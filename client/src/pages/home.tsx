@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { AddressCard } from "@/components/address-card";
 import { TransactionList } from "@/components/transaction-list";
-import { Send, Shield, Wallet2, Bitcoin } from "lucide-react";
+import { Send, Shield, Smartphone, Bitcoin, QrCode, Fingerprint } from "lucide-react";
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
 import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
@@ -23,16 +23,19 @@ function WelcomePage() {
     <div className="container max-w-4xl mx-auto p-4 space-y-16 py-12">
       {/* Hero Section */}
       <div className="text-center space-y-4">
-        <Bitcoin className="w-16 h-16 mx-auto text-primary animate-bounce" />
+        <div className="relative">
+          <Bitcoin className="w-16 h-16 mx-auto text-primary animate-bounce" />
+          <Smartphone className="w-8 h-8 absolute top-12 right-1/2 translate-x-12 text-primary/80" />
+        </div>
         <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          Welcome to Your Bitcoin Wallet
+          Mobile Bitcoin Wallet
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          A secure and user-friendly way to manage your Bitcoin transactions
+          Secure Bitcoin management in your pocket. Available for iOS and Android.
         </p>
         <Button size="lg" onClick={createWallet} className="mt-8">
-          <Wallet2 className="mr-2 h-5 w-5" />
-          Create Your Wallet
+          <Smartphone className="mr-2 h-5 w-5" />
+          Try Demo Wallet
         </Button>
       </div>
 
@@ -40,26 +43,43 @@ function WelcomePage() {
       <div className="grid md:grid-cols-3 gap-8">
         <div className="space-y-3 text-center">
           <Shield className="w-8 h-8 mx-auto text-primary" />
-          <h3 className="text-lg font-semibold">Secure Storage</h3>
+          <h3 className="text-lg font-semibold">Mobile Security</h3>
           <p className="text-muted-foreground">
-            Your Bitcoin is protected with industry-standard security measures
+            Enhanced with biometric authentication and secure enclave storage
           </p>
         </div>
 
         <div className="space-y-3 text-center">
-          <Send className="w-8 h-8 mx-auto text-primary" />
-          <h3 className="text-lg font-semibold">Easy Transfers</h3>
+          <QrCode className="w-8 h-8 mx-auto text-primary" />
+          <h3 className="text-lg font-semibold">Quick Transfers</h3>
           <p className="text-muted-foreground">
-            Send and receive Bitcoin with just a few clicks
+            Scan QR codes for instant Bitcoin transfers on the go
           </p>
         </div>
 
         <div className="space-y-3 text-center">
-          <Wallet2 className="w-8 h-8 mx-auto text-primary" />
-          <h3 className="text-lg font-semibold">Transaction History</h3>
+          <Fingerprint className="w-8 h-8 mx-auto text-primary" />
+          <h3 className="text-lg font-semibold">Touch ID / Face ID</h3>
           <p className="text-muted-foreground">
-            Keep track of all your Bitcoin transactions in one place
+            Secure access with your device's biometric authentication
           </p>
+        </div>
+      </div>
+
+      {/* Mobile App Promotion */}
+      <div className="text-center space-y-4 bg-primary/5 rounded-lg p-8">
+        <h2 className="text-2xl font-semibold">Coming Soon to Mobile Stores</h2>
+        <p className="text-muted-foreground">
+          Get ready for a seamless Bitcoin experience on your mobile device.
+          Native apps for both iOS and Android platforms.
+        </p>
+        <div className="flex gap-4 justify-center mt-6">
+          <Button variant="outline" disabled>
+            App Store
+          </Button>
+          <Button variant="outline" disabled>
+            Google Play
+          </Button>
         </div>
       </div>
     </div>
