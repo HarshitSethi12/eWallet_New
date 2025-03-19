@@ -28,10 +28,10 @@ function WelcomePage() {
           <Smartphone className="w-10 h-10 absolute -bottom-2 -right-2 text-primary/80 animate-bounce" />
         </div>
         <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          BitWallet Mobile
+          Your Go-to Cryptocurrency Wallet
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Secure Bitcoin management in your pocket. Available for iOS and Android.
+          Secure Cryptocurrency Management
         </p>
         <Button size="lg" onClick={createWallet} className="mt-8">
           <Smartphone className="mr-2 h-5 w-5" />
