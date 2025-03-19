@@ -7,6 +7,7 @@ export default {
     extend: {
       fontFamily: {
         sans: [
+          "Calibri",
           "Inter",
           "SF Pro Display",
           "-apple-system",
