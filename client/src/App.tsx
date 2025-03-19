@@ -32,6 +32,11 @@ function Navigation() {
               Receive
             </Button>
           </Link>
+          <Link href="/signup"> {/* Added Sign Up link */}
+            <Button variant="ghost" size="sm" className="text-white hover:text-white/90">
+              Sign Up
+            </Button>
+          </Link>
         </div>
       </div>
     </nav>
@@ -44,6 +49,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/send" component={SendPage} />
       <Route path="/receive" component={Receive} />
+      <Route path="/signup" component={() => <div>Sign Up Page</div>} /> {/* Placeholder signup page */}
       <Route component={NotFound} />
     </Switch>
   );
