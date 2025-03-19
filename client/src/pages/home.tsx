@@ -36,7 +36,7 @@ function WelcomePage() {
           <Button size="lg" onClick={createWallet} className="mt-8">
             Sign In
           </Button>
-          <Button size="lg" variant="outline" href="/signup" className="mt-8">
+          <Button size="lg" href="/signup" className="mt-8">
             Sign Up
           </Button>
         </div>
