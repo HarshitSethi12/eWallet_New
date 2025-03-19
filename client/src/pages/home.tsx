@@ -23,12 +23,12 @@ function WelcomePage() {
     <div className="container max-w-4xl mx-auto p-4 space-y-16 py-12">
       {/* Hero Section */}
       <div className="text-center space-y-4">
-        <div className="relative">
-          <Bitcoin className="w-16 h-16 mx-auto text-primary animate-bounce" />
-          <Smartphone className="w-8 h-8 absolute top-12 right-1/2 translate-x-12 text-primary/80" />
+        <div className="relative inline-block">
+          <Bitcoin className="w-20 h-20 text-primary animate-pulse rotate-12" />
+          <Smartphone className="w-10 h-10 absolute -bottom-2 -right-2 text-primary/80 animate-bounce" />
         </div>
         <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          Mobile Bitcoin Wallet
+          BitWallet Mobile
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
           Secure Bitcoin management in your pocket. Available for iOS and Android.

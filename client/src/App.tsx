@@ -14,9 +14,9 @@ function Navigation() {
     <nav className="border-b bg-primary">
       <div className="container max-w-3xl mx-auto p-4 flex items-center justify-between text-white">
         <Link href="/">
-          <Button variant="link" className="text-xl font-bold text-white">
-            <Bitcoin className="mr-2 h-5 w-5" />
-            Bitcoin Wallet
+          <Button variant="link" className="text-xl font-bold text-white flex items-center">
+            <Bitcoin className="mr-2 h-6 w-6 rotate-12 animate-pulse" />
+            BitWallet
           </Button>
         </Link>
 
