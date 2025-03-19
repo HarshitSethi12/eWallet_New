@@ -3,18 +3,18 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { Button } from "@/components/ui/button";
-import { Bitcoin, Send as SendIcon, BookUser } from "lucide-react";
+import { Bitcoin, Send as SendIcon, QrCode } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import SendPage from "@/pages/send";
-import Contacts from "@/pages/contacts";
+import Receive from "@/pages/receive";
 
 function Navigation() {
   return (
-    <nav className="border-b">
-      <div className="container max-w-3xl mx-auto p-4 flex items-center justify-between">
+    <nav className="border-b bg-primary">
+      <div className="container max-w-3xl mx-auto p-4 flex items-center justify-between text-white">
         <Link href="/">
-          <Button variant="link" className="text-xl font-bold">
+          <Button variant="link" className="text-xl font-bold text-white">
             <Bitcoin className="mr-2 h-5 w-5" />
             Bitcoin Wallet
           </Button>
@@ -22,15 +22,15 @@ function Navigation() {
 
         <div className="flex gap-4">
           <Link href="/send">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="text-white hover:text-white/90">
               <SendIcon className="mr-2 h-4 w-4" />
               Send
             </Button>
           </Link>
-          <Link href="/contacts">
-            <Button variant="ghost" size="sm">
-              <BookUser className="mr-2 h-4 w-4" />
-              Contacts
+          <Link href="/receive">
+            <Button variant="ghost" size="sm" className="text-white hover:text-white/90">
+              <QrCode className="mr-2 h-4 w-4" />
+              Receive
             </Button>
           </Link>
         </div>
@@ -44,7 +44,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/send" component={SendPage} />
-      <Route path="/contacts" component={Contacts} />
+      <Route path="/receive" component={Receive} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -53,11 +53,13 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Navigation />
-      <main className="min-h-screen">
-        <Router />
-      </main>
-      <Toaster />
+      <div className="min-h-screen bg-primary/5">
+        <Navigation />
+        <main className="text-primary-foreground">
+          <Router />
+        </main>
+        <Toaster />
+      </div>
     </QueryClientProvider>
   );
 }
