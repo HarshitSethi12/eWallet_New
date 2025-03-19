@@ -32,9 +32,14 @@ function WelcomePage() {
         <p className="text-xl font-medium text-muted-foreground max-w-2xl mx-auto">
           Secure Cryptocurrency Management
         </p>
-        <Button size="lg" onClick={createWallet} className="mt-8">
-          Sign In
-        </Button>
+        <div className="flex gap-4 justify-center">
+          <Button size="lg" onClick={createWallet} className="mt-8">
+            Sign In
+          </Button>
+          <Button size="lg" variant="outline" href="/signup" className="mt-8">
+            Sign Up
+          </Button>
+        </div>
       </div>
     </div>
   );

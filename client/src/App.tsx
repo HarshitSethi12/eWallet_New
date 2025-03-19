@@ -32,11 +32,6 @@ function Navigation() {
               Receive
             </Button>
           </Link>
-          <Link href="/signup"> {/* Added Sign Up link */}
-            <Button variant="ghost" size="sm" className="text-white hover:text-white/90">
-              Sign Up
-            </Button>
-          </Link>
         </div>
       </div>
     </nav>
