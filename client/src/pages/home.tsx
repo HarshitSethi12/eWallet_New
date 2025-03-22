@@ -30,7 +30,7 @@ function WelcomePage() {
           Your Go-to Cryptocurrency Wallet
         </h1>
         <p className="text-xl font-medium text-muted-foreground max-w-2xl mx-auto">
-          Secure Cryptocurrency Management
+          We offer Secure Cryptocurrency Management
         </p>
         <div className="flex gap-4 justify-center">
           <Button size="lg" onClick={createWallet} className="mt-8">
