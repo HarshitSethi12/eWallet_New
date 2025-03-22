@@ -12,23 +12,23 @@ import Receive from "@/pages/receive";
 function Navigation() {
   return (
     <nav className="border-b bg-primary">
-      <div className="container max-w-3xl mx-auto p-4 flex items-center justify-between text-white">
+      <div className="container max-w-3xl mx-auto p-4 flex flex-col items-center gap-4 text-white">
         <Link href="/">
-          <Button variant="link" className="text-2xl font-bold text-white hover:text-white/90">
+          <Button variant="link" className="text-3xl font-bold text-white hover:text-white/90">
             BitWallet
           </Button>
         </Link>
 
-        <div className="flex gap-4">
+        <div className="flex gap-8">
           <Link href="/send">
-            <Button variant="ghost" size="sm" className="text-white hover:text-white/90">
-              <SendIcon className="mr-2 h-4 w-4" />
+            <Button variant="ghost" className="text-white hover:text-white/90">
+              <SendIcon className="mr-2 h-5 w-5" />
               Send
             </Button>
           </Link>
           <Link href="/receive">
-            <Button variant="ghost" size="sm" className="text-white hover:text-white/90">
-              <QrCode className="mr-2 h-4 w-4" />
+            <Button variant="ghost" className="text-white hover:text-white/90">
+              <QrCode className="mr-2 h-5 w-5" />
               Receive
             </Button>
           </Link>
