@@ -16,11 +16,13 @@ export function setupAuth(app: express.Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    callbackURL: '/auth/google/callback'
-  },
+  // Only setup Google auth if credentials are configured
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: '/auth/google/callback'
+    },
   async (accessToken, refreshToken, profile, done) => {
     try {
       // Create or get user
@@ -48,13 +50,17 @@ export function setupAuth(app: express.Express) {
     passport.authenticate('google', { scope: ['profile', 'email'] })
   );
 
-  app.get('/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login' }),
-    (req, res) => {
-      const token = jwt.sign({ userId: req.user.id }, process.env.JWT_SECRET || '');
-      res.redirect(`/?token=${token}`);
-    }
-  );
+  }
+
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    app.get('/auth/google/callback',
+      passport.authenticate('google', { failureRedirect: '/login' }),
+      (req, res) => {
+        const token = jwt.sign({ userId: req.user.id }, process.env.JWT_SECRET || 'dev-jwt-secret');
+        res.redirect(`/?token=${token}`);
+      }
+    );
+  }
 
   app.get('/auth/logout', (req, res) => {
     req.logout(() => {
