@@ -2,11 +2,22 @@ import { pgTable, text, serial, integer, timestamp, boolean } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  googleId: text("google_id").unique(),
+  email: text("email").unique(),
+  name: text("name"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const wallets = pgTable("wallets", {
   id: serial("id").primaryKey(),
-  address: text("address").notNull().unique(),
-  privateKey: text("private_key").notNull(),
-  balance: integer("balance").notNull().default(0),
+  userId: integer("user_id").references(() => users.id),
+  chain: text("chain").notNull(), // 'BTC' or 'ETH'
+  address: text("address").notNull(),
+  encryptedPrivateKey: text("encrypted_private_key").notNull(),
+  lastBalance: text("last_balance").default("0"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const transactions = pgTable("transactions", {
