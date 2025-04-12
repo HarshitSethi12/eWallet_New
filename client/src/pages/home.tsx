@@ -33,8 +33,8 @@ function WelcomePage() {
           We offer Secure Cryptocurrency Management
         </p>
         <div className="flex gap-4 justify-center">
-          <Button size="lg" onClick={createWallet} className="mt-8">
-            Sign In
+          <Button size="lg" onClick={() => window.location.href = '/auth/google'} className="mt-8">
+            Sign In with Google
           </Button>
           <Button size="lg" href="/signup" className="mt-8">
             Sign Up
