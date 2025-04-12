@@ -34,18 +34,13 @@ function WelcomePage() {
           </div>
         </div>
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight px-2 leading-tight relative">
-          <span className="relative z-10 animated-gradient-text">
+          <span className="relative z-10">
             <span className="block sm:inline">Your Go-to</span>{" "}
             <span className="block sm:inline">Cryptocurrency</span>{" "}
             <span className="block sm:inline">Exchange</span>
           </span>
-          <span className="absolute top-1 left-0 right-0 opacity-30 blur-[2px] text-green-300 hidden md:inline-block">
-            <span className="inline">Your Go-to</span>{" "}
-            <span className="inline">Cryptocurrency</span>{" "}
-            <span className="inline">Exchange</span>
-          </span>
         </h1>
-        <p className="text-lg md:text-xl font-medium max-w-2xl mx-auto px-4 text-[#0A3665]">
+        <p className="text-lg md:text-xl font-medium max-w-2xl mx-auto px-4 animated-gradient-text">
           Secure Cryptocurrency Management
         </p>
         <div className="flex gap-4 justify-center mt-6 sm:mt-8 md:mt-10">
