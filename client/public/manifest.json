@@ -1,0 +1,21 @@
+
+{
+  "short_name": "BitWallet",
+  "name": "BitWallet - Crypto Wallet",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#30D158",
+  "background_color": "#F2FFF5"
+}
