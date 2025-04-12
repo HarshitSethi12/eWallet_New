@@ -3,10 +3,11 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { AddressCard } from "@/components/address-card";
 import { TransactionList } from "@/components/transaction-list";
-import { Send, Bitcoin } from "lucide-react";
+import { Send, ArrowDownLeft, Wallet as WalletIcon, ShieldCheck } from "lucide-react";
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
 import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
+import { RiExchangeFundsFill } from "react-icons/ri";
 
 function WelcomePage() {
   const createWallet = async () => {
@@ -23,8 +24,14 @@ function WelcomePage() {
     <div className="container max-w-4xl mx-auto p-4 space-y-16 py-12">
       {/* Hero Section */}
       <div className="text-center space-y-6">
-        <div className="relative inline-block">
-          <Bitcoin className="w-24 h-24 text-primary animate-pulse rotate-12" />
+        <div className="relative inline-flex items-center justify-center w-32 h-32">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#30D158] via-teal-400 to-[#0A3665] opacity-20 blur-xl animate-pulse"></div>
+          <div className="absolute inset-2 bg-gradient-to-br from-[#F2FFF5] to-white rounded-full opacity-90"></div>
+          <div className="relative z-10 flex items-center justify-center icon-group icon-float">
+            <WalletIcon className="w-10 h-10 text-[#30D158] transform -translate-x-4" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }} />
+            <RiExchangeFundsFill className="w-14 h-14 text-teal-500" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))" }} />
+            <ShieldCheck className="w-10 h-10 text-[#0A3665] transform translate-x-4" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }} />
+          </div>
         </div>
         <h1 className="text-5xl font-bold tracking-tight bg-gradient-to-r from-[#30D158] to-[#0A3665] bg-clip-text text-transparent">
           Your Go-to Cryptocurrency Wallet
