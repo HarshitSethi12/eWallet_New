@@ -28,9 +28,9 @@ function Navigation() {
                 Bit
               </span>
               <span 
+                className="font-bold"
                 style={{ 
                   fontFamily: "'Poppins', sans-serif", 
-                  fontWeight: 500,
                   letterSpacing: "-0.01em",
                   background: "linear-gradient(90deg, #5EEAD4 0%, #FFFFFF 100%)",
                   WebkitBackgroundClip: "text",
