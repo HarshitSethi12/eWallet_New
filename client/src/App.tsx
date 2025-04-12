@@ -12,19 +12,34 @@ function Navigation() {
       <div className="container max-w-5xl mx-auto p-4 flex items-center justify-center text-white">
         <Link href="/">
           <Button variant="link" className="text-3xl hover:text-white/90 flex items-center py-2">
-            <span 
-              className="font-bold relative" 
-              style={{ 
-                fontFamily: "'Montserrat', sans-serif", 
-                letterSpacing: "0.02em",
-                background: "linear-gradient(90deg, #30D158 0%, #0A3665 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                textShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                padding: "0.2rem 0"
-              }}
-            >
-              BitWallet
+            <span className="flex items-end">
+              <span 
+                className="logo-shimmer font-bold" 
+                style={{ 
+                  fontFamily: "'Poppins', sans-serif", 
+                  letterSpacing: "-0.01em",
+                  background: "linear-gradient(90deg, #30D158 0%, #14B8A6 50%, #0A3665 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.1))",
+                  paddingRight: "2px"
+                }}
+              >
+                Bit
+              </span>
+              <span 
+                style={{ 
+                  fontFamily: "'Poppins', sans-serif", 
+                  fontWeight: 500,
+                  letterSpacing: "-0.01em",
+                  background: "linear-gradient(90deg, #5EEAD4 0%, #FFFFFF 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.1))"
+                }}
+              >
+                Wallet
+              </span>
             </span>
           </Button>
         </Link>
