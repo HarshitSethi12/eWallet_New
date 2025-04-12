@@ -22,24 +22,30 @@ function WelcomePage() {
   return (
     <div className="container max-w-4xl mx-auto p-4 space-y-16 py-12">
       {/* Hero Section */}
-      <div className="text-center space-y-4">
+      <div className="text-center space-y-6">
         <div className="relative inline-block">
-          <Bitcoin className="w-20 h-20 text-primary animate-pulse rotate-12" />
+          <Bitcoin className="w-24 h-24 text-primary animate-pulse rotate-12" />
         </div>
-        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+        <h1 className="text-5xl font-bold tracking-tight bg-gradient-to-r from-[#30D158] to-[#0A3665] bg-clip-text text-transparent">
           Your Go-to Cryptocurrency Wallet
         </h1>
-        <p className="text-xl font-medium text-muted-foreground max-w-2xl mx-auto">
-          We offer Secure Cryptocurrency Management
+        <p className="text-xl font-medium max-w-2xl mx-auto" style={{ color: 'var(--color-heading)' }}>
+          Secure Cryptocurrency Management
         </p>
-        <div className="flex gap-4 justify-center">
-          <Button size="lg" onClick={() => window.location.href = '/auth/google'} className="mt-8">
-            Sign In with Google
-          </Button>
-          <Button size="lg" href="/signup" className="mt-8">
-            Sign Up
+        <div className="flex gap-4 justify-center mt-10">
+          <Button 
+            size="lg" 
+            className="btn-primary px-8 py-6 text-lg rounded-lg shadow-lg hover:shadow-xl transition-all"
+            onClick={createWallet}
+          >
+            Sign In
           </Button>
         </div>
+      </div>
+      
+      {/* Decorative element */}
+      <div className="relative">
+        <div className="absolute -z-10 top-0 inset-x-0 h-64 bg-gradient-to-b from-[#F2FFF5] to-transparent opacity-70 blur-2xl"></div>
       </div>
     </div>
   );
@@ -78,19 +84,25 @@ export default function Home() {
   }
 
   return (
-    <div className="container max-w-3xl mx-auto p-4 space-y-8">
-      <div className="flex justify-end">
+    <div className="container max-w-3xl mx-auto p-4 space-y-10">
+      <div className="flex justify-center gap-4 mt-6">
         <Link href="/send">
-          <Button>
-            <Send className="mr-2 h-4 w-4" />
-            Send Bitcoin
+          <Button className="btn-primary px-6 py-5 text-lg rounded-lg shadow-md hover:shadow-lg transition-all">
+            <Send className="mr-2 h-5 w-5" />
+            Send
+          </Button>
+        </Link>
+        <Link href="/receive">
+          <Button className="btn-secondary px-6 py-5 text-lg rounded-lg shadow-md hover:shadow-lg transition-all">
+            <ArrowDownLeft className="mr-2 h-5 w-5" />
+            Receive
           </Button>
         </Link>
       </div>
 
       <AddressCard 
         address={wallet.address}
-        balance={wallet.balance}
+        balance={wallet.lastBalance ? parseInt(wallet.lastBalance) : 0}
       />
 
       <TransactionList 

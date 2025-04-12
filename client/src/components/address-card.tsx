@@ -20,22 +20,33 @@ export function AddressCard({ address, balance }: AddressCardProps) {
     });
   };
 
+  const balanceInBTC = balance / 100000000;
+
   return (
-    <Card className="w-full">
-      <CardHeader>
+    <Card className="w-full border-none shadow-lg" style={{ backgroundColor: 'white' }}>
+      <CardHeader className="pb-2">
         <CardTitle className="flex justify-between items-center">
-          <span>Your Wallet</span>
-          <span className="text-2xl font-bold">₿ {balance / 100000000}</span>
+          <span className="text-xl" style={{ color: 'var(--color-heading)' }}>Your Wallet</span>
+          <span className="text-3xl font-bold success-text">₿ {balanceInBTC.toFixed(8)}</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col items-center gap-4">
-        <QRCodeSVG value={address} size={200} includeMargin />
+      <CardContent className="flex flex-col items-center gap-6">
+        <div className="bg-white p-4 rounded-xl shadow-sm">
+          <QRCodeSVG value={address} size={200} includeMargin bgColor="#FFFFFF" fgColor="#0A3665" />
+        </div>
         <div className="flex items-center gap-2 w-full">
-          <code className="flex-1 p-2 bg-muted rounded text-sm overflow-hidden text-ellipsis">
+          <code className="flex-1 p-3 rounded-lg text-sm overflow-hidden text-ellipsis font-mono" 
+              style={{ backgroundColor: 'var(--color-secondary)', color: 'var(--color-accent)' }}>
             {address}
           </code>
-          <Button variant="outline" size="icon" onClick={copyAddress}>
-            <Copy className="h-4 w-4" />
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={copyAddress}
+            className="rounded-lg p-3 hover:bg-primary/10"
+            style={{ borderColor: 'var(--color-primary)' }}
+          >
+            <Copy className="h-5 w-5" style={{ color: 'var(--color-primary)' }} />
           </Button>
         </div>
       </CardContent>

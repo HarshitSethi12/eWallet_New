@@ -8,10 +8,10 @@ import Home from "@/pages/home";
 
 function Navigation() {
   return (
-    <nav className="border-b bg-primary">
-      <div className="container max-w-3xl mx-auto p-4 flex items-center justify-center text-white">
+    <nav className="border-b" style={{ backgroundColor: 'var(--color-accent)' }}>
+      <div className="container max-w-5xl mx-auto p-4 flex items-center justify-center text-white">
         <Link href="/">
-          <Button variant="link" className="text-3xl font-bold text-white hover:text-white/90">
+          <Button variant="link" className="text-3xl font-bold text-white hover:text-white/90" style={{ fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif", letterSpacing: "-0.03em" }}>
             BitWallet
           </Button>
         </Link>
@@ -24,6 +24,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/send" component={Home} />
+      <Route path="/receive" component={Home} />
       <Route path="/signup" component={() => <div>Sign Up Page</div>} /> {/* Placeholder signup page */}
       <Route component={NotFound} />
     </Switch>
@@ -33,9 +35,9 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-primary/5">
+      <div className="min-h-screen" style={{ backgroundColor: 'var(--color-secondary)' }}>
         <Navigation />
-        <main className="text-primary-foreground">
+        <main>
           <Router />
         </main>
         <Toaster />
