@@ -1,5 +1,6 @@
 
 @import '@fontsource/inter';
+@import '@fontsource/roboto-mono';
 
 @tailwind base;
 @tailwind components;
