@@ -9,9 +9,9 @@ import Home from "@/pages/home";
 function Navigation() {
   return (
     <nav className="border-b" style={{ backgroundColor: 'var(--color-accent)' }}>
-      <div className="container max-w-5xl mx-auto p-4 flex items-center justify-center text-white">
+      <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 flex items-center justify-center text-white">
         <Link href="/">
-          <Button variant="link" className="text-3xl hover:text-white/90 flex items-center py-2">
+          <Button variant="link" className="text-2xl sm:text-3xl hover:text-white/90 flex items-center py-1 sm:py-2">
             <span className="flex items-end">
               <span 
                 className="logo-shimmer font-bold" 
