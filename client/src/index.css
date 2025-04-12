@@ -124,5 +124,55 @@
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
+    position: relative;
+  }
+  
+  .animated-gradient-text::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    bottom: -5px;
+    left: -5px;
+    background: linear-gradient(90deg, rgba(48,209,88,0.2), rgba(20,184,166,0.1), rgba(10,54,101,0.1), rgba(20,184,166,0.2), rgba(48,209,88,0.3));
+    background-size: 300% 100%;
+    animation: gradientAnimation 4s ease-in-out infinite;
+    filter: blur(10px);
+    z-index: -1;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+  }
+  
+  .animated-gradient-text:hover::after {
+    opacity: 0.8;
+    filter: blur(8px);
+  }
+  
+  /* Add shimmer animation for extra flair */
+  @keyframes shimmer {
+    0% {
+      background-position: -100% 0;
+    }
+    100% {
+      background-position: 100% 0;
+    }
+  }
+  
+  h1 .animated-gradient-text::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.15) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    z-index: 1;
+    animation: shimmer 3s infinite;
+    background-size: 200% 100%;
   }
 }
