@@ -37,7 +37,7 @@ function WelcomePage() {
           <span className="relative z-10 animated-gradient-text">
             <span className="block sm:inline">Your Go-to</span>{" "}
             <span className="block sm:inline">Cryptocurrency</span>{" "}
-            <span className="block sm:inline">Exchange</span>
+            <span className="block sm:inline">Wallet</span>
           </span>
           <span className="absolute top-1 left-0 right-0 opacity-30 blur-[2px] text-green-300 hidden md:inline-block">
             <span className="inline">Your Go-to</span>{" "}
