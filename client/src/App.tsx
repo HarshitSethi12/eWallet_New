@@ -14,28 +14,20 @@ function Navigation() {
           <Button variant="link" className="text-2xl sm:text-3xl hover:text-white/90 flex items-center py-1 sm:py-2">
             <span className="flex items-end">
               <span 
-                className="logo-shimmer font-bold" 
+                className="logo-shimmer font-bold animated-gradient-text" 
                 style={{ 
                   fontFamily: "'Poppins', sans-serif", 
                   letterSpacing: "-0.01em",
-                  background: "linear-gradient(90deg, #30D158 0%, #14B8A6 50%, #0A3665 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.1))",
                   paddingRight: "2px"
                 }}
               >
                 Bit
               </span>
               <span 
-                className="font-bold"
+                className="font-bold animated-gradient-text"
                 style={{ 
                   fontFamily: "'Poppins', sans-serif", 
-                  letterSpacing: "-0.01em",
-                  background: "linear-gradient(90deg, #5EEAD4 0%, #FFFFFF 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.1))"
+                  letterSpacing: "-0.01em"
                 }}
               >
                 Wallet
