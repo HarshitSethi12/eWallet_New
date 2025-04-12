@@ -34,7 +34,7 @@ function WelcomePage() {
           </div>
         </div>
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight px-2 leading-tight relative">
-          <span className="relative z-10">
+          <span className="relative z-10 animated-gradient-text">
             <span className="block sm:inline">Your Go-to</span>{" "}
             <span className="block sm:inline">Cryptocurrency</span>{" "}
             <span className="block sm:inline">Wallet</span>
