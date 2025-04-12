@@ -45,7 +45,7 @@ function WelcomePage() {
             <span className="inline">Exchange</span>
           </span>
         </h1>
-        <p className="text-lg md:text-xl font-medium max-w-2xl mx-auto px-4 animated-gradient-text">
+        <p className="text-lg md:text-xl font-medium max-w-2xl mx-auto px-4 text-[#0A3665]">
           Secure Cryptocurrency Management
         </p>
         <div className="flex gap-4 justify-center mt-6 sm:mt-8 md:mt-10">
