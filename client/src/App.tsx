@@ -11,10 +11,20 @@ function Navigation() {
     <nav className="border-b" style={{ backgroundColor: 'var(--color-accent)' }}>
       <div className="container max-w-5xl mx-auto p-4 flex items-center justify-center text-white">
         <Link href="/">
-          <Button variant="link" className="text-3xl hover:text-white/90 flex items-center py-2" style={{ fontFamily: "'Roboto Mono', 'SF Mono', monospace", letterSpacing: "0.05em", fontWeight: "300" }}>
-            <span className="relative" style={{ textShadow: "0 0 10px rgba(255,255,255,0.4)" }}>
-              <span style={{ color: "#FFFFFF" }}>B<span style={{ color: "#E0F7E4" }}>i</span>t</span>
-              <span style={{ color: "#9AFCB3" }}>W<span style={{ color: "#FFFFFF" }}>a</span>ll<span style={{ color: "#E0F7E4" }}>e</span>t</span>
+          <Button variant="link" className="text-3xl hover:text-white/90 flex items-center py-2">
+            <span 
+              className="font-bold relative" 
+              style={{ 
+                fontFamily: "'Montserrat', sans-serif", 
+                letterSpacing: "0.02em",
+                background: "linear-gradient(90deg, #30D158 0%, #0A3665 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                textShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                padding: "0.2rem 0"
+              }}
+            >
+              BitWallet
             </span>
           </Button>
         </Link>

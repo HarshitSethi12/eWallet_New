@@ -1,6 +1,8 @@
 
 @import '@fontsource/inter';
 @import '@fontsource/roboto-mono';
+@import '@fontsource/montserrat';
+@import '@fontsource/montserrat/700.css'; /* Bold weight */
 
 @tailwind base;
 @tailwind components;
