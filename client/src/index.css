@@ -1,4 +1,3 @@
-
 @import '@fontsource/inter';
 @import '@fontsource/roboto-mono';
 @import '@fontsource/montserrat';
@@ -12,11 +11,11 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #30D158;
-  --color-secondary: #F2FFF5;
-  --color-accent: #0A3665;
-  --color-heading: #1E3A29;
-  --color-body: #333333;
+  --color-primary: #10B981;
+  --color-secondary: #111827;
+  --color-accent: #059669;
+  --color-heading: #F9FAFB;
+  --color-body: #D1D5DB;
 }
 
 @layer base {
@@ -85,7 +84,7 @@
     animation: shimmer 8s ease-in-out infinite;
     background-size: 200% 100%;
   }
-  
+
   /* Icon group animation */
   @keyframes float {
     0%, 100% {
@@ -95,15 +94,15 @@
       transform: translateY(-5px);
     }
   }
-  
+
   .icon-float {
     animation: float 3s ease-in-out infinite;
   }
-  
+
   .icon-group {
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
   }
-  
+
   /* Animated gradient for text */
   @keyframes gradientAnimation {
     0% {
@@ -116,9 +115,9 @@
       background-position: 0% 50%;
     }
   }
-  
+
   .animated-gradient-text {
-    background: linear-gradient(90deg, #30D158, #14B8A6, #0A3665, #14B8A6, #30D158);
+    background: linear-gradient(90deg, #10B981, #059669, #10B981, #059669, #10B981);
     background-size: 300% 100%;
     animation: gradientAnimation 8s ease infinite;
     background-clip: text;
@@ -126,7 +125,7 @@
     color: transparent;
     position: relative;
   }
-  
+
   .animated-gradient-text::after {
     content: '';
     position: absolute;
@@ -134,7 +133,7 @@
     right: -5px;
     bottom: -5px;
     left: -5px;
-    background: linear-gradient(90deg, rgba(48,209,88,0.2), rgba(20,184,166,0.1), rgba(10,54,101,0.1), rgba(20,184,166,0.2), rgba(48,209,88,0.3));
+    background: linear-gradient(90deg, rgba(16,185,129,0.2), rgba(5,150,105,0.1), rgba(16,185,129,0.1), rgba(5,150,105,0.2), rgba(16,185,129,0.3));
     background-size: 300% 100%;
     animation: gradientAnimation 4s ease-in-out infinite;
     filter: blur(10px);
@@ -142,12 +141,12 @@
     opacity: 0.6;
     transition: all 0.3s ease;
   }
-  
+
   .animated-gradient-text:hover::after {
     opacity: 0.8;
     filter: blur(8px);
   }
-  
+
   /* Add shimmer animation for extra flair */
   @keyframes shimmer {
     0% {
@@ -157,7 +156,7 @@
       background-position: 100% 0;
     }
   }
-  
+
   h1 .animated-gradient-text::before {
     content: '';
     position: absolute;
