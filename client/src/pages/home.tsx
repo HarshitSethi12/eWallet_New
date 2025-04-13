@@ -34,9 +34,12 @@ function WelcomePage() {
           </div>
         </div>
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight px-2 leading-tight relative">
-          <span className="relative z-10" style={{ color: '#0A3665' }}>
+          <span className="relative z-10" style={{ 
+            color: '#0A3665',
+            textShadow: '1px 1px 2px rgba(48, 209, 88, 0.1)'
+          }}>
             <span className="block sm:inline">Your Go-to</span>{" "}
-            <span className="block sm:inline">Cryptocurrency</span>{" "}
+            <span className="block sm:inline" style={{ color: '#1E7B43' }}>Cryptocurrency</span>{" "}
             <span className="block sm:inline">Wallet</span>
           </span>
         </h1>
