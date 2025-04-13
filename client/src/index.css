@@ -10,12 +10,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Original Green Theme */
 :root {
   --color-primary: #10B981;
   --color-secondary: #111827;
   --color-accent: #059669;
   --color-heading: #F9FAFB;
   --color-body: #D1D5DB;
+}
+
+/* Professional Ocean Theme */
+:root {
+  --color-primary-ocean: #0EA5E9;
+  --color-secondary-ocean: #0F172A;
+  --color-accent-ocean: #0284C7;
+  --color-heading-ocean: #F0F9FF;
+  --color-body-ocean: #E0F2FE;
+}
+
+/* Elegant Dark Gold Theme */
+:root {
+  --color-primary-gold: #F59E0B;
+  --color-secondary-gold: #1C1917;
+  --color-accent-gold: #D97706;
+  --color-heading-gold: #FEF9C3;
+  --color-body-gold: #FEF3C7;
 }
 
 @layer base {
@@ -25,8 +44,8 @@
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
-    background-color: var(--color-secondary);
-    color: var(--color-body);
+    background-color: var(--color-secondary); /* Defaults to original green theme */
+    color: var(--color-body); /* Defaults to original green theme */
     @apply antialiased bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -34,7 +53,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    color: var(--color-heading);
+    color: var(--color-heading); /* Defaults to original green theme */
     font-weight: 600;
     letter-spacing: -0.015em;
     @apply tracking-tight;
@@ -51,23 +70,23 @@
   }
 
   .btn-primary {
-    background-color: var(--color-primary);
+    background-color: var(--color-primary); /* Defaults to original green theme */
     color: white;
     font-weight: 500;
   }
 
   .btn-secondary {
-    background-color: var(--color-accent);
+    background-color: var(--color-accent); /* Defaults to original green theme */
     color: white;
     font-weight: 500;
   }
 
   .accent-text {
-    color: var(--color-accent);
+    color: var(--color-accent); /* Defaults to original green theme */
   }
 
   .success-text {
-    color: var(--color-primary);
+    color: var(--color-primary); /* Defaults to original green theme */
   }
 
   /* Shimmer animation for logo */
