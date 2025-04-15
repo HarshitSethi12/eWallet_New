@@ -37,6 +37,33 @@
   --color-body-gold: #FEF3C7;
 }
 
+/* Modern Blue Theme */
+:root {
+  --color-primary-blue: #2563eb;
+  --color-secondary-blue: #f0f9ff;
+  --color-accent-blue: #1e40af;
+  --color-heading-blue: #1e293b;
+  --color-body-blue: #334155;
+}
+
+/* Minimal Gray Theme */
+:root {
+  --color-primary-gray: #3b82f6;
+  --color-secondary-gray: #f8fafc;
+  --color-accent-gray: #475569;
+  --color-heading-gray: #1e293b;
+  --color-body-gray: #334155;
+}
+
+/* Dark Mode Theme */
+:root {
+  --color-primary-dark: #60a5fa;
+  --color-secondary-dark: #1e293b;
+  --color-accent-dark: #93c5fd;
+  --color-heading-dark: #f8fafc;
+  --color-body-dark: #e2e8f0;
+}
+
 @layer base {
   * {
     @apply border-border;
