@@ -10,13 +10,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Original Green Theme */
+/* Fresh Green Theme */
 :root {
-  --color-primary: #10B981;
-  --color-secondary: #111827;
-  --color-accent: #059669;
-  --color-heading: #F9FAFB;
-  --color-body: #D1D5DB;
+  --color-primary: #34D399;    /* Bright mint green for primary actions */
+  --color-secondary: #F9FAFB;  /* Clean white background */
+  --color-accent: #10B981;     /* Deeper green for accents */
+  --color-heading: #065F46;    /* Dark green for headings */
+  --color-body: #1F2937;       /* Dark gray for body text */
 }
 
 /* Professional Ocean Theme */
