@@ -50,9 +50,17 @@ export function setupAuth(app: express.Express) {
       }
 
       const redirectUri = `${req.protocol}://${req.get('host')}/auth/callback`;
-      oauth2Client._setRedirectUri(redirectUri);
+      oauth2Client.setCredentials({ refresh_token: null });
       
-      const { tokens } = await oauth2Client.getToken(code);
+      // Set redirect URI properly
+      const { OAuth2Client } = require('google-auth-library');
+      const tempClient = new OAuth2Client(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        redirectUri
+      );
+      
+      const { tokens } = await tempClient.getToken(code);
       oauth2Client.setCredentials(tokens);
       
       const userInfo = await oauth2Client.request({
