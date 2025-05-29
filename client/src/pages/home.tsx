@@ -3,22 +3,15 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { AddressCard } from "@/components/address-card";
 import { TransactionList } from "@/components/transaction-list";
-import { Send, ArrowDownLeft, Wallet as WalletIcon, ShieldCheck } from "lucide-react";
+import { Send, ArrowDownLeft, Wallet as WalletIcon, ShieldCheck, LogOut } from "lucide-react";
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
 import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
+import { useAuth } from "@/hooks/use-auth";
 
 function WelcomePage() {
-  const createWallet = async () => {
-    const newWallet = {
-      address: generateMockAddress(),
-      privateKey: generateMockPrivateKey(),
-      balance: 100000000, // 1 BTC initial balance for demo
-    };
-    const response = await apiRequest("POST", "/api/wallet", newWallet);
-    return response.json();
-  };
+  const { login } = useAuth();
 
   return (
     <div className="container max-w-4xl mx-auto px-3 sm:px-4 space-y-8 sm:space-y-12 md:space-y-16 py-6 sm:py-8 md:py-12">
@@ -50,9 +43,9 @@ function WelcomePage() {
           <Button 
             size="lg" 
             className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all"
-            onClick={createWallet}
+            onClick={login}
           >
-            Sign In
+            Sign In with Google
           </Button>
         </div>
       </div>
@@ -66,6 +59,8 @@ function WelcomePage() {
 }
 
 export default function Home() {
+  const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
+  
   const { data: wallet, isLoading: isLoadingWallet } = useQuery<Wallet | null>({
     queryKey: ["/api/wallet/primary"],
     queryFn: async () => {
@@ -77,12 +72,17 @@ export default function Home() {
         return null;
       }
     },
+    enabled: isAuthenticated,
   });
 
   const { data: transactions = [], isLoading: isLoadingTx } = useQuery<Transaction[]>({
     queryKey: [`/api/transactions/${wallet?.address}`],
-    enabled: !!wallet?.address,
+    enabled: !!wallet?.address && isAuthenticated,
   });
+
+  if (!isAuthenticated) {
+    return <WelcomePage />;
+  }
 
   if (isLoadingWallet || isLoadingTx) {
     return (
@@ -93,12 +93,39 @@ export default function Home() {
     );
   }
 
-  if (!wallet) {
-    return <WelcomePage />;
-  }
-
   return (
     <div className="container max-w-3xl mx-auto px-3 sm:px-4 space-y-6 sm:space-y-8 md:space-y-10 py-4">
+      {/* User Profile Section */}
+      <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <img 
+              src={user?.picture} 
+              alt={user?.name} 
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full"
+            />
+            <div>
+              <h2 className="font-semibold text-lg" style={{ color: 'var(--color-heading)' }}>
+                Welcome, {user?.given_name}!
+              </h2>
+              <p className="text-sm" style={{ color: 'var(--color-body)' }}>
+                {user?.email}
+              </p>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={logout}
+            disabled={isLoggingOut}
+            className="flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            {isLoggingOut ? "Signing out..." : "Sign Out"}
+          </Button>
+        </div>
+      </div>
+
       <div className="flex justify-center gap-2 sm:gap-4 mt-4 sm:mt-6">
         <Link href="/send">
           <Button className="btn-primary px-4 sm:px-6 py-4 sm:py-5 text-base sm:text-lg rounded-lg shadow-md hover:shadow-lg transition-all">
@@ -114,15 +141,19 @@ export default function Home() {
         </Link>
       </div>
 
-      <AddressCard 
-        address={wallet.address}
-        balance={wallet.lastBalance ? parseInt(wallet.lastBalance) : 0}
-      />
+      {wallet && (
+        <>
+          <AddressCard 
+            address={wallet.address}
+            balance={wallet.lastBalance ? parseInt(wallet.lastBalance) : 0}
+          />
 
-      <TransactionList 
-        transactions={transactions}
-        walletAddress={wallet.address}
-      />
+          <TransactionList 
+            transactions={transactions}
+            walletAddress={wallet.address}
+          />
+        </>
+      )}
     </div>
   );
 }
