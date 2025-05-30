@@ -23,8 +23,13 @@ export function setupAuth(app: express.Express) {
 
   app.get('/auth/google', async (req, res) => {
     try {
-      const redirectUri = `${req.protocol}://${req.get('host')}/auth/callback`;
-      oauth2Client.setCredentials({ refresh_token: null });
+      // Use the exact redirect URI that matches your Google Cloud Console configuration
+      const baseUrl = req.get('host')?.includes('replit.dev') 
+        ? `https://${req.get('host')}`
+        : `${req.protocol}://${req.get('host')}`;
+      const redirectUri = `${baseUrl}/auth/callback`;
+      
+      console.log('Generated redirect URI:', redirectUri);
       
       const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
@@ -49,8 +54,13 @@ export function setupAuth(app: express.Express) {
         return res.redirect('/?error=no_code');
       }
 
-      const redirectUri = `${req.protocol}://${req.get('host')}/auth/callback`;
-      oauth2Client.setCredentials({ refresh_token: null });
+      // Use the same redirect URI logic as in /auth/google
+      const baseUrl = req.get('host')?.includes('replit.dev') 
+        ? `https://${req.get('host')}`
+        : `${req.protocol}://${req.get('host')}`;
+      const redirectUri = `${baseUrl}/auth/callback`;
+      
+      console.log('Using redirect URI for token exchange:', redirectUri);
       
       // Set redirect URI properly
       const { OAuth2Client } = require('google-auth-library');
