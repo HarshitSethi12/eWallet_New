@@ -88,8 +88,9 @@ export function setupAuth(app: express.Express) {
     req.session.destroy((err) => {
       if (err) {
         console.error('Logout error:', err);
+        return res.status(500).json({ error: 'Logout failed' });
       }
-      res.redirect('/');
+      res.json({ success: true });
     });
   });
 

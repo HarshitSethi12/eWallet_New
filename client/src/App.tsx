@@ -45,7 +45,7 @@ function Navigation() {
         </div>
         
         <div className="flex-shrink-0">
-          {isAuthenticated && user ? (
+          {isAuthenticated && user && (
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 text-sm">
                 <img 
@@ -70,8 +70,6 @@ function Navigation() {
                 </span>
               </Button>
             </div>
-          ) : (
-            <div className="text-sm text-white/70">Not authenticated</div>
           )}
         </div>
       </div>
