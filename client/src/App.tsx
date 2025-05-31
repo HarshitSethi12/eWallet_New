@@ -42,32 +42,7 @@ function Navigation() {
           </Link>
         </div>
         
-        {isAuthenticated && user && (
-          <div className="absolute right-3 sm:right-4 flex items-center gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <img 
-                src={user.picture} 
-                alt={user.name} 
-                className="w-8 h-8 rounded-full border-2 border-white/20"
-              />
-              <span className="hidden sm:block font-medium text-white">
-                {user.given_name}
-              </span>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={logout}
-              disabled={isLoggingOut}
-              className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">
-                {isLoggingOut ? "Signing out..." : "Sign Out"}
-              </span>
-            </Button>
-          </div>
-        )}
+        
       </div>
     </nav>
   );
