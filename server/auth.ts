@@ -1,4 +1,3 @@
-
 import express from 'express';
 import session from 'express-session';
 import { oauth2Client, GOOGLE_CLIENT_ID } from './config/auth';
@@ -28,9 +27,9 @@ export function setupAuth(app: express.Express) {
         ? `https://${req.get('host')}`
         : `${req.protocol}://${req.get('host')}`;
       const redirectUri = `${baseUrl}/auth/callback`;
-      
+
       console.log('Generated redirect URI:', redirectUri);
-      
+
       const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: [
@@ -39,7 +38,7 @@ export function setupAuth(app: express.Express) {
         ],
         redirect_uri: redirectUri
       });
-      
+
       res.redirect(url);
     } catch (error) {
       console.error('Auth error:', error);
@@ -59,9 +58,9 @@ export function setupAuth(app: express.Express) {
         ? `https://${req.get('host')}`
         : `${req.protocol}://${req.get('host')}`;
       const redirectUri = `${baseUrl}/auth/callback`;
-      
+
       console.log('Using redirect URI for token exchange:', redirectUri);
-      
+
       // Set redirect URI properly
       const { OAuth2Client } = require('google-auth-library');
       const tempClient = new OAuth2Client(
@@ -69,14 +68,14 @@ export function setupAuth(app: express.Express) {
         process.env.GOOGLE_CLIENT_SECRET,
         redirectUri
       );
-      
+
       const { tokens } = await tempClient.getToken(code);
       oauth2Client.setCredentials(tokens);
-      
+
       const userInfo = await oauth2Client.request({
         url: 'https://www.googleapis.com/oauth2/v3/userinfo'
       });
-      
+
       req.session.user = userInfo.data;
       res.redirect('/?authenticated=true');
     } catch (error) {
@@ -102,3 +101,5 @@ export function setupAuth(app: express.Express) {
     }
   });
 }
+
+import crypto from 'crypto';
