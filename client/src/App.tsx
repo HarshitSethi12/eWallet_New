@@ -14,7 +14,7 @@ function Navigation() {
   console.log('Navigation render:', { isAuthenticated, user }); // Debug log
 
   return (
-    <nav className="border-b" style={{ backgroundColor: '#1e40af' }}>
+    <nav className="border-b" style={{ backgroundColor: 'var(--color-accent)' }}>
       <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 flex items-center justify-between text-white">
         <div className="flex-shrink-0">
           <Link href="/">
