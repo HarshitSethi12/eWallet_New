@@ -95,34 +95,15 @@ export default function Home() {
 
   return (
     <div className="container max-w-3xl mx-auto px-3 sm:px-4 space-y-6 sm:space-y-8 md:space-y-10 py-4">
-      {/* User Profile Section */}
+      {/* Welcome Message */}
       <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <img 
-              src={user?.picture} 
-              alt={user?.name} 
-              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full"
-            />
-            <div>
-              <h2 className="font-semibold text-lg" style={{ color: 'var(--color-heading)' }}>
-                Welcome, {user?.given_name}!
-              </h2>
-              <p className="text-sm" style={{ color: 'var(--color-body)' }}>
-                {user?.email}
-              </p>
-            </div>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={logout}
-            disabled={isLoggingOut}
-            className="flex items-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            {isLoggingOut ? "Signing out..." : "Sign Out"}
-          </Button>
+        <div className="text-center">
+          <h2 className="font-semibold text-xl sm:text-2xl" style={{ color: 'var(--color-heading)' }}>
+            Welcome to BitWallet, {user?.given_name}!
+          </h2>
+          <p className="text-sm mt-2" style={{ color: 'var(--color-body)' }}>
+            Manage your cryptocurrency securely and easily
+          </p>
         </div>
       </div>
 
