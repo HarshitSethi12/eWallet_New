@@ -62,7 +62,6 @@ export function setupAuth(app: express.Express) {
       console.log('Using redirect URI for token exchange:', redirectUri);
 
       // Set redirect URI properly
-      const { OAuth2Client } = require('google-auth-library');
       const tempClient = new OAuth2Client(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
@@ -104,3 +103,4 @@ export function setupAuth(app: express.Express) {
 }
 
 import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
