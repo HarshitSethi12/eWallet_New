@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,9 +24,11 @@ export default function AdminSessions() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const [error, setError] = useState("");
 
   const authenticate = async () => {
-    if (!adminKey) {
+    if (!adminKey.trim()) {
+      setError("Please enter an admin key");
       toast({
         title: "Error",
         description: "Please enter admin key",
@@ -35,6 +36,49 @@ export default function AdminSessions() {
       });
       return;
     }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/admin/sessions", {
+        method: "GET",
+        headers: {
+          "x-admin-key": adminKey,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsAuthenticated(true);
+        setSessions(data);
+        toast({
+          title: "Success",
+          description: "Admin access granted",
+        });
+      } else {
+        setError("Invalid admin key");
+        toast({
+          title: "Error",
+          description: "Invalid admin key",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Authentication error:", error);
+      setError("Failed to authenticate. Please check your connection.");
+      toast({
+        title: "Error",
+        description: "Failed to authenticate",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSessions = async () => {
+    if (!isAuthenticated) return;
 
     setLoading(true);
     try {
@@ -47,22 +91,21 @@ export default function AdminSessions() {
       if (response.ok) {
         const data = await response.json();
         setSessions(data);
-        setIsAuthenticated(true);
-        toast({
-          title: "Success",
-          description: "Admin access granted",
-        });
       } else {
+        console.error("Failed to fetch sessions");
+        setError("Failed to fetch sessions");
         toast({
           title: "Error",
-          description: "Invalid admin key",
+          description: "Failed to fetch sessions",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error("Error fetching sessions:", error);
+      setError("Failed to fetch sessions");
       toast({
         title: "Error",
-        description: "Failed to authenticate",
+        description: "Failed to fetch sessions",
         variant: "destructive",
       });
     } finally {
@@ -110,6 +153,9 @@ export default function AdminSessions() {
             <p className="text-sm text-gray-500 text-center">
               For demo purposes, use: <code className="bg-gray-100 px-1 rounded">admin123</code>
             </p>
+              {error && (
+                  <p className="text-red-500 text-sm mt-1 text-center">{error}</p>
+              )}
           </CardContent>
         </Card>
       </div>
@@ -136,7 +182,7 @@ export default function AdminSessions() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -150,7 +196,7 @@ export default function AdminSessions() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -166,7 +212,7 @@ export default function AdminSessions() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
