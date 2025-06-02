@@ -7,6 +7,7 @@ import { LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
+import AdminSessions from "@/pages/admin-sessions";
 
 function Navigation() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/send" component={Home} />
       <Route path="/receive" component={Home} />
+      <Route path="/admin/sessions" component={AdminSessions} />
       <Route path="/signup" component={() => <div>Sign Up Page</div>} /> {/* Placeholder signup page */}
       <Route component={NotFound} />
     </Switch>

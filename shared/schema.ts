@@ -35,9 +35,23 @@ export const contacts = pgTable("contacts", {
   address: text("address").notNull().unique(),
 });
 
+export const userSessions = pgTable("user_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  email: text("email").notNull(),
+  name: text("name"),
+  loginTime: timestamp("login_time").defaultNow(),
+  logoutTime: timestamp("logout_time"),
+  duration: integer("duration"), // duration in minutes
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  sessionId: text("session_id"),
+});
+
 export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true });
 export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true });
 export const insertContactSchema = createInsertSchema(contacts).omit({ id: true });
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({ id: true });
 
 export type Wallet = typeof wallets.$inferSelect;
 export type InsertWallet = z.infer<typeof insertWalletSchema>;
@@ -45,3 +59,5 @@ export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Contact = typeof contacts.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;

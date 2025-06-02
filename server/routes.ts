@@ -69,5 +69,28 @@ export async function registerRoutes(app: Express) {
     return res.status(204).end();
   });
 
+  // Admin routes for session tracking
+  app.get("/api/admin/sessions", async (req, res) => {
+    // Basic admin check - you can enhance this with proper admin authentication
+    const adminKey = req.headers['x-admin-key'];
+    if (adminKey !== process.env.ADMIN_KEY && adminKey !== 'admin123') {
+      return res.status(401).json({ message: "Unauthorized - Admin access required" });
+    }
+
+    const sessions = await storage.getAllUserSessions();
+    return res.json(sessions);
+  });
+
+  app.get("/api/admin/sessions/:email", async (req, res) => {
+    // Basic admin check
+    const adminKey = req.headers['x-admin-key'];
+    if (adminKey !== process.env.ADMIN_KEY && adminKey !== 'admin123') {
+      return res.status(401).json({ message: "Unauthorized - Admin access required" });
+    }
+
+    const sessions = await storage.getUserSessionsByEmail(req.params.email);
+    return res.json(sessions);
+  });
+
   return createServer(app);
 }

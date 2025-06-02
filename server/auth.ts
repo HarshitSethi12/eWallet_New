@@ -1,11 +1,13 @@
 import express from 'express';
 import session from 'express-session';
 import { oauth2Client, GOOGLE_CLIENT_ID } from './config/auth';
+import { storage } from './storage';
 
 declare module 'express-session' {
   interface SessionData {
     user?: any;
     state?: string;
+    sessionDbId?: number;
   }
 }
 
@@ -76,6 +78,20 @@ export function setupAuth(app: express.Express) {
       });
 
       req.session.user = userInfo.data;
+
+      // Track login session
+      const sessionData = {
+        userId: null, // We'll need to create/find user first
+        email: userInfo.data.email,
+        name: userInfo.data.name,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        sessionId: req.sessionID,
+      };
+
+      const sessionDbId = await storage.createUserSession(sessionData);
+      req.session.sessionDbId = sessionDbId;
+
       res.redirect('/?authenticated=true');
     } catch (error) {
       console.error('Callback error:', error);
@@ -83,7 +99,14 @@ export function setupAuth(app: express.Express) {
     }
   });
 
-  app.get('/auth/logout', (req, res) => {
+  app.get('/auth/logout', async (req, res) => {
+    const sessionDbId = req.session.sessionDbId;
+    
+    // Update session end time if we have a tracked session
+    if (sessionDbId) {
+      await storage.endUserSession(sessionDbId);
+    }
+
     req.session.destroy((err) => {
       if (err) {
         console.error('Logout error:', err);
