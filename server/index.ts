@@ -72,7 +72,10 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
-    log(`App is accessible at https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
+    log(`🚀 Server started successfully!`);
+    log(`📍 Listening on port ${port} (0.0.0.0:${port})`);
+    log(`🌐 App is accessible at https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
+    log(`🌐 Direct URL: https://workspace.harshitsethi1.repl.co`);
+    log(`⚙️  Environment: ${app.get("env")}`);
   });
 })();
