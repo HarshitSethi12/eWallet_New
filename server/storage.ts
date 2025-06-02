@@ -12,6 +12,7 @@ import {
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { desc } from "drizzle-orm";
+import * as schema from "@shared/schema"; // Import the schema
 
 export interface IStorage {
   // Wallet operations
@@ -28,6 +29,19 @@ export interface IStorage {
   getContacts(): Promise<Contact[]>;
   createContact(contact: InsertContact): Promise<Contact>;
   deleteContact(id: number): Promise<void>;
+
+  // Session operations
+  createUserSession(sessionData: {
+    userId?: number | null;
+    email: string;
+    name: string;
+    ipAddress: string;
+    userAgent: string;
+    sessionId: string;
+  }): Promise<number>;
+  endUserSession(sessionId: number): Promise<void>;
+  getAllUserSessions(): Promise<any[]>;
+  getUserSessionsByEmail(email: string): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -102,6 +116,47 @@ export class DatabaseStorage implements IStorage {
 
   async deleteContact(id: number): Promise<void> {
     await db.delete(contacts).where(eq(contacts.id, id));
+  }
+
+  async createUserSession(sessionData: {
+    userId?: number | null;
+    email: string;
+    name: string;
+    ipAddress: string;
+    userAgent: string;
+    sessionId: string;
+  }): Promise<number> {
+    const result = await db.insert(schema.userSessions).values({
+      ...sessionData,
+      loginTime: new Date(),
+    }).returning();
+    return result[0].id;
+  }
+
+  async endUserSession(sessionId: number): Promise<void> {
+    const session = await db.select().from(schema.userSessions).where(eq(schema.userSessions.id, sessionId));
+    if (session[0]) {
+      const loginTime = new Date(session[0].loginTime);
+      const logoutTime = new Date();
+      const duration = Math.floor((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)); // duration in minutes
+
+      await db.update(schema.userSessions)
+        .set({ 
+          logoutTime,
+          duration 
+        })
+        .where(eq(schema.userSessions.id, sessionId));
+    }
+  }
+
+  async getAllUserSessions(): Promise<any[]> {
+    return await db.select().from(schema.userSessions).orderBy(desc(schema.userSessions.loginTime));
+  }
+
+  async getUserSessionsByEmail(email: string): Promise<any[]> {
+    return await db.select().from(schema.userSessions)
+      .where(eq(schema.userSessions.email, email))
+      .orderBy(desc(schema.userSessions.loginTime));
   }
 }
 
