@@ -94,7 +94,9 @@ export function setupAuth(app: express.Express) {
         sessionId: req.sessionID,
       };
 
+      console.log('Creating session with data:', sessionData);
       const sessionDbId = await storage.createUserSession(sessionData);
+      console.log('Session created with ID:', sessionDbId);
       req.session.sessionDbId = sessionDbId;
 
       res.redirect('/?authenticated=true');

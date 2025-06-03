@@ -53,9 +53,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/admin/sessions" component={AdminSessions} />
       <Route path="/send" component={Home} />
       <Route path="/receive" component={Home} />
-      <Route path="/admin/sessions" component={AdminSessions} />
       <Route path="/signup" component={() => <div>Sign Up Page</div>} /> {/* Placeholder signup page */}
       <Route component={NotFound} />
     </Switch>
