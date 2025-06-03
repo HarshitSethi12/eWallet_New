@@ -1,6 +1,6 @@
 import express from 'express';
 import session from 'express-session';
-import { oauth2Client, GOOGLE_CLIENT_ID } from './config/auth';
+import { OAuth2Client } from 'google-auth-library';
 import { storage } from './storage';
 
 declare module 'express-session' {
@@ -24,7 +24,12 @@ export function setupAuth(app: express.Express) {
 
   app.get('/auth/google', async (req, res) => {
     try {
-      // Use the exact redirect URI that matches your Google Cloud Console configuration
+      // Create OAuth client with proper configuration
+      const oauth2Client = new OAuth2Client(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET
+      );
+
       const baseUrl = req.get('host')?.includes('replit.dev') 
         ? `https://${req.get('host')}`
         : `${req.protocol}://${req.get('host')}`;
@@ -64,13 +69,13 @@ export function setupAuth(app: express.Express) {
       console.log('Using redirect URI for token exchange:', redirectUri);
 
       // Set redirect URI properly
-      const tempClient = new OAuth2Client(
+      const oauth2Client = new OAuth2Client(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
         redirectUri
       );
 
-      const { tokens } = await tempClient.getToken(code);
+      const { tokens } = await oauth2Client.getToken(code);
       oauth2Client.setCredentials(tokens);
 
       const userInfo = await oauth2Client.request({
@@ -125,5 +130,3 @@ export function setupAuth(app: express.Express) {
   });
 }
 
-import crypto from 'crypto';
-import { OAuth2Client } from 'google-auth-library';

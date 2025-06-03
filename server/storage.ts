@@ -5,14 +5,15 @@ import {
   type InsertTransaction, 
   type Contact, 
   type InsertContact,
+  type UserSession,
+  type InsertUserSession,
   wallets,
   transactions,
-  contacts
+  contacts,
+  userSessions
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
-import { wallets, transactions, contacts, userSessions } from "@shared/schema";
-import type { Wallet, InsertWallet, Transaction, InsertTransaction, Contact, InsertContact } from "@shared/schema";
 
 export interface IStorage {
   // Wallet operations
