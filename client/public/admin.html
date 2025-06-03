@@ -1,0 +1,84 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .admin-form { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .sessions-table { width: 100%; border-collapse: collapse; }
+        .sessions-table th, .sessions-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .sessions-table th { background-color: #f2f2f2; }
+        .error { color: red; padding: 10px; background: #ffe6e6; border-radius: 4px; }
+        .success { color: green; padding: 10px; background: #e6ffe6; border-radius: 4px; }
+        input, button { padding: 10px; margin: 5px; }
+        button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Admin Panel - Session Management</h1>
+    
+    <div class="admin-form">
+        <h3>Admin Access</h3>
+        <input type="password" id="adminKey" placeholder="Enter admin key" />
+        <button onclick="loadSessions()">Load Sessions</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        async function loadSessions() {
+            const adminKey = document.getElementById('adminKey').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!adminKey) {
+                resultDiv.innerHTML = '<div class="error">Please enter admin key</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/sessions', {
+                    headers: {
+                        'X-Admin-Key': adminKey
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const sessions = await response.json();
+                
+                let html = '<div class="success">Sessions loaded successfully!</div>';
+                html += '<h3>Session Data</h3>';
+                
+                if (sessions.length === 0) {
+                    html += '<p>No sessions found.</p>';
+                } else {
+                    html += '<table class="sessions-table">';
+                    html += '<tr><th>ID</th><th>Name</th><th>Email</th><th>Login Time</th><th>Logout Time</th><th>Duration</th><th>IP</th></tr>';
+                    
+                    sessions.forEach(session => {
+                        html += `<tr>
+                            <td>${session.id}</td>
+                            <td>${session.name || 'N/A'}</td>
+                            <td>${session.email}</td>
+                            <td>${new Date(session.loginTime).toLocaleString()}</td>
+                            <td>${session.logoutTime ? new Date(session.logoutTime).toLocaleString() : 'Active'}</td>
+                            <td>${session.duration || 'N/A'} min</td>
+                            <td>${session.ipAddress || 'N/A'}</td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                }
+                
+                resultDiv.innerHTML = html;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

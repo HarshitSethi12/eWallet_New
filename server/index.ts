@@ -50,9 +50,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
-
-  // Add admin routes for session management BEFORE static serving
+  // Add admin routes for session management FIRST
   app.get("/api/admin/sessions", async (req, res) => {
     // Basic admin check
     const adminKey = req.headers['x-admin-key'];
@@ -85,12 +83,24 @@ app.use((req, res, next) => {
     }
   });
 
+  const server = await registerRoutes(app);
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
     throw err;
+  });
+
+  // Add health check route
+  app.get("/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Add a catch-all API route for debugging
+  app.get("/api/*", (req, res) => {
+    res.status(404).json({ message: `API route not found: ${req.path}` });
   });
 
   // importantly only setup vite in development and after
