@@ -98,6 +98,20 @@ app.use((req, res, next) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // Add test endpoint
+  app.get("/test", (req, res) => {
+    res.send(`
+      <html>
+        <body>
+          <h1>Server is running!</h1>
+          <p>Time: ${new Date().toISOString()}</p>
+          <p>Environment: ${app.get("env")}</p>
+          <p>Host: ${req.get('host')}</p>
+        </body>
+      </html>
+    `);
+  });
+
   // Add a catch-all API route for debugging
   app.get("/api/*", (req, res) => {
     res.status(404).json({ message: `API route not found: ${req.path}` });
