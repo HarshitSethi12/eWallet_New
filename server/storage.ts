@@ -10,9 +10,9 @@ import {
   contacts
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
-import { desc } from "drizzle-orm";
-import * as schema from "@shared/schema"; // Import the schema
+import { eq, desc } from "drizzle-orm";
+import { wallets, transactions, contacts, userSessions } from "@shared/schema";
+import type { Wallet, InsertWallet, Transaction, InsertTransaction, Contact, InsertContact } from "@shared/schema";
 
 export interface IStorage {
   // Wallet operations
@@ -126,7 +126,7 @@ export class DatabaseStorage implements IStorage {
     userAgent: string;
     sessionId: string;
   }): Promise<number> {
-    const result = await db.insert(schema.userSessions).values({
+    const result = await db.insert(userSessions).values({
       ...sessionData,
       loginTime: new Date(),
     }).returning();
@@ -134,29 +134,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async endUserSession(sessionId: number): Promise<void> {
-    const session = await db.select().from(schema.userSessions).where(eq(schema.userSessions.id, sessionId));
+    const session = await db.select().from(userSessions).where(eq(userSessions.id, sessionId));
     if (session[0]) {
       const loginTime = new Date(session[0].loginTime);
       const logoutTime = new Date();
       const duration = Math.floor((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)); // duration in minutes
 
-      await db.update(schema.userSessions)
+      await db.update(userSessions)
         .set({ 
           logoutTime,
           duration 
         })
-        .where(eq(schema.userSessions.id, sessionId));
+        .where(eq(userSessions.id, sessionId));
     }
   }
 
   async getAllUserSessions(): Promise<any[]> {
-    return await db.select().from(schema.userSessions).orderBy(desc(schema.userSessions.loginTime));
+    return await db.select().from(userSessions).orderBy(desc(userSessions.loginTime));
   }
 
   async getUserSessionsByEmail(email: string): Promise<any[]> {
-    return await db.select().from(schema.userSessions)
-      .where(eq(schema.userSessions.email, email))
-      .orderBy(desc(schema.userSessions.loginTime));
+    return await db.select().from(userSessions)
+      .where(eq(userSessions.email, email))
+      .orderBy(desc(userSessions.loginTime));
   }
 }
 
