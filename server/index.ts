@@ -140,12 +140,16 @@ app.use((req, res, next) => {
 
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client
-  const port = 5000;
+  const port = process.env.PORT || 5000;
   server.listen(port, "0.0.0.0", () => {
     log(`🚀 Server started successfully!`);
     log(`📍 Listening on port ${port} (0.0.0.0:${port})`);
     log(`🌐 App is accessible at https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
     log(`🌐 Direct URL: https://workspace.harshitsethi1.repl.co`);
     log(`⚙️  Environment: ${app.get("env")}`);
+    
+    // Log network interfaces for debugging
+    log(`🔍 Process ID: ${process.pid}`);
+    log(`🔍 Node version: ${process.version}`);
   });
 })();
