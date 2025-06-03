@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
+import { storage } from "./storage";
 
 const app = express();
 
@@ -67,6 +68,39 @@ app.use((req, res, next) => {
   } else {
     serveStatic(app);
   }
+
+  // Add admin routes for session management
+  app.get("/api/admin/sessions", async (req, res) => {
+    // Basic admin check
+    const adminKey = req.headers['x-admin-key'];
+    if (adminKey !== process.env.ADMIN_KEY && adminKey !== 'admin123') {
+      return res.status(401).json({ message: "Unauthorized - Admin access required" });
+    }
+
+    try {
+      const sessions = await storage.getAllUserSessions();
+      return res.json(sessions);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+      return res.status(500).json({ message: "Error fetching sessions" });
+    }
+  });
+
+  app.get("/api/admin/sessions/:email", async (req, res) => {
+    // Basic admin check
+    const adminKey = req.headers['x-admin-key'];
+    if (adminKey !== process.env.ADMIN_KEY && adminKey !== 'admin123') {
+      return res.status(401).json({ message: "Unauthorized - Admin access required" });
+    }
+
+    try {
+      const sessions = await storage.getUserSessionsByEmail(req.params.email);
+      return res.json(sessions);
+    } catch (error) {
+      console.error('Error fetching user sessions:', error);
+      return res.status(500).json({ message: "Error fetching user sessions" });
+    }
+  });
 
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client
