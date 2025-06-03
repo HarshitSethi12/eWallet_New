@@ -107,9 +107,21 @@ app.use((req, res, next) => {
           <p>Time: ${new Date().toISOString()}</p>
           <p>Environment: ${app.get("env")}</p>
           <p>Host: ${req.get('host')}</p>
+          <p>Port: 5000</p>
+          <p>Process: ${process.pid}</p>
         </body>
       </html>
     `);
+  });
+
+  // Add ping endpoint
+  app.get("/ping", (req, res) => {
+    res.json({ 
+      status: "pong", 
+      timestamp: new Date().toISOString(),
+      host: req.get('host'),
+      ip: req.ip
+    });
   });
 
   // Add a catch-all API route for debugging
@@ -129,11 +141,7 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, "0.0.0.0", () => {
     log(`🚀 Server started successfully!`);
     log(`📍 Listening on port ${port} (0.0.0.0:${port})`);
     log(`🌐 App is accessible at https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
