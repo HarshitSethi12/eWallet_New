@@ -49,7 +49,7 @@ function WelcomePage() {
           </Button>
         </div>
       </div>
-      
+
       {/* Decorative element */}
       <div className="relative">
         <div className="absolute -z-10 top-0 inset-x-0 h-64 bg-gradient-to-b from-[#F2FFF5] to-transparent opacity-70 blur-2xl"></div>
@@ -79,14 +79,9 @@ function AuthenticatedWelcome() {
             color: '#0A3665',
             textShadow: '1px 1px 2px rgba(48, 209, 88, 0.1)'
           }}>
-            <span className="block sm:inline">Your Go-to</span>{" "}
-            <span className="block sm:inline" style={{ color: '#1E7B43' }}>Cryptocurrency</span>{" "}
-            <span className="block sm:inline">Wallet</span>
+            Welcome {user?.name}!
           </span>
         </h1>
-        <p className="text-lg md:text-xl font-medium max-w-2xl mx-auto px-4 animated-gradient-text">
-          Secure Cryptocurrency Management
-        </p>
         <div className="flex flex-col items-center gap-4 mt-6 sm:mt-8 md:mt-10">
           <img 
             src={user?.picture} 
@@ -114,7 +109,7 @@ function AuthenticatedWelcome() {
           </div>
         </div>
       </div>
-      
+
       {/* Decorative element */}
       <div className="relative">
         <div className="absolute -z-10 top-0 inset-x-0 h-64 bg-gradient-to-b from-[#F2FFF5] to-transparent opacity-70 blur-2xl"></div>
@@ -125,7 +120,7 @@ function AuthenticatedWelcome() {
 
 export default function Home() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
-  
+
   const { data: wallet, isLoading: isLoadingWallet } = useQuery<Wallet | null>({
     queryKey: ["/api/wallet/primary"],
     queryFn: async () => {
@@ -151,5 +146,5 @@ export default function Home() {
 
   // Show the authenticated welcome page instead of the wallet interface
   return <AuthenticatedWelcome />;
-      
+
 }
