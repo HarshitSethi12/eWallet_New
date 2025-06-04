@@ -43,7 +43,8 @@ export function setupAuth(app: express.Express) {
           'https://www.googleapis.com/auth/userinfo.profile',
           'https://www.googleapis.com/auth/userinfo.email'
         ],
-        redirect_uri: redirectUri
+        redirect_uri: redirectUri,
+        prompt: 'select_account'  // Force account selection every time
       });
 
       res.redirect(url);
