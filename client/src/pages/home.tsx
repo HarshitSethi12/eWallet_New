@@ -75,11 +75,11 @@ function AuthenticatedWelcome() {
           </div>
         </div>
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight px-2 leading-tight relative">
-          <span className="relative z-10" style={{ 
+          <span className="relative z-10 italic" style={{ 
             color: '#0A3665',
             textShadow: '1px 1px 2px rgba(48, 209, 88, 0.1)'
           }}>
-            Welcome {user?.name}!
+            Welcome {user?.name?.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')}..
           </span>
         </h1>
         <div className="flex flex-col items-center gap-4 mt-6 sm:mt-8 md:mt-10">
