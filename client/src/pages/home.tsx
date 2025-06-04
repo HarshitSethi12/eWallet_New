@@ -93,15 +93,25 @@ function AuthenticatedWelcome() {
             alt={user?.name} 
             className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-white shadow-lg"
           />
-          <Button 
-            size="lg" 
-            className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-            onClick={logout}
-            disabled={isLoggingOut}
-          >
-            <LogOut className="h-5 w-5" />
-            {isLoggingOut ? "Signing out..." : "Sign Out"}
-          </Button>
+          <div className="flex flex-col gap-3">
+            <Button 
+              size="lg" 
+              className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+              onClick={() => window.location.href = '/dashboard'}
+            >
+              <WalletIcon className="h-5 w-5" />
+              Dashboard
+            </Button>
+            <Button 
+              size="lg" 
+              className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+              onClick={logout}
+              disabled={isLoggingOut}
+            >
+              <LogOut className="h-5 w-5" />
+              {isLoggingOut ? "Signing out..." : "Sign Out"}
+            </Button>
+          </div>
         </div>
       </div>
       

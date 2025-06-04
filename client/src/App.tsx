@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import AdminSessions from "@/pages/admin-sessions";
+import Dashboard from "@/pages/dashboard";
 
 function Navigation() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
@@ -53,6 +54,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/admin/sessions" component={AdminSessions} />
       <Route path="/send" component={Home} />
       <Route path="/receive" component={Home} />
