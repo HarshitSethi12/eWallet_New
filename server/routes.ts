@@ -75,7 +75,7 @@ export async function registerRoutes(app: Express) {
     const response = await fetch(
       "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,cardano,polkadot,chainlink&order=market_cap_desc&per_page=5&page=1&sparkline=false"
     );
-    
+
     if (!response.ok) {
       // Fallback mock data if API fails
       const mockData = [
@@ -127,12 +127,12 @@ export async function registerRoutes(app: Express) {
       ];
       return res.json(mockData);
     }
-    
+
     const data = await response.json();
     res.json(data);
   } catch (error) {
     console.error("Failed to fetch crypto prices:", error);
-    
+
     // Return mock data as fallback
     const mockData = [
       {
