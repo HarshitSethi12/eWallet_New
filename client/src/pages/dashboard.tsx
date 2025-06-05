@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
 import { useAuth } from "@/hooks/use-auth";
+import { PriceTicker } from "@/components/price-ticker";
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
@@ -127,6 +128,11 @@ export default function Dashboard() {
                 Receive
               </Button>
             </Link>
+          </div>
+
+          {/* Price Ticker Section */}
+          <div className="space-y-4">
+            <PriceTicker />
           </div>
 
           <div className="space-y-4">
