@@ -13,9 +13,10 @@ export async function registerRoutes(app: Express) {
     if (!wallet) {
       // Create a default wallet for demo
       wallet = await storage.createWallet({
+        chain: "BTC",
         address: defaultAddress,
-        balance: 1000000, // 1 million satoshis for demo
-        privateKey: "5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ"
+        encryptedPrivateKey: "5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ",
+        lastBalance: "1000000" // 1 million satoshis for demo
       });
     }
     
