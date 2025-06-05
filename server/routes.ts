@@ -69,12 +69,8 @@ export async function registerRoutes(app: Express) {
     return res.status(204).end();
   });
 
-  return createServer(app);
-}
-
-
-// Crypto prices endpoint
-app.get("/api/crypto-prices", async (req, res) => {
+  // Crypto prices endpoint
+  app.get("/api/crypto-prices", async (req, res) => {
   try {
     const response = await fetch(
       "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,cardano,polkadot,chainlink&order=market_cap_desc&per_page=5&page=1&sparkline=false"
@@ -187,4 +183,7 @@ app.get("/api/crypto-prices", async (req, res) => {
     ];
     res.json(mockData);
   }
-});
+  });
+
+  return createServer(app);
+}
