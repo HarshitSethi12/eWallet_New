@@ -5,6 +5,23 @@ import { insertWalletSchema, insertTransactionSchema, insertContactSchema } from
 
 export async function registerRoutes(app: Express) {
   // Wallet routes
+  app.get("/api/wallet/primary", async (req, res) => {
+    // For demo purposes, we'll create a default wallet if none exists
+    const defaultAddress = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
+    let wallet = await storage.getWallet(defaultAddress);
+    
+    if (!wallet) {
+      // Create a default wallet for demo
+      wallet = await storage.createWallet({
+        address: defaultAddress,
+        balance: 1000000, // 1 million satoshis for demo
+        privateKey: "5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ"
+      });
+    }
+    
+    return res.json(wallet);
+  });
+
   app.get("/api/wallet/:address", async (req, res) => {
     const wallet = await storage.getWallet(req.params.address);
     if (!wallet) return res.status(404).json({ message: "Wallet not found" });
