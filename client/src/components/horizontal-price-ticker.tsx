@@ -120,7 +120,7 @@ export function HorizontalPriceTicker() {
       {/* Price ticker content */}
       <div
         ref={scrollRef}
-        className="flex items-center gap-8 overflow-x-auto scrollbar-hide px-8 py-6"
+        className="flex items-center gap-12 overflow-x-auto scrollbar-hide px-12 py-8"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         onScroll={updateScrollButtons}
       >
@@ -129,10 +129,10 @@ export function HorizontalPriceTicker() {
           const colors = cryptoColors[crypto.symbol.toLowerCase()] || { primary: "#6B7280", secondary: "#9CA3AF" };
           
           return (
-            <div key={crypto.id} className="flex flex-col items-center min-w-[140px] hover:transform hover:scale-105 transition-transform cursor-pointer">
+            <div key={crypto.id} className="flex flex-col items-center min-w-[160px] max-w-[160px] p-4 hover:transform hover:scale-105 transition-transform cursor-pointer">
               {/* Coin Icon */}
               <div 
-                className="w-12 h-12 rounded-full flex items-center justify-center shadow-md mb-2 relative"
+                className="w-14 h-14 rounded-full flex items-center justify-center shadow-md mb-3 relative"
                 style={{ 
                   background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` 
                 }}
@@ -144,12 +144,12 @@ export function HorizontalPriceTicker() {
               </div>
               
               {/* Coin Symbol */}
-              <p className="text-xs font-medium text-gray-600 mb-1 uppercase tracking-wide">
+              <p className="text-xs font-medium text-gray-600 mb-2 uppercase tracking-wide">
                 {crypto.symbol}
               </p>
               
               {/* Price */}
-              <p className="text-lg font-bold text-gray-900 mb-1">
+              <p className="text-lg font-bold text-gray-900 mb-2 text-center">
                 ${crypto.current_price.toLocaleString('en-US', { 
                   minimumFractionDigits: 2, 
                   maximumFractionDigits: 2 
