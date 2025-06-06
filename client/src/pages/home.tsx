@@ -58,7 +58,6 @@ function WelcomePage() {
         </h2>
         <HorizontalPriceTicker />
       </div>
-      </div>
 
       {/* Decorative element */}
       <div className="relative">
