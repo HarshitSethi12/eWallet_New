@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface CryptoPriceData {
   id: string;
@@ -34,30 +34,41 @@ export function HorizontalPriceTicker() {
   const { data: prices, isLoading, error } = useQuery<CryptoPriceData[]>({
     queryKey: ["crypto-prices"],
     queryFn: async () => {
-      const response = await fetch("/api/crypto-prices");
-      if (!response.ok) throw new Error("Failed to fetch prices");
-      return response.json();
+      try {
+        const response = await fetch("/api/crypto-prices");
+        if (!response.ok) throw new Error("Failed to fetch prices");
+        return response.json();
+      } catch (error) {
+        console.error("Error fetching crypto prices:", error);
+        throw error;
+      }
     },
     refetchInterval: 30000,
+    retry: 3,
+    retryDelay: 1000,
   });
 
-  const scroll = (direction: 'left' | 'right') => {
+  const updateScrollButtons = () => {
     if (scrollRef.current) {
-      const scrollAmount = 300;
-      const newScrollLeft = scrollRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
-      scrollRef.current.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
-      
-      setTimeout(() => {
-        if (scrollRef.current) {
-          setCanScrollLeft(scrollRef.current.scrollLeft > 0);
-          setCanScrollRight(
-            scrollRef.current.scrollLeft < 
-            scrollRef.current.scrollWidth - scrollRef.current.clientWidth
-          );
-        }
-      }, 300);
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
     }
   };
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (!scrollRef.current) return;
+    
+    const scrollAmount = 300;
+    const newScrollLeft = scrollRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+    scrollRef.current.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
+    
+    setTimeout(updateScrollButtons, 300);
+  };
+
+  useEffect(() => {
+    updateScrollButtons();
+  }, [prices]);
 
   if (isLoading) {
     return (
@@ -111,6 +122,7 @@ export function HorizontalPriceTicker() {
         ref={scrollRef}
         className="flex items-center gap-8 overflow-x-auto scrollbar-hide px-8 py-6"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        onScroll={updateScrollButtons}
       >
         {prices?.map((crypto) => {
           const isPositive = crypto.price_change_percentage_24h > 0;
