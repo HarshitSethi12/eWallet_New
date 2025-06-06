@@ -10,6 +10,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide scrollbar for price ticker */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Fresh Green Theme */
 :root {
   --color-primary: #34D399;    /* Bright mint green for primary actions */
