@@ -101,9 +101,9 @@ export function HorizontalPriceTicker() {
       {canScrollLeft && (
         <button
           onClick={() => scroll('left')}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50 transition-colors"
+          className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-gray-50 transition-colors"
         >
-          <ChevronLeft className="h-4 w-4 text-gray-600" />
+          <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
         </button>
       )}
 
@@ -111,16 +111,16 @@ export function HorizontalPriceTicker() {
       {canScrollRight && (
         <button
           onClick={() => scroll('right')}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50 transition-colors"
+          className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-gray-50 transition-colors"
         >
-          <ChevronRight className="h-4 w-4 text-gray-600" />
+          <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
         </button>
       )}
 
       {/* Price ticker content */}
       <div
         ref={scrollRef}
-        className="flex items-center gap-12 overflow-x-auto scrollbar-hide px-12 py-8"
+        className="flex items-center gap-4 sm:gap-8 lg:gap-12 overflow-x-auto scrollbar-hide px-4 sm:px-8 lg:px-12 py-4 sm:py-6 lg:py-8"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         onScroll={updateScrollButtons}
       >
@@ -129,27 +129,27 @@ export function HorizontalPriceTicker() {
           const colors = cryptoColors[crypto.symbol.toLowerCase()] || { primary: "#6B7280", secondary: "#9CA3AF" };
           
           return (
-            <div key={crypto.id} className="flex flex-col items-center min-w-[160px] max-w-[160px] p-4 hover:transform hover:scale-105 transition-transform cursor-pointer">
+            <div key={crypto.id} className="flex flex-col items-center min-w-[120px] max-w-[120px] sm:min-w-[140px] sm:max-w-[140px] lg:min-w-[160px] lg:max-w-[160px] p-2 sm:p-3 lg:p-4 hover:transform hover:scale-105 transition-transform cursor-pointer">
               {/* Coin Icon */}
               <div 
-                className="w-14 h-14 rounded-full flex items-center justify-center shadow-md mb-3 relative"
+                className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center shadow-md mb-2 sm:mb-3 relative"
                 style={{ 
                   background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` 
                 }}
               >
-                <span className="text-white font-bold text-sm">
+                <span className="text-white font-bold text-xs sm:text-sm">
                   {crypto.symbol.toUpperCase().slice(0, 3)}
                 </span>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
+                <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full border-2 border-white"></div>
               </div>
               
               {/* Coin Symbol */}
-              <p className="text-xs font-medium text-gray-600 mb-2 uppercase tracking-wide">
+              <p className="text-xs font-medium text-gray-600 mb-1 sm:mb-2 uppercase tracking-wide">
                 {crypto.symbol}
               </p>
               
               {/* Price */}
-              <p className="text-lg font-bold text-gray-900 mb-2 text-center">
+              <p className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 mb-1 sm:mb-2 text-center">
                 ${crypto.current_price.toLocaleString('en-US', { 
                   minimumFractionDigits: 2, 
                   maximumFractionDigits: 2 
@@ -157,7 +157,7 @@ export function HorizontalPriceTicker() {
               </p>
               
               {/* Percentage Change */}
-              <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+              <div className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium ${
                 isPositive 
                   ? 'bg-green-100 text-green-700' 
                   : 'bg-red-100 text-red-700'
@@ -170,7 +170,7 @@ export function HorizontalPriceTicker() {
       </div>
       
       {/* Bottom info bar */}
-      <div className="bg-gray-50 px-6 py-3 border-t border-gray-100">
+      <div className="bg-gray-50 px-4 sm:px-6 py-2 sm:py-3 border-t border-gray-100">
         <p className="text-xs text-gray-500 text-center">
           Live market data • Updates every 30 seconds
         </p>
