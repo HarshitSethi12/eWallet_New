@@ -91,7 +91,7 @@ export async function registerRoutes(app: Express) {
   app.get("/api/crypto-prices", async (req, res) => {
   try {
     const response = await fetch(
-      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,cardano,polkadot,chainlink&order=market_cap_desc&per_page=5&page=1&sparkline=false"
+      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,binancecoin,cardano,solana,ripple,polkadot,dogecoin,avalanche-2,polygon&order=market_cap_desc&per_page=10&page=1&sparkline=false"
     );
 
     if (!response.ok) {
@@ -172,6 +172,15 @@ export async function registerRoutes(app: Express) {
         total_volume: 15000000000
       },
       {
+        id: "binancecoin",
+        symbol: "bnb",
+        name: "BNB",
+        current_price: 310.50,
+        price_change_percentage_24h: 1.85,
+        market_cap: 47000000000,
+        total_volume: 1200000000
+      },
+      {
         id: "cardano",
         symbol: "ada",
         name: "Cardano",
@@ -179,6 +188,24 @@ export async function registerRoutes(app: Express) {
         price_change_percentage_24h: 0.85,
         market_cap: 17000000000,
         total_volume: 450000000
+      },
+      {
+        id: "solana",
+        symbol: "sol",
+        name: "Solana",
+        current_price: 98.75,
+        price_change_percentage_24h: 3.25,
+        market_cap: 45000000000,
+        total_volume: 2800000000
+      },
+      {
+        id: "ripple",
+        symbol: "xrp",
+        name: "XRP",
+        current_price: 0.63,
+        price_change_percentage_24h: -0.45,
+        market_cap: 36000000000,
+        total_volume: 1100000000
       },
       {
         id: "polkadot",
@@ -190,11 +217,29 @@ export async function registerRoutes(app: Express) {
         total_volume: 180000000
       },
       {
-        id: "chainlink",
-        symbol: "link",
-        name: "Chainlink",
-        current_price: 15.80,
-        price_change_percentage_24h: 1.45,
+        id: "dogecoin",
+        symbol: "doge",
+        name: "Dogecoin",
+        current_price: 0.082,
+        price_change_percentage_24h: 4.15,
+        market_cap: 12000000000,
+        total_volume: 890000000
+      },
+      {
+        id: "avalanche-2",
+        symbol: "avax",
+        name: "Avalanche",
+        current_price: 36.80,
+        price_change_percentage_24h: 2.95,
+        market_cap: 15000000000,
+        total_volume: 650000000
+      },
+      {
+        id: "polygon",
+        symbol: "matic",
+        name: "Polygon",
+        current_price: 0.92,
+        price_change_percentage_24h: -1.15,
         market_cap: 9200000000,
         total_volume: 420000000
       }

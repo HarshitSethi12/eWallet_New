@@ -120,7 +120,7 @@ export function HorizontalPriceTicker() {
       {/* Price ticker content */}
       <div
         ref={scrollRef}
-        className="flex items-center gap-4 sm:gap-8 lg:gap-12 overflow-x-auto scrollbar-hide px-4 sm:px-8 lg:px-12 py-4 sm:py-6 lg:py-8"
+        className="flex items-center justify-start gap-2 sm:gap-4 lg:gap-6 overflow-x-auto scrollbar-hide px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         onScroll={updateScrollButtons}
       >
@@ -129,7 +129,7 @@ export function HorizontalPriceTicker() {
           const colors = cryptoColors[crypto.symbol.toLowerCase()] || { primary: "#6B7280", secondary: "#9CA3AF" };
           
           return (
-            <div key={crypto.id} className="flex flex-col items-center min-w-[120px] max-w-[120px] sm:min-w-[140px] sm:max-w-[140px] lg:min-w-[160px] lg:max-w-[160px] p-2 sm:p-3 lg:p-4 hover:transform hover:scale-105 transition-transform cursor-pointer">
+            <div key={crypto.id} className="flex flex-col items-center min-w-[110px] max-w-[110px] sm:min-w-[130px] sm:max-w-[130px] lg:min-w-[140px] lg:max-w-[140px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
               {/* Coin Icon */}
               <div 
                 className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center shadow-md mb-2 sm:mb-3 relative"
