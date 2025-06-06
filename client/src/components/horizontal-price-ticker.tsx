@@ -138,7 +138,7 @@ export function HorizontalPriceTicker() {
               
               {/* Price */}
               <p className="text-lg font-bold text-gray-900 mb-1">
-                ₹{crypto.current_price.toLocaleString('en-IN', { 
+                ${crypto.current_price.toLocaleString('en-US', { 
                   minimumFractionDigits: 2, 
                   maximumFractionDigits: 2 
                 })}
