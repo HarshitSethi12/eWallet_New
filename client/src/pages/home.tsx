@@ -9,6 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
 import { useAuth } from "@/hooks/use-auth";
+import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 
 function WelcomePage() {
   const { login } = useAuth();
@@ -48,6 +49,15 @@ function WelcomePage() {
             Sign In with Google
           </Button>
         </div>
+      </div>
+
+      {/* Live Market Prices Section */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold text-center" style={{ color: '#0A3665' }}>
+          Live Market Prices
+        </h2>
+        <HorizontalPriceTicker />
+      </div>
       </div>
 
       {/* Decorative element */}
