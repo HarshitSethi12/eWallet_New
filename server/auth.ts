@@ -32,9 +32,18 @@ export function setupAuth(app: express.Express) {
         process.env.GOOGLE_CLIENT_SECRET
       );
 
-      const baseUrl = req.get('host')?.includes('replit.dev') 
-        ? `https://${req.get('host')}`
-        : `${req.protocol}://${req.get('host')}`;
+      // Handle different Replit domains and development URLs
+      const host = req.get('host');
+      let baseUrl;
+
+      if (host?.includes('replit.dev') || host?.includes('repl.co')) {
+        baseUrl = `https://${host}`;
+      } else if (req.get('x-forwarded-proto')) {
+        baseUrl = `${req.get('x-forwarded-proto')}://${host}`;
+      } else {
+        baseUrl = `${req.protocol}://${host}`;
+      }
+
       const redirectUri = `${baseUrl}/auth/callback`;
 
       console.log('Generated redirect URI:', redirectUri);
@@ -63,10 +72,18 @@ export function setupAuth(app: express.Express) {
         return res.redirect('/?error=no_code');
       }
 
-      // Use the same redirect URI logic as in /auth/google
-      const baseUrl = req.get('host')?.includes('replit.dev') 
-        ? `https://${req.get('host')}`
-        : `${req.protocol}://${req.get('host')}`;
+      // Handle different Replit domains and development URLs
+      const host = req.get('host');
+      let baseUrl;
+
+      if (host?.includes('replit.dev') || host?.includes('repl.co')) {
+        baseUrl = `https://${host}`;
+      } else if (req.get('x-forwarded-proto')) {
+        baseUrl = `${req.get('x-forwarded-proto')}://${host}`;
+      } else {
+        baseUrl = `${req.protocol}://${host}`;
+      }
+
       const redirectUri = `${baseUrl}/auth/callback`;
 
       console.log('Using redirect URI for token exchange:', redirectUri);
@@ -111,7 +128,7 @@ export function setupAuth(app: express.Express) {
 
   app.get('/auth/logout', async (req, res) => {
     const sessionDbId = req.session.sessionDbId;
-    
+
     // Update session end time if we have a tracked session
     if (sessionDbId) {
       await storage.endUserSession(sessionDbId);
@@ -131,12 +148,21 @@ export function setupAuth(app: express.Express) {
     try {
       const state = crypto.randomBytes(16).toString('hex');
       req.session.state = state;
-      
-      const baseUrl = req.get('host')?.includes('replit.dev') 
-        ? `https://${req.get('host')}`
-        : `${req.protocol}://${req.get('host')}`;
-      const redirectUri = `${baseUrl}/auth/apple/callback`;
-      
+
+      // Handle different Replit domains and development URLs
+      const host = req.get('host');
+      let baseUrl;
+
+      if (host?.includes('replit.dev') || host?.includes('repl.co')) {
+        baseUrl = `https://${host}`;
+      } else if (req.get('x-forwarded-proto')) {
+        baseUrl = `${req.get('x-forwarded-proto')}://${host}`;
+      } else {
+        baseUrl = `${req.protocol}://${host}`;
+      }
+
+      const redirectUri = `${baseUrl}/auth/callback`;
+
       const params = new URLSearchParams({
         client_id: process.env.APPLE_CLIENT_ID || '',
         redirect_uri: redirectUri,
@@ -145,7 +171,7 @@ export function setupAuth(app: express.Express) {
         response_mode: 'form_post',
         state: state,
       });
-      
+
       const appleAuthUrl = `https://appleid.apple.com/auth/authorize?${params}`;
       res.redirect(appleAuthUrl);
     } catch (error) {
@@ -157,18 +183,18 @@ export function setupAuth(app: express.Express) {
   app.post('/auth/apple/callback', async (req, res) => {
     try {
       const { code, id_token, state } = req.body;
-      
+
       if (!state || state !== req.session.state) {
         return res.redirect('/?error=invalid_state');
       }
-      
+
       if (!id_token) {
         return res.redirect('/?error=no_id_token');
       }
 
       // Decode the ID token (Apple sends user info in the JWT)
       const decoded = jwt.decode(id_token) as any;
-      
+
       if (!decoded) {
         return res.redirect('/?error=invalid_token');
       }
@@ -214,4 +240,3 @@ export function setupAuth(app: express.Express) {
     }
   });
 }
-
