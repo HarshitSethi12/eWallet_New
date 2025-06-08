@@ -14,8 +14,12 @@ build = ["sh", "-c", "npm run build"]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 5001
+externalPort = 3000
+
 [workflows]
-runButton = "Dev Server"
+runButton = "Clean Dev Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -45,6 +49,23 @@ waitForPort = 5000
 name = "Dev Server"
 author = 12265190
 mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "Clean Dev Server"
+author = 12265190
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f \"tsx server/index.ts\" || true"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "sleep 2"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
