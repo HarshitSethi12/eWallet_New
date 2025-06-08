@@ -28,24 +28,24 @@ const getCoinFallbackIcon = (symbol: string): string => {
     'SOL': '#9945ff',
     'USDC': '#2775ca',
     'XRP': '#23292f',
+    'DOGE': '#c2a633',
     'ADA': '#0033ad',
     'AVAX': '#e84142',
-    'DOGE': '#c2a633',
+    'SHIB': '#ffa409',
     'LINK': '#2a5ada',
+    'DOT': '#e6007a',
+    'BCH': '#8dc351',
     'MATIC': '#8247e5',
     'LTC': '#bfbbbb',
-    'UNI': '#ff007a',
     'NEAR': '#00c08b',
-    'DOT': '#e6007a',
+    'UNI': '#ff007a',
     'ICP': '#f15a24',
-    'XLM': '#7d00ff',
     'ETC': '#328332',
-    'VET': '#15bdff',
+    'XLM': '#7d00ff',
     'FIL': '#0090ff',
-    'HBAR': '#000000',
     'ATOM': '#2e3148',
     'XMR': '#ff6600',
-    'ALGO': '#000000'
+    'HBAR': '#000000'
   };
   
   const color = colors[symbol.toUpperCase()] || '#6B7280';
