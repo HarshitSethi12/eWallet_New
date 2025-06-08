@@ -259,7 +259,7 @@ export function HorizontalPriceTicker() {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         onScroll={updateScrollButtons}
       >
-        {cryptoPrices?.map((crypto) => {
+        {Array.isArray(cryptoPrices) && cryptoPrices?.map((crypto) => {
           const isPositive = crypto.change > 0;
           const colors = cryptoColors[crypto.symbol.toLowerCase()] || { primary: "#6B7280", secondary: "#9CA3AF" };
 
