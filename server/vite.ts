@@ -22,6 +22,16 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+// Add cache-busting middleware for development
+function addNoCacheHeaders(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (process.env.NODE_ENV !== 'production') {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+}
+
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
@@ -43,6 +53,7 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
+  app.use(addNoCacheHeaders); // Apply no-cache headers
   app.use(vite.middlewares);
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
