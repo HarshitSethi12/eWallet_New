@@ -242,7 +242,7 @@ export function HorizontalPriceTicker() {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         onScroll={updateScrollButtons}
       >
-        {cryptoPrices.map((crypto) => {
+        {cryptoPrices && cryptoPrices.length > 0 ? cryptoPrices.map((crypto) => {
           const isPositive = crypto.change > 0;
           const colors = cryptoColors[crypto.symbol.toLowerCase()] || { primary: "#6B7280", secondary: "#9CA3AF" };
 
@@ -285,7 +285,11 @@ export function HorizontalPriceTicker() {
               </div>
             </div>
           );
-        })}
+        }) : (
+          <div className="flex items-center justify-center w-full py-8">
+            <p className="text-gray-500">Loading market data...</p>
+          </div>
+        )}
       </div>
 
       {/* Bottom info bar */}
