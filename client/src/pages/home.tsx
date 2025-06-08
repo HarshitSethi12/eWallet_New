@@ -8,6 +8,7 @@ import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockcha
 import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
+import { SiGmail } from "react-icons/si";
 import { useAuth } from "@/hooks/use-auth";
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 
@@ -43,10 +44,11 @@ function WelcomePage() {
         <div className="flex flex-col items-center gap-4 mt-6 sm:mt-8 md:mt-10">
           <Button 
             size="lg" 
-            className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all"
+            className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
             onClick={login}
           >
-            Sign In with Google
+            <SiGmail className="h-5 w-5" />
+            Gmail
           </Button>
         </div>
       </div>
