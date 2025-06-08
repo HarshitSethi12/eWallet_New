@@ -1,13 +1,28 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { Server } from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 
+// Environment configuration
+const isProduction = process.env.NODE_ENV === "production";
+const isDevelopment = process.env.NODE_ENV === "development" || !isProduction;
+
 const app = express();
+
+// Configure app for production environment
+if (isProduction) {
+  app.set('env', 'production');
+}
 
 // Trust proxy for correct IP addresses in production
 app.set('trust proxy', true);
+
+// Add startup logging
+log(`🔧 Starting server in ${isProduction ? 'production' : 'development'} mode`);
+log(`🔧 Node.js version: ${process.version}`);
+log(`🔧 Process ID: ${process.pid}`);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -138,18 +153,49 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const port = process.env.PORT || 5000;
-  server.listen(port, "0.0.0.0", () => {
+  // Configure port for different environments
+  const port = parseInt(process.env.PORT || "5000", 10);
+  const host = "0.0.0.0"; // Always bind to 0.0.0.0 for Cloud Run compatibility
+  
+  // Add error handling for server startup
+  server.on('error', (error: any) => {
+    if (error.code === 'EADDRINUSE') {
+      log(`❌ Port ${port} is already in use`);
+      process.exit(1);
+    } else if (error.code === 'EACCES') {
+      log(`❌ Permission denied to bind to port ${port}`);
+      process.exit(1);
+    } else {
+      log(`❌ Server error: ${error.message}`);
+      process.exit(1);
+    }
+  });
+
+  // Start server with proper error handling and host binding
+  server.listen(port, host, () => {
     log(`🚀 Server started successfully!`);
-    log(`📍 Listening on port ${port} (0.0.0.0:${port})`);
-    log(`🌐 App is accessible at https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
-    log(`🌐 Direct URL: https://workspace.harshitsethi1.repl.co`);
+    log(`📍 Listening on ${host}:${port}`);
     log(`⚙️  Environment: ${app.get("env")}`);
     
-    // Log network interfaces for debugging
-    log(`🔍 Process ID: ${process.pid}`);
-    log(`🔍 Node version: ${process.version}`);
+    // Environment-specific logging
+    if (isProduction) {
+      log(`🌐 Production deployment ready`);
+      log(`🔒 Trust proxy enabled for Cloud Run`);
+    } else {
+      log(`🌐 Development server at http://localhost:${port}`);
+      if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+        log(`🌐 Replit URL: https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
+      }
+    }
+    
+    // Log essential environment variables for debugging
+    const requiredEnvVars = ['DATABASE_URL', 'NODE_ENV'];
+    const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+    
+    if (missingEnvVars.length > 0) {
+      log(`⚠️  Missing environment variables: ${missingEnvVars.join(', ')}`);
+    } else {
+      log(`✅ All required environment variables are set`);
+    }
   });
 })();
