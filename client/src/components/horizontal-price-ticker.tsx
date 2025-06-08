@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -58,11 +57,11 @@ export function HorizontalPriceTicker() {
 
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
-    
+
     const scrollAmount = 300;
     const newScrollLeft = scrollRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
     scrollRef.current.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
-    
+
     setTimeout(updateScrollButtons, 300);
   };
 
@@ -127,37 +126,37 @@ export function HorizontalPriceTicker() {
         {prices?.map((crypto) => {
           const isPositive = crypto.price_change_percentage_24h > 0;
           const colors = cryptoColors[crypto.symbol.toLowerCase()] || { primary: "#6B7280", secondary: "#9CA3AF" };
-          
+
           return (
-            <div key={crypto.id} className="flex flex-col items-center min-w-[110px] max-w-[110px] sm:min-w-[130px] sm:max-w-[130px] lg:min-w-[140px] lg:max-w-[140px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
+            <div key={crypto.id} className="flex flex-col items-center min-w-[90px] max-w-[90px] sm:min-w-[110px] sm:max-w-[110px] lg:min-w-[120px] lg:max-w-[120px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
               {/* Coin Icon */}
               <div 
-                className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center shadow-md mb-2 sm:mb-3 relative"
+                className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center shadow-md mb-1 sm:mb-2 relative"
                 style={{ 
                   background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` 
                 }}
               >
-                <span className="text-white font-bold text-xs sm:text-sm">
+                <span className="text-white font-bold text-[0.6rem] sm:text-xs">
                   {crypto.symbol.toUpperCase().slice(0, 3)}
                 </span>
-                <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full border-2 border-white"></div>
+                <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full border-2 border-white"></div>
               </div>
-              
+
               {/* Coin Symbol */}
-              <p className="text-xs font-medium text-gray-600 mb-1 sm:mb-2 uppercase tracking-wide">
+              <p className="text-[0.6rem] font-medium text-gray-600 mb-0.5 sm:mb-1 uppercase tracking-wide text-center">
                 {crypto.symbol}
               </p>
-              
+
               {/* Price */}
-              <p className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 mb-1 sm:mb-2 text-center">
+              <p className="text-xs sm:text-sm lg:text-base font-bold text-gray-900 mb-0.5 sm:mb-1 text-center">
                 ${crypto.current_price.toLocaleString('en-US', { 
                   minimumFractionDigits: 2, 
                   maximumFractionDigits: 2 
                 })}
               </p>
-              
+
               {/* Percentage Change */}
-              <div className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium ${
+              <div className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[0.6rem] font-medium ${
                 isPositive 
                   ? 'bg-green-100 text-green-700' 
                   : 'bg-red-100 text-red-700'
@@ -168,7 +167,7 @@ export function HorizontalPriceTicker() {
           );
         })}
       </div>
-      
+
       {/* Bottom info bar */}
       <div className="bg-gray-50 px-4 sm:px-6 py-2 sm:py-3 border-t border-gray-100">
         <p className="text-xs text-gray-500 text-center">

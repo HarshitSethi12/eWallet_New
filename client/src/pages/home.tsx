@@ -52,8 +52,8 @@ function WelcomePage() {
       </div>
 
       {/* Live Market Prices Section */}
-      <div className="space-y-3 sm:space-y-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-center px-4" style={{ color: '#0A3665' }}>
+      <div className="w-full max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 mb-12 sm:mb-16">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-center mb-6 sm:mb-8 text-gray-800">
           Live Market Prices
         </h2>
         <HorizontalPriceTicker />
