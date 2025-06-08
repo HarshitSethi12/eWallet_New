@@ -64,8 +64,29 @@ app.use((req, res, next) => {
   next();
 });
 
+// Global error handlers for unhandled errors
+process.on('uncaughtException', (error) => {
+  log(`❌ Uncaught Exception: ${error.message}`);
+  console.error(error.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  log(`❌ Unhandled Rejection at: ${promise}, reason: ${reason}`);
+  console.error(reason);
+  process.exit(1);
+});
+
 (async () => {
-  // Add admin routes for session management FIRST
+  try {
+    // Validate critical environment variables
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is required');
+    }
+
+    log('✅ Environment validation passed');
+
+    // Add admin routes for session management FIRST
   app.get("/api/admin/sessions", async (req, res) => {
     // Basic admin check
     const adminKey = req.headers['x-admin-key'];
@@ -171,8 +192,29 @@ app.use((req, res, next) => {
     }
   });
 
+  // Graceful shutdown handling
+  const gracefulShutdown = () => {
+    log('🔄 Received shutdown signal, closing server gracefully...');
+    server.close(() => {
+      log('✅ Server closed successfully');
+      process.exit(0);
+    });
+    
+    // Force close after 10 seconds
+    setTimeout(() => {
+      log('❌ Forcing server shutdown');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
+
   // Start server with proper error handling and host binding
-  server.listen(port, host, () => {
+  server.listen({
+    port: port,
+    host: host
+  }, () => {
     log(`🚀 Server started successfully!`);
     log(`📍 Listening on ${host}:${port}`);
     log(`⚙️  Environment: ${app.get("env")}`);
@@ -198,4 +240,10 @@ app.use((req, res, next) => {
       log(`✅ All required environment variables are set`);
     }
   });
+
+} catch (error) {
+  log(`❌ Server startup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  console.error(error);
+  process.exit(1);
+}
 })();
