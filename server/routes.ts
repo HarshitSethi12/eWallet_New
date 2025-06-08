@@ -87,62 +87,38 @@ export async function registerRoutes(app: Express) {
     return res.status(204).end();
   });
 
-  // Get crypto prices
+  // Crypto prices endpoint
   app.get("/api/crypto-prices", async (req, res) => {
     try {
-      const coins = [
-        'bitcoin', 'ethereum', 'tether', 'binancecoin', 'solana', 'usd-coin', 
-        'xrp', 'staked-ether', 'dogecoin', 'cardano', 'avalanche-2', 'chainlink',
-        'tron', 'wrapped-bitcoin', 'hyperliquid', 'sui', 'wrapped-steth',
-        'leo-token', 'the-open-network', 'usds', 'litecoin', 'shiba-inu',
-        'hedera-hashgraph', 'stellar', 'polkadot'
+      const coinIds = [
+        'bitcoin', 'ethereum', 'tether', 'binancecoin', 'solana', 'usd-coin', 'ripple', 'dogecoin', 'cardano',
+        'tron', 'avalanche-2', 'shiba-inu', 'chainlink', 'bitcoin-cash', 'polkadot', 'near',
+        'uniswap', 'internet-computer', 'dai', 'litecoin', 'leo-token', 'wrapped-bitcoin',
+        'aptos', 'staked-ether', 'stellar'
       ];
 
-      const response = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${coins.join(',')}&vs_currencies=usd&include_24hr_change=true`,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'BitWallet/1.0'
-          },
-          timeout: 10000
+      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds.join(',')}&vs_currencies=usd&include_24hr_change=true`;
+      console.log('Fetching from:', url);
+
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BitWallet/1.0'
         }
-      );
+      });
 
       if (!response.ok) {
-        console.error(`CoinGecko API error: ${response.status} ${response.statusText}`);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`CoinGecko API error: ${response.status} - ${errorText}`);
+        throw new Error(`CoinGecko API error: ${response.status}`);
       }
 
       const data = await response.json();
-
-      // Validate the response
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response format from CoinGecko API');
-      }
-
+      console.log('Crypto data fetched successfully:', Object.keys(data).length, 'coins');
       res.json(data);
     } catch (error) {
       console.error('Error fetching crypto prices:', error);
-
-      // Return a fallback response with mock data to prevent app crash
-      const fallbackData = {};
-      const coins = [
-        'bitcoin', 'ethereum', 'tether', 'binancecoin', 'solana', 'usd-coin', 
-        'xrp', 'staked-ether', 'dogecoin', 'cardano', 'avalanche-2', 'chainlink',
-        'tron', 'wrapped-bitcoin', 'hyperliquid', 'sui', 'wrapped-steth',
-        'leo-token', 'the-open-network', 'usds', 'litecoin', 'shiba-inu',
-        'hedera-hashgraph', 'stellar', 'polkadot'
-      ];
-
-      coins.forEach(coin => {
-        fallbackData[coin] = {
-          usd: 0,
-          usd_24h_change: 0
-        };
-      });
-
-      res.status(200).json(fallbackData);
+      res.status(500).json({ error: 'Failed to fetch crypto prices', details: error.message });
     }
   });
 
