@@ -83,7 +83,7 @@ const getCoinImageId = (coinId: string): string => {
     'the-open-network': '11419',
     'usds': '28001'
   };
-  
+
   return imageMap[coinId] || '1'; // Default to Bitcoin image ID if not found
 };
 
@@ -124,9 +124,9 @@ const getCoinFallbackIcon = (symbol: string): string => {
     'TON': '#0088cc',
     'USDS': '#1652f0'
   };
-  
+
   const color = colors[symbol.toUpperCase()] || '#6B7280';
-  
+
   return `data:image/svg+xml,${encodeURIComponent(`
     <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
       <circle cx="16" cy="16" r="16" fill="${color}"/>
@@ -142,21 +142,45 @@ export function HorizontalPriceTicker() {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const { data: prices, isLoading, error } = useQuery<CryptoPriceData[]>({
-    queryKey: ["crypto-prices"],
+  const { data: cryptoPrices, isLoading, error } = useQuery<CryptoPriceData[]>({
+    queryKey: ['crypto-prices'],
     queryFn: async () => {
       try {
-        const response = await fetch("/api/crypto-prices");
-        if (!response.ok) throw new Error("Failed to fetch prices");
-        return response.json();
+        // Using CoinGecko API directly as fallback
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,cardano,polkadot,chainlink,litecoin,stellar,tron,staked-ether,wrapped-bitcoin,hyperliquid,sui,wrapped-steth,leo-token,the-open-network,ethena-usde,usd-coin&vs_currencies=usd&include_24hr_change=true');
+        if (!response.ok) {
+          throw new Error('Failed to fetch crypto prices');
+        }
+        const data = await response.json();
+
+        // Transform the data to match your expected format
+        const cryptoList = [
+          { symbol: 'BTC', name: 'Bitcoin', price: data.bitcoin?.usd || 0, change: data.bitcoin?.usd_24h_change || 0, icon: '₿' },
+          { symbol: 'ETH', name: 'Ethereum', price: data.ethereum?.usd || 0, change: data.ethereum?.usd_24h_change || 0, icon: 'Ξ' },
+          { symbol: 'ADA', name: 'Cardano', price: data.cardano?.usd || 0, change: data.cardano?.usd_24h_change || 0, icon: '₳' },
+          { symbol: 'DOT', name: 'Polkadot', price: data.polkadot?.usd || 0, change: data.polkadot?.usd_24h_change || 0, icon: '●' },
+          { symbol: 'LINK', name: 'Chainlink', price: data.chainlink?.usd || 0, change: data.chainlink?.usd_24h_change || 0, icon: '🔗' },
+          { symbol: 'LTC', name: 'Litecoin', price: data.litecoin?.usd || 0, change: data.litecoin?.usd_24h_change || 0, icon: 'Ł' },
+          { symbol: 'XLM', name: 'Stellar', price: data.stellar?.usd || 0, change: data.stellar?.usd_24h_change || 0, icon: '*' },
+          { symbol: 'TRX', name: 'Tron', price: data.tron?.usd || 0, change: data.tron?.usd_24h_change || 0, icon: '⚡' },
+          { symbol: 'STETH', name: 'Staked Ether', price: data['staked-ether']?.usd || 0, change: data['staked-ether']?.usd_24h_change || 0, icon: '🔒' },
+          { symbol: 'WBTC', name: 'Wrapped Bitcoin', price: data['wrapped-bitcoin']?.usd || 0, change: data['wrapped-bitcoin']?.usd_24h_change || 0, icon: '🔄' },
+          { symbol: 'HYPE', name: 'Hyperliquid', price: data.hyperliquid?.usd || 0, change: data.hyperliquid?.usd_24h_change || 0, icon: '🚀' },
+          { symbol: 'SUI', name: 'Sui', price: data.sui?.usd || 0, change: data.sui?.usd_24h_change || 0, icon: '🌊' },
+          { symbol: 'WSTETH', name: 'Wrapped stETH', price: data['wrapped-steth']?.usd || 0, change: data['wrapped-steth']?.usd_24h_change || 0, icon: '🔗' },
+          { symbol: 'LEO', name: 'LEO Token', price: data['leo-token']?.usd || 0, change: data['leo-token']?.usd_24h_change || 0, icon: '🦁' },
+          { symbol: 'TON', name: 'The Open Network', price: data['the-open-network']?.usd || 0, change: data['the-open-network']?.usd_24h_change || 0, icon: '💎' },
+          { symbol: 'USDS', name: 'Ethena USDe', price: data['ethena-usde']?.usd || 0, change: data['ethena-usde']?.usd_24h_change || 0, icon: '$' },
+          { symbol: 'USDC', name: 'USD Coin', price: data['usd-coin']?.usd || 0, change: data['usd-coin']?.usd_24h_change || 0, icon: '$' },
+        ];
+
+        return cryptoList;
       } catch (error) {
-        console.error("Error fetching crypto prices:", error);
-        throw error;
+        console.error('Error fetching crypto prices:', error);
+        return [];
       }
     },
-    refetchInterval: 30000,
-    retry: 3,
-    retryDelay: 1000,
+    refetchInterval: 60000, // Refetch every minute
   });
 
   const updateScrollButtons = () => {
@@ -179,7 +203,7 @@ export function HorizontalPriceTicker() {
 
   useEffect(() => {
     updateScrollButtons();
-  }, [prices]);
+  }, [cryptoPrices]);
 
   if (isLoading) {
     return (
@@ -235,16 +259,16 @@ export function HorizontalPriceTicker() {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         onScroll={updateScrollButtons}
       >
-        {prices?.map((crypto) => {
-          const isPositive = crypto.price_change_percentage_24h > 0;
+        {cryptoPrices?.map((crypto) => {
+          const isPositive = crypto.change > 0;
           const colors = cryptoColors[crypto.symbol.toLowerCase()] || { primary: "#6B7280", secondary: "#9CA3AF" };
 
           return (
-            <div key={crypto.id} className="flex flex-col items-center min-w-[90px] max-w-[90px] sm:min-w-[110px] sm:max-w-[110px] lg:min-w-[120px] lg:max-w-[120px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
+            <div key={crypto.symbol} className="flex flex-col items-center min-w-[90px] max-w-[90px] sm:min-w-[110px] sm:max-w-[110px] lg:min-w-[120px] lg:max-w-[120px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
               {/* Coin Icon */}
               <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full shadow-md mb-1 sm:mb-2 relative overflow-hidden bg-white border-2 border-gray-100">
                 <img 
-                  src={getCoinImageUrl(crypto.id)}
+                  src={getCoinImageUrl(crypto.name.toLowerCase())}
                   alt={crypto.name}
                   className="w-full h-full object-cover rounded-full"
                   onError={(e) => {
@@ -262,7 +286,7 @@ export function HorizontalPriceTicker() {
 
               {/* Price */}
               <p className="text-xs sm:text-sm lg:text-base font-bold text-gray-900 mb-0.5 sm:mb-1 text-center">
-                ${crypto.current_price.toLocaleString('en-US', { 
+                ${crypto.price.toLocaleString('en-US', { 
                   minimumFractionDigits: 2, 
                   maximumFractionDigits: 2 
                 })}
@@ -274,7 +298,7 @@ export function HorizontalPriceTicker() {
                   ? 'bg-green-100 text-green-700' 
                   : 'bg-red-100 text-red-700'
               }`}>
-                {isPositive ? '+' : ''}{crypto.price_change_percentage_24h.toFixed(2)}%
+                {isPositive ? '+' : ''}{crypto.change.toFixed(2)}%
               </div>
             </div>
           );
