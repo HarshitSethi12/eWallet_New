@@ -40,6 +40,53 @@ const cryptoColors: { [key: string]: { primary: string; secondary: string } } = 
   algo: { primary: "#000000", secondary: "#333333" }
 };
 
+// Get coin image URL from CoinGecko with proper fallback
+const getCoinImageUrl = (coinId: string): string => {
+  // Use CoinGecko's direct image URLs for better reliability
+  return `https://coin-images.coingecko.com/coins/images/${getCoinImageId(coinId)}/large/${coinId}.png`;
+};
+
+// Map CoinGecko coin IDs to their image IDs for better reliability
+const getCoinImageId = (coinId: string): string => {
+  const imageMap: { [key: string]: string } = {
+    'bitcoin': '1',
+    'ethereum': '279',
+    'tether': '325',
+    'binancecoin': '825',
+    'solana': '4128',
+    'usd-coin': '6319',
+    'ripple': '44',
+    'dogecoin': '5',
+    'cardano': '975',
+    'avalanche-2': '12559',
+    'shiba-inu': '11939',
+    'chainlink': '877',
+    'polkadot': '12171',
+    'bitcoin-cash': '780',
+    'polygon': '4713',
+    'litecoin': '2',
+    'near': '10365',
+    'uniswap': '12504',
+    'internet-computer': '14495',
+    'ethereum-classic': '453',
+    'stellar': '4',
+    'filecoin': '12817',
+    'cosmos': '5055',
+    'monero': '69',
+    'hedera-hashgraph': '4642',
+    'tron': '1094',
+    'lido-staked-ether': '13442',
+    'wrapped-bitcoin': '7598',
+    'sui': '26375',
+    'wrapped-steth': '18834',
+    'leo-token': '11091',
+    'the-open-network': '11419',
+    'usds': '28001'
+  };
+  
+  return imageMap[coinId] || '1'; // Default to Bitcoin image ID if not found
+};
+
 // Enhanced fallback for when image fails to load
 const getCoinFallbackIcon = (symbol: string): string => {
   const colors: { [key: string]: string } = {
@@ -67,7 +114,15 @@ const getCoinFallbackIcon = (symbol: string): string => {
     'FIL': '#0090ff',
     'ATOM': '#2e3148',
     'XMR': '#ff6600',
-    'HBAR': '#000000'
+    'HBAR': '#000000',
+    'TRX': '#ff060a',
+    'STETH': '#00d4aa',
+    'WBTC': '#f09242',
+    'SUI': '#4da2ff',
+    'WSTETH': '#00d4aa',
+    'LEO': '#ffa500',
+    'TON': '#0088cc',
+    'USDS': '#1652f0'
   };
   
   const color = colors[symbol.toUpperCase()] || '#6B7280';
@@ -189,7 +244,7 @@ export function HorizontalPriceTicker() {
               {/* Coin Icon */}
               <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full shadow-md mb-1 sm:mb-2 relative overflow-hidden bg-white border-2 border-gray-100">
                 <img 
-                  src={`https://api.coingecko.com/api/v3/coins/${crypto.id}/image`}
+                  src={getCoinImageUrl(crypto.id)}
                   alt={crypto.name}
                   className="w-full h-full object-cover rounded-full"
                   onError={(e) => {
