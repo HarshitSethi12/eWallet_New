@@ -13,6 +13,23 @@ interface CryptoPriceData {
   total_volume: number;
 }
 
+// Helper function to get CoinGecko image ID for each cryptocurrency
+const getCoinImageId = (coinId: string): string => {
+  const imageMap: { [key: string]: string } = {
+    'bitcoin': '1',
+    'ethereum': '279',
+    'binancecoin': '825',
+    'cardano': '975',
+    'solana': '4128',
+    'ripple': '44',
+    'polkadot': '12171',
+    'dogecoin': '5',
+    'avalanche-2': '12559',
+    'polygon': '4713'
+  };
+  return imageMap[coinId] || '1'; // Default to Bitcoin if not found
+};
+
 export function PriceTicker() {
   const { data: prices, isLoading, error } = useQuery<CryptoPriceData[]>({
     queryKey: ["crypto-prices"],
@@ -74,10 +91,22 @@ export function PriceTicker() {
           return (
             <div key={crypto.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">
-                    {crypto.symbol.toUpperCase().slice(0, 2)}
-                  </span>
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-white border-2 border-gray-100 shadow-sm">
+                  <img 
+                    src={`https://assets.coingecko.com/coins/images/${getCoinImageId(crypto.id)}/large/${crypto.symbol}.png`}
+                    alt={crypto.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback to gradient design if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        parent.style.background = 'linear-gradient(135deg, #F7931A 0%, #FF9500 100%)';
+                        parent.innerHTML = `<span class="text-white font-bold text-sm">${crypto.symbol.toUpperCase().slice(0, 2)}</span>`;
+                      }
+                    }}
+                  />
                 </div>
                 <div>
                   <p className="font-semibold" style={{ color: 'var(--color-heading)' }}>

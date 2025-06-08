@@ -25,6 +25,23 @@ const cryptoColors: { [key: string]: { primary: string; secondary: string } } = 
   matic: { primary: "#8247E5", secondary: "#7C3AED" }
 };
 
+// Helper function to get CoinGecko image ID for each cryptocurrency
+const getCoinImageId = (coinId: string): string => {
+  const imageMap: { [key: string]: string } = {
+    'bitcoin': '1',
+    'ethereum': '279',
+    'binancecoin': '825',
+    'cardano': '975',
+    'solana': '4128',
+    'ripple': '44',
+    'polkadot': '12171',
+    'dogecoin': '5',
+    'avalanche-2': '12559',
+    'polygon': '4713'
+  };
+  return imageMap[coinId] || '1'; // Default to Bitcoin if not found
+};
+
 export function HorizontalPriceTicker() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -130,15 +147,22 @@ export function HorizontalPriceTicker() {
           return (
             <div key={crypto.id} className="flex flex-col items-center min-w-[90px] max-w-[90px] sm:min-w-[110px] sm:max-w-[110px] lg:min-w-[120px] lg:max-w-[120px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
               {/* Coin Icon */}
-              <div 
-                className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center shadow-md mb-1 sm:mb-2 relative"
-                style={{ 
-                  background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` 
-                }}
-              >
-                <span className="text-white font-bold text-[0.6rem] sm:text-xs">
-                  {crypto.symbol.toUpperCase().slice(0, 3)}
-                </span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full shadow-md mb-1 sm:mb-2 relative overflow-hidden bg-white border-2 border-gray-100">
+                <img 
+                  src={`https://assets.coingecko.com/coins/images/${getCoinImageId(crypto.id)}/large/${crypto.symbol}.png`}
+                  alt={crypto.name}
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    // Fallback to gradient design if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.style.background = `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`;
+                      parent.innerHTML = `<span class="text-white font-bold text-[0.6rem] sm:text-xs">${crypto.symbol.toUpperCase().slice(0, 3)}</span>`;
+                    }
+                  }}
+                />
                 <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full border-2 border-white"></div>
               </div>
 
