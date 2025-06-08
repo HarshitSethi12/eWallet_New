@@ -12,19 +12,26 @@ type ToasterToast = ToastProps & {
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
-type ActionType = {
-  ADD_TOAST: {
-    toast: ToasterToast
-  }
-  UPDATE_TOAST: {
-    toast: Partial<ToasterToast>
-  }
-  DISMISS_TOAST: {
-    toastId?: ToasterToast["id"]
-  }
-  REMOVE_TOAST: {
-    toastId?: ToasterToast["id"]
-  }
+type ActionType = 
+  | {
+      type: "ADD_TOAST"
+      toast: ToasterToast
+    }
+  | {
+      type: "UPDATE_TOAST"
+      toast: Partial<ToasterToast>
+    }
+  | {
+      type: "DISMISS_TOAST"
+      toastId?: ToasterToast["id"]
+    }
+  | {
+      type: "REMOVE_TOAST"
+      toastId?: ToasterToast["id"]
+    }
+
+interface State {
+  toasts: ToasterToast[]
 }
 
 let count = 0
@@ -32,17 +39,6 @@ let count = 0
 function genId() {
   count = (count + 1) % Number.MAX_SAFE_INTEGER
   return count.toString()
-}
-
-type Action =
-  | {
-      type: keyof ActionType
-      [key: string]: any
-    }
-  | ActionType[keyof ActionType]
-
-interface State {
-  toasts: ToasterToast[]
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
@@ -63,7 +59,7 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
-export const reducer = (state: State, action: Action): State => {
+export const reducer = (state: State, action: ActionType): State => {
   switch (action.type) {
     case "ADD_TOAST":
       return {
@@ -120,7 +116,7 @@ const listeners: Array<(state: State) => void> = []
 
 let memoryState: State = { toasts: [] }
 
-function dispatch(action: Action) {
+function dispatch(action: ActionType) {
   memoryState = reducer(memoryState, action)
   listeners.forEach((listener) => {
     listener(memoryState)
