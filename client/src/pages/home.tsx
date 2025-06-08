@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 
 function WelcomePage() {
-  const { login } = useAuth();
+  const { login, loginWithApple } = useAuth();
 
   return (
     <div className="container max-w-4xl mx-auto px-3 sm:px-4 space-y-8 sm:space-y-12 md:space-y-16 py-6 sm:py-8 md:py-12">
@@ -47,6 +47,13 @@ function WelcomePage() {
             onClick={login}
           >
             Sign In with Google
+          </Button>
+          <Button 
+            size="lg" 
+            className="bg-black hover:bg-gray-800 text-white px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all"
+            onClick={loginWithApple}
+          >
+            Sign In with Apple
           </Button>
         </div>
       </div>

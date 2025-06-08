@@ -1,6 +1,8 @@
 import express from 'express';
 import session from 'express-session';
 import { OAuth2Client } from 'google-auth-library';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { storage } from './storage';
 
 declare module 'express-session' {
@@ -122,6 +124,86 @@ export function setupAuth(app: express.Express) {
       }
       res.json({ success: true });
     });
+  });
+
+  // Apple Sign In routes
+  app.get('/auth/apple', async (req, res) => {
+    try {
+      const state = crypto.randomBytes(16).toString('hex');
+      req.session.state = state;
+      
+      const baseUrl = req.get('host')?.includes('replit.dev') 
+        ? `https://${req.get('host')}`
+        : `${req.protocol}://${req.get('host')}`;
+      const redirectUri = `${baseUrl}/auth/apple/callback`;
+      
+      const params = new URLSearchParams({
+        client_id: process.env.APPLE_CLIENT_ID || '',
+        redirect_uri: redirectUri,
+        response_type: 'code id_token',
+        scope: 'name email',
+        response_mode: 'form_post',
+        state: state,
+      });
+      
+      const appleAuthUrl = `https://appleid.apple.com/auth/authorize?${params}`;
+      res.redirect(appleAuthUrl);
+    } catch (error) {
+      console.error('Apple auth error:', error);
+      res.redirect('/?error=apple_auth_failed');
+    }
+  });
+
+  app.post('/auth/apple/callback', async (req, res) => {
+    try {
+      const { code, id_token, state } = req.body;
+      
+      if (!state || state !== req.session.state) {
+        return res.redirect('/?error=invalid_state');
+      }
+      
+      if (!id_token) {
+        return res.redirect('/?error=no_id_token');
+      }
+
+      // Decode the ID token (Apple sends user info in the JWT)
+      const decoded = jwt.decode(id_token) as any;
+      
+      if (!decoded) {
+        return res.redirect('/?error=invalid_token');
+      }
+
+      // Create user object similar to Google's format
+      const appleUser = {
+        id: decoded.sub,
+        email: decoded.email,
+        name: decoded.name || `Apple User`,
+        given_name: decoded.name?.split(' ')[0] || 'Apple',
+        family_name: decoded.name?.split(' ').slice(1).join(' ') || 'User',
+        picture: null, // Apple doesn't provide profile pictures
+        provider: 'apple'
+      };
+
+      req.session.user = appleUser;
+
+      // Track login session
+      const sessionData = {
+        userId: null,
+        email: appleUser.email,
+        name: appleUser.name,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        sessionId: req.sessionID,
+      };
+
+      const sessionDbId = await storage.createUserSession(sessionData);
+      req.session.sessionDbId = sessionDbId;
+
+      res.redirect('/?authenticated=true&provider=apple');
+    } catch (error) {
+      console.error('Apple callback error:', error);
+      res.redirect('/?error=apple_callback_failed');
+    }
   });
 
   app.get('/auth/user', (req, res) => {

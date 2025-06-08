@@ -34,6 +34,12 @@ export function useAuth() {
     },
   });
 
+  const appleLoginMutation = useMutation({
+    mutationFn: async () => {
+      window.location.href = "/auth/apple";
+    },
+  });
+
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch("/auth/logout");
@@ -61,6 +67,7 @@ export function useAuth() {
     isLoading,
     isAuthenticated: !!user,
     login: loginMutation.mutate,
+    loginWithApple: appleLoginMutation.mutate,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
   };
