@@ -15,14 +15,29 @@ interface CryptoPriceData {
 const cryptoColors: { [key: string]: { primary: string; secondary: string } } = {
   btc: { primary: "#F7931A", secondary: "#FF9500" },
   eth: { primary: "#627EEA", secondary: "#4A90E2" },
+  usdt: { primary: "#26A17B", secondary: "#009393" },
   bnb: { primary: "#F3BA2F", secondary: "#E1A429" },
-  ada: { primary: "#0033AD", secondary: "#1B4F93" },
   sol: { primary: "#9945FF", secondary: "#7C3AED" },
+  usdc: { primary: "#2775CA", secondary: "#1E5A96" },
   xrp: { primary: "#23292F", secondary: "#4A5568" },
-  dot: { primary: "#E6007A", secondary: "#D53F8C" },
-  doge: { primary: "#C2A633", secondary: "#B7931F" },
+  ada: { primary: "#0033AD", secondary: "#1B4F93" },
   avax: { primary: "#E84142", secondary: "#E53E3E" },
-  matic: { primary: "#8247E5", secondary: "#7C3AED" }
+  doge: { primary: "#C2A633", secondary: "#B7931F" },
+  link: { primary: "#2A5ADA", secondary: "#1B4F93" },
+  matic: { primary: "#8247E5", secondary: "#7C3AED" },
+  ltc: { primary: "#BFBBBB", secondary: "#A6A6A6" },
+  uni: { primary: "#FF007A", secondary: "#E6006F" },
+  near: { primary: "#00C08B", secondary: "#00A876" },
+  dot: { primary: "#E6007A", secondary: "#D53F8C" },
+  icp: { primary: "#F15A24", secondary: "#D9491F" },
+  xlm: { primary: "#7D00FF", secondary: "#6A00D9" },
+  etc: { primary: "#328332", secondary: "#2A6F2A" },
+  vet: { primary: "#15BDFF", secondary: "#0FA8E6" },
+  fil: { primary: "#0090FF", secondary: "#007ACC" },
+  hbar: { primary: "#000000", secondary: "#333333" },
+  atom: { primary: "#2E3148", secondary: "#252839" },
+  xmr: { primary: "#FF6600", secondary: "#E65C00" },
+  algo: { primary: "#000000", secondary: "#333333" }
 };
 
 // Enhanced fallback for when image fails to load
@@ -30,18 +45,29 @@ const getCoinFallbackIcon = (symbol: string): string => {
   const colors: { [key: string]: string } = {
     'BTC': '#f7931a',
     'ETH': '#627eea', 
+    'USDT': '#26a17b',
     'BNB': '#f3ba2f',
-    'ADA': '#0033ad',
     'SOL': '#9945ff',
+    'USDC': '#2775ca',
     'XRP': '#23292f',
-    'DOT': '#e6007a',
-    'DOGE': '#c2a633',
+    'ADA': '#0033ad',
     'AVAX': '#e84142',
+    'DOGE': '#c2a633',
+    'LINK': '#2a5ada',
     'MATIC': '#8247e5',
     'LTC': '#bfbbbb',
-    'LINK': '#2a5ada',
     'UNI': '#ff007a',
-    'ATOM': '#2e3148'
+    'NEAR': '#00c08b',
+    'DOT': '#e6007a',
+    'ICP': '#f15a24',
+    'XLM': '#7d00ff',
+    'ETC': '#328332',
+    'VET': '#15bdff',
+    'FIL': '#0090ff',
+    'HBAR': '#000000',
+    'ATOM': '#2e3148',
+    'XMR': '#ff6600',
+    'ALGO': '#000000'
   };
   
   const color = colors[symbol.toUpperCase()] || '#6B7280';

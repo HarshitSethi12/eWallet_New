@@ -91,57 +91,37 @@ export async function registerRoutes(app: Express) {
   app.get("/api/crypto-prices", async (req, res) => {
   try {
     const response = await fetch(
-      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,binancecoin,cardano,solana,ripple,polkadot,dogecoin,avalanche-2,polygon&order=market_cap_desc&per_page=10&page=1&sparkline=false"
+      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=25&page=1&sparkline=false"
     );
 
     if (!response.ok) {
-      // Fallback mock data if API fails
+      // Fallback mock data for top 25 coins if API fails
       const mockData = [
-        {
-          id: "bitcoin",
-          symbol: "btc",
-          name: "Bitcoin",
-          current_price: 43250.00,
-          price_change_percentage_24h: 2.35,
-          market_cap: 850000000000,
-          total_volume: 25000000000
-        },
-        {
-          id: "ethereum",
-          symbol: "eth",
-          name: "Ethereum",
-          current_price: 2650.00,
-          price_change_percentage_24h: -1.25,
-          market_cap: 320000000000,
-          total_volume: 15000000000
-        },
-        {
-          id: "cardano",
-          symbol: "ada",
-          name: "Cardano",
-          current_price: 0.48,
-          price_change_percentage_24h: 0.85,
-          market_cap: 17000000000,
-          total_volume: 450000000
-        },
-        {
-          id: "polkadot",
-          symbol: "dot",
-          name: "Polkadot",
-          current_price: 7.25,
-          price_change_percentage_24h: -0.65,
-          market_cap: 9500000000,
-          total_volume: 180000000
-        },
-        {
-          id: "chainlink",
-          symbol: "link",
-          name: "Chainlink",
-          current_price: 15.80,
-          price_change_percentage_24h: 1.45,
-          market_cap: 9200000000,
-          total_volume: 420000000
-        }
+        { id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 43250.00, price_change_percentage_24h: 2.35, market_cap: 850000000000, total_volume: 25000000000 },
+        { id: "ethereum", symbol: "eth", name: "Ethereum", current_price: 2650.00, price_change_percentage_24h: -1.25, market_cap: 320000000000, total_volume: 15000000000 },
+        { id: "tether", symbol: "usdt", name: "Tether", current_price: 1.00, price_change_percentage_24h: 0.05, market_cap: 95000000000, total_volume: 45000000000 },
+        { id: "binancecoin", symbol: "bnb", name: "BNB", current_price: 310.50, price_change_percentage_24h: 1.85, market_cap: 47000000000, total_volume: 1200000000 },
+        { id: "solana", symbol: "sol", name: "Solana", current_price: 98.75, price_change_percentage_24h: 3.25, market_cap: 45000000000, total_volume: 2800000000 },
+        { id: "usd-coin", symbol: "usdc", name: "USDC", current_price: 1.00, price_change_percentage_24h: -0.02, market_cap: 42000000000, total_volume: 8500000000 },
+        { id: "ripple", symbol: "xrp", name: "XRP", current_price: 0.63, price_change_percentage_24h: -0.45, market_cap: 36000000000, total_volume: 1100000000 },
+        { id: "cardano", symbol: "ada", name: "Cardano", current_price: 0.48, price_change_percentage_24h: 0.85, market_cap: 17000000000, total_volume: 450000000 },
+        { id: "avalanche-2", symbol: "avax", name: "Avalanche", current_price: 36.80, price_change_percentage_24h: 2.95, market_cap: 15000000000, total_volume: 650000000 },
+        { id: "dogecoin", symbol: "doge", name: "Dogecoin", current_price: 0.082, price_change_percentage_24h: 4.15, market_cap: 12000000000, total_volume: 890000000 },
+        { id: "chainlink", symbol: "link", name: "Chainlink", current_price: 15.80, price_change_percentage_24h: 1.45, market_cap: 9200000000, total_volume: 420000000 },
+        { id: "polygon", symbol: "matic", name: "Polygon", current_price: 0.92, price_change_percentage_24h: -1.15, market_cap: 9200000000, total_volume: 420000000 },
+        { id: "litecoin", symbol: "ltc", name: "Litecoin", current_price: 72.50, price_change_percentage_24h: 1.85, market_cap: 5400000000, total_volume: 380000000 },
+        { id: "uniswap", symbol: "uni", name: "Uniswap", current_price: 8.90, price_change_percentage_24h: -2.15, market_cap: 5300000000, total_volume: 210000000 },
+        { id: "near", symbol: "near", name: "NEAR Protocol", current_price: 5.40, price_change_percentage_24h: 3.85, market_cap: 5100000000, total_volume: 290000000 },
+        { id: "polkadot", symbol: "dot", name: "Polkadot", current_price: 7.25, price_change_percentage_24h: -0.65, market_cap: 9500000000, total_volume: 180000000 },
+        { id: "internet-computer", symbol: "icp", name: "Internet Computer", current_price: 12.80, price_change_percentage_24h: 2.45, market_cap: 5900000000, total_volume: 120000000 },
+        { id: "stellar", symbol: "xlm", name: "Stellar", current_price: 0.115, price_change_percentage_24h: 1.25, market_cap: 3400000000, total_volume: 85000000 },
+        { id: "ethereum-classic", symbol: "etc", name: "Ethereum Classic", current_price: 27.60, price_change_percentage_24h: -1.85, market_cap: 4100000000, total_volume: 190000000 },
+        { id: "vechain", symbol: "vet", name: "VeChain", current_price: 0.035, price_change_percentage_24h: 2.15, market_cap: 2800000000, total_volume: 45000000 },
+        { id: "filecoin", symbol: "fil", name: "Filecoin", current_price: 5.90, price_change_percentage_24h: -3.25, market_cap: 3200000000, total_volume: 150000000 },
+        { id: "hedera-hashgraph", symbol: "hbar", name: "Hedera", current_price: 0.28, price_change_percentage_24h: 1.95, market_cap: 10200000000, total_volume: 180000000 },
+        { id: "cosmos", symbol: "atom", name: "Cosmos Hub", current_price: 7.85, price_change_percentage_24h: 0.75, market_cap: 3100000000, total_volume: 95000000 },
+        { id: "monero", symbol: "xmr", name: "Monero", current_price: 165.40, price_change_percentage_24h: 1.35, market_cap: 3000000000, total_volume: 78000000 },
+        { id: "algorand", symbol: "algo", name: "Algorand", current_price: 0.42, price_change_percentage_24h: -0.95, market_cap: 3400000000, total_volume: 92000000 }
       ];
       return res.json(mockData);
     }
@@ -151,98 +131,33 @@ export async function registerRoutes(app: Express) {
   } catch (error) {
     console.error("Failed to fetch crypto prices:", error);
 
-    // Return mock data as fallback
+    // Return mock data for top 25 coins as fallback
     const mockData = [
-      {
-        id: "bitcoin",
-        symbol: "btc",
-        name: "Bitcoin",
-        current_price: 43250.00,
-        price_change_percentage_24h: 2.35,
-        market_cap: 850000000000,
-        total_volume: 25000000000
-      },
-      {
-        id: "ethereum",
-        symbol: "eth",
-        name: "Ethereum",
-        current_price: 2650.00,
-        price_change_percentage_24h: -1.25,
-        market_cap: 320000000000,
-        total_volume: 15000000000
-      },
-      {
-        id: "binancecoin",
-        symbol: "bnb",
-        name: "BNB",
-        current_price: 310.50,
-        price_change_percentage_24h: 1.85,
-        market_cap: 47000000000,
-        total_volume: 1200000000
-      },
-      {
-        id: "cardano",
-        symbol: "ada",
-        name: "Cardano",
-        current_price: 0.48,
-        price_change_percentage_24h: 0.85,
-        market_cap: 17000000000,
-        total_volume: 450000000
-      },
-      {
-        id: "solana",
-        symbol: "sol",
-        name: "Solana",
-        current_price: 98.75,
-        price_change_percentage_24h: 3.25,
-        market_cap: 45000000000,
-        total_volume: 2800000000
-      },
-      {
-        id: "ripple",
-        symbol: "xrp",
-        name: "XRP",
-        current_price: 0.63,
-        price_change_percentage_24h: -0.45,
-        market_cap: 36000000000,
-        total_volume: 1100000000
-      },
-      {
-        id: "polkadot",
-        symbol: "dot",
-        name: "Polkadot",
-        current_price: 7.25,
-        price_change_percentage_24h: -0.65,
-        market_cap: 9500000000,
-        total_volume: 180000000
-      },
-      {
-        id: "dogecoin",
-        symbol: "doge",
-        name: "Dogecoin",
-        current_price: 0.082,
-        price_change_percentage_24h: 4.15,
-        market_cap: 12000000000,
-        total_volume: 890000000
-      },
-      {
-        id: "avalanche-2",
-        symbol: "avax",
-        name: "Avalanche",
-        current_price: 36.80,
-        price_change_percentage_24h: 2.95,
-        market_cap: 15000000000,
-        total_volume: 650000000
-      },
-      {
-        id: "polygon",
-        symbol: "matic",
-        name: "Polygon",
-        current_price: 0.92,
-        price_change_percentage_24h: -1.15,
-        market_cap: 9200000000,
-        total_volume: 420000000
-      }
+      { id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 43250.00, price_change_percentage_24h: 2.35, market_cap: 850000000000, total_volume: 25000000000 },
+      { id: "ethereum", symbol: "eth", name: "Ethereum", current_price: 2650.00, price_change_percentage_24h: -1.25, market_cap: 320000000000, total_volume: 15000000000 },
+      { id: "tether", symbol: "usdt", name: "Tether", current_price: 1.00, price_change_percentage_24h: 0.05, market_cap: 95000000000, total_volume: 45000000000 },
+      { id: "binancecoin", symbol: "bnb", name: "BNB", current_price: 310.50, price_change_percentage_24h: 1.85, market_cap: 47000000000, total_volume: 1200000000 },
+      { id: "solana", symbol: "sol", name: "Solana", current_price: 98.75, price_change_percentage_24h: 3.25, market_cap: 45000000000, total_volume: 2800000000 },
+      { id: "usd-coin", symbol: "usdc", name: "USDC", current_price: 1.00, price_change_percentage_24h: -0.02, market_cap: 42000000000, total_volume: 8500000000 },
+      { id: "ripple", symbol: "xrp", name: "XRP", current_price: 0.63, price_change_percentage_24h: -0.45, market_cap: 36000000000, total_volume: 1100000000 },
+      { id: "cardano", symbol: "ada", name: "Cardano", current_price: 0.48, price_change_percentage_24h: 0.85, market_cap: 17000000000, total_volume: 450000000 },
+      { id: "avalanche-2", symbol: "avax", name: "Avalanche", current_price: 36.80, price_change_percentage_24h: 2.95, market_cap: 15000000000, total_volume: 650000000 },
+      { id: "dogecoin", symbol: "doge", name: "Dogecoin", current_price: 0.082, price_change_percentage_24h: 4.15, market_cap: 12000000000, total_volume: 890000000 },
+      { id: "chainlink", symbol: "link", name: "Chainlink", current_price: 15.80, price_change_percentage_24h: 1.45, market_cap: 9200000000, total_volume: 420000000 },
+      { id: "polygon", symbol: "matic", name: "Polygon", current_price: 0.92, price_change_percentage_24h: -1.15, market_cap: 9200000000, total_volume: 420000000 },
+      { id: "litecoin", symbol: "ltc", name: "Litecoin", current_price: 72.50, price_change_percentage_24h: 1.85, market_cap: 5400000000, total_volume: 380000000 },
+      { id: "uniswap", symbol: "uni", name: "Uniswap", current_price: 8.90, price_change_percentage_24h: -2.15, market_cap: 5300000000, total_volume: 210000000 },
+      { id: "near", symbol: "near", name: "NEAR Protocol", current_price: 5.40, price_change_percentage_24h: 3.85, market_cap: 5100000000, total_volume: 290000000 },
+      { id: "polkadot", symbol: "dot", name: "Polkadot", current_price: 7.25, price_change_percentage_24h: -0.65, market_cap: 9500000000, total_volume: 180000000 },
+      { id: "internet-computer", symbol: "icp", name: "Internet Computer", current_price: 12.80, price_change_percentage_24h: 2.45, market_cap: 5900000000, total_volume: 120000000 },
+      { id: "stellar", symbol: "xlm", name: "Stellar", current_price: 0.115, price_change_percentage_24h: 1.25, market_cap: 3400000000, total_volume: 85000000 },
+      { id: "ethereum-classic", symbol: "etc", name: "Ethereum Classic", current_price: 27.60, price_change_percentage_24h: -1.85, market_cap: 4100000000, total_volume: 190000000 },
+      { id: "vechain", symbol: "vet", name: "VeChain", current_price: 0.035, price_change_percentage_24h: 2.15, market_cap: 2800000000, total_volume: 45000000 },
+      { id: "filecoin", symbol: "fil", name: "Filecoin", current_price: 5.90, price_change_percentage_24h: -3.25, market_cap: 3200000000, total_volume: 150000000 },
+      { id: "hedera-hashgraph", symbol: "hbar", name: "Hedera", current_price: 0.28, price_change_percentage_24h: 1.95, market_cap: 10200000000, total_volume: 180000000 },
+      { id: "cosmos", symbol: "atom", name: "Cosmos Hub", current_price: 7.85, price_change_percentage_24h: 0.75, market_cap: 3100000000, total_volume: 95000000 },
+      { id: "monero", symbol: "xmr", name: "Monero", current_price: 165.40, price_change_percentage_24h: 1.35, market_cap: 3000000000, total_volume: 78000000 },
+      { id: "algorand", symbol: "algo", name: "Algorand", current_price: 0.42, price_change_percentage_24h: -0.95, market_cap: 3400000000, total_volume: 92000000 }
     ];
     res.json(mockData);
   }
