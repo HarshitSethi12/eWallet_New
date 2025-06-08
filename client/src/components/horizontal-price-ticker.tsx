@@ -148,14 +148,14 @@ export function HorizontalPriceTicker() {
       try {
         // Using a simpler mock data for now to avoid API issues
         const mockData = [
-          { symbol: 'BTC', name: 'Bitcoin', price: 45000, change: 2.5, icon: '₿' },
-          { symbol: 'ETH', name: 'Ethereum', price: 3200, change: -1.2, icon: 'Ξ' },
-          { symbol: 'ADA', name: 'Cardano', price: 0.85, change: 3.4, icon: '₳' },
-          { symbol: 'DOT', name: 'Polkadot', price: 12.50, change: -0.8, icon: '●' },
-          { symbol: 'LINK', name: 'Chainlink', price: 18.75, change: 1.9, icon: '🔗' },
-          { symbol: 'LTC', name: 'Litecoin', price: 140.25, change: 0.6, icon: 'Ł' },
-          { symbol: 'XLM', name: 'Stellar', price: 0.28, change: -2.1, icon: '*' },
-          { symbol: 'TRX', name: 'Tron', price: 0.095, change: 4.2, icon: '⚡' },
+          { symbol: 'BTC', name: 'Bitcoin', price: 45000, change: 2.5 },
+          { symbol: 'ETH', name: 'Ethereum', price: 3200, change: -1.2 },
+          { symbol: 'ADA', name: 'Cardano', price: 0.85, change: 3.4 },
+          { symbol: 'DOT', name: 'Polkadot', price: 12.50, change: -0.8 },
+          { symbol: 'LINK', name: 'Chainlink', price: 18.75, change: 1.9 },
+          { symbol: 'LTC', name: 'Litecoin', price: 140.25, change: 0.6 },
+          { symbol: 'XLM', name: 'Stellar', price: 0.28, change: -2.1 },
+          { symbol: 'TRX', name: 'Tron', price: 0.095, change: 4.2 },
         ];
         return mockData;
       } catch (error) {
@@ -242,7 +242,7 @@ export function HorizontalPriceTicker() {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         onScroll={updateScrollButtons}
       >
-        {cryptoPrices && cryptoPrices.length > 0 ? cryptoPrices.map((crypto) => {
+        {Array.isArray(cryptoPrices) && cryptoPrices.length > 0 ? cryptoPrices.map((crypto) => {
           const isPositive = crypto.change > 0;
           const colors = cryptoColors[crypto.symbol.toLowerCase()] || { primary: "#6B7280", secondary: "#9CA3AF" };
 
