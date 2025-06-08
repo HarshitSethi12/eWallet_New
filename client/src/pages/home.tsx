@@ -8,7 +8,7 @@ import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockcha
 import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
-import { SiGmail } from "react-icons/si";
+import { Mail } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 
@@ -47,7 +47,7 @@ function WelcomePage() {
             className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
             onClick={login}
           >
-            <SiGmail className="h-5 w-5" />
+            <Mail className="h-5 w-5" />
             Gmail
           </Button>
         </div>
