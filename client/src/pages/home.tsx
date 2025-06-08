@@ -48,13 +48,6 @@ function WelcomePage() {
           >
             Sign In with Google
           </Button>
-          <Button 
-            size="lg" 
-            className="bg-black hover:bg-gray-800 text-white px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all"
-            onClick={loginWithApple}
-          >
-            Sign In with Apple
-          </Button>
         </div>
       </div>
 
