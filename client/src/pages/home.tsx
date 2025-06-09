@@ -43,7 +43,7 @@ function WelcomePage() {
         <div className="flex flex-col items-center gap-4 mt-6 sm:mt-8 md:mt-10">
           <Button 
             size="lg" 
-            className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
+            className="btn-primary px-4 sm:px-6 py-3 sm:py-4 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
             onClick={login}
           >
             <span className="text-base sm:text-lg font-semibold">Gmail</span>
