@@ -27,7 +27,7 @@ function Navigation() {
                     fontFamily: "'Poppins', sans-serif", 
                     letterSpacing: "-0.01em",
                     paddingRight: "2px",
-                    color: "#FAF7F0"
+                    color: "#F7F3E9"
                   }}
                 >
                   Bit
@@ -37,7 +37,7 @@ function Navigation() {
                   style={{ 
                     fontFamily: "'Poppins', sans-serif", 
                     letterSpacing: "-0.01em",
-                    color: "#9CAF88"
+                    color: "#A0826D"
                   }}
                 >
                   Wallet
@@ -67,14 +67,44 @@ function Router() {
   );
 }
 
+function Footer() {
+  return (
+    <footer className="mt-auto border-t" style={{ backgroundColor: 'var(--color-footer)' }}>
+      <div className="container max-w-5xl mx-auto px-3 py-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between text-white">
+          <div className="flex items-center mb-2 sm:mb-0">
+            <span 
+              className="text-lg font-medium"
+              style={{ 
+                fontFamily: "'Poppins', sans-serif",
+                color: "#F7F3E9"
+              }}
+            >
+              © 2024 BitWallet - Natural Digital Finance
+            </span>
+          </div>
+          <div className="flex items-center space-x-4 text-sm" style={{ color: "#A0826D" }}>
+            <span>Secure</span>
+            <span>•</span>
+            <span>Natural</span>
+            <span>•</span>
+            <span>Sustainable</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen" style={{ backgroundColor: 'var(--color-secondary)' }}>
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-secondary)' }}>
         <Navigation />
-        <main>
+        <main className="flex-1">
           <Router />
         </main>
+        <Footer />
         <Toaster />
       </div>
     </QueryClientProvider>

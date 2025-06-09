@@ -20,14 +20,15 @@
   display: none;
 }
 
-/* Natural Forest & Earth Theme */
+/* Pure Natural Earthy Forest & Stone Theme */
 :root {
-  --color-primary: #228B22;    /* Forest green for primary actions */
-  --color-secondary: #FAF7F0;  /* Warm cream background */
-  --color-accent: #9CAF88;     /* Sage green for accents */
-  --color-heading: #3C2414;    /* Rich brown for headings */
-  --color-body: #5D4E37;       /* Earthy brown for body text */
-  --color-nav: #1B4332;        /* Deep forest for navigation */
+  --color-primary: #87A96B;    /* Sage green for primary actions */
+  --color-secondary: #F7F3E9;  /* Warm cream background */
+  --color-accent: #A0826D;     /* Warm stone for accents */
+  --color-heading: #8B4513;    /* Rich earth brown for headings */
+  --color-body: #6B5B47;       /* Warm stone brown for body text */
+  --color-nav: #2D5016;        /* Deep forest for navigation */
+  --color-footer: #2D5016;     /* Deep forest for footer */
 }
 
 /* Professional Ocean Theme */
@@ -119,7 +120,7 @@
     font-weight: 500;
   }
 
-  /* Force all buttons to use the natural forest theme */
+  /* Force all buttons to use the natural sage green theme */
   button.btn-primary,
   .btn-primary,
   button.btn-secondary,
@@ -128,15 +129,15 @@
   [data-variant="default"],
   [data-variant="secondary"],
   button:not([class*="outline"]):not([class*="ghost"]):not([class*="link"]):not([class*="destructive"]) {
-    background-color: #228B22 !important;
-    border-color: #228B22 !important;
+    background-color: #87A96B !important;
+    border-color: #87A96B !important;
     color: white !important;
   }
 
   /* Hover effects for buttons */
   button:hover:not([class*="outline"]):not([class*="ghost"]):not([class*="link"]):not([class*="destructive"]) {
-    background-color: #1F7A1F !important;
-    border-color: #1F7A1F !important;
+    background-color: #759157 !important;
+    border-color: #759157 !important;
   }
 
   .accent-text {
@@ -194,13 +195,13 @@
   }
 
   .animated-gradient-text {
-    color: #228B22 !important;
+    color: #87A96B !important;
     position: relative;
     background: transparent !important;
     background-image: none !important;
     -webkit-background-clip: text !important;
     background-clip: text !important;
-    -webkit-text-fill-color: #228B22 !important;
+    -webkit-text-fill-color: #87A96B !important;
   }
 
   .animated-gradient-text::after {
@@ -214,8 +215,8 @@
   /* Override any gradient animations */
   .logo-shimmer.animated-gradient-text,
   .animated-gradient-text.logo-shimmer {
-    color: #228B22 !important;
-    -webkit-text-fill-color: #228B22 !important;
+    color: #87A96B !important;
+    -webkit-text-fill-color: #87A96B !important;
     background: none !important;
     animation: none !important;
   }
