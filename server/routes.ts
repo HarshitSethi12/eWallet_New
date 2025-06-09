@@ -98,7 +98,7 @@ export async function registerRoutes(app: Express) {
       ];
 
       const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds.join(',')}&vs_currencies=usd&include_24hr_change=true`;
-      console.log('Fetching from:', url);
+      console.log('Fetching crypto prices from:', url);
 
       const response = await fetch(url, {
         headers: {

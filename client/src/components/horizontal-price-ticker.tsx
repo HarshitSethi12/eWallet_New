@@ -146,24 +146,31 @@ export function HorizontalPriceTicker() {
     queryKey: ['crypto-prices'],
     queryFn: async () => {
       try {
-        // Using a simpler mock data for now to avoid API issues
-        const mockData = [
-          { symbol: 'BTC', name: 'Bitcoin', price: 45000, change: 2.5 },
-          { symbol: 'ETH', name: 'Ethereum', price: 3200, change: -1.2 },
-          { symbol: 'ADA', name: 'Cardano', price: 0.85, change: 3.4 },
-          { symbol: 'DOT', name: 'Polkadot', price: 12.50, change: -0.8 },
-          { symbol: 'LINK', name: 'Chainlink', price: 18.75, change: 1.9 },
-          { symbol: 'LTC', name: 'Litecoin', price: 140.25, change: 0.6 },
-          { symbol: 'XLM', name: 'Stellar', price: 0.28, change: -2.1 },
-          { symbol: 'TRX', name: 'Tron', price: 0.095, change: 4.2 },
+        const response = await fetch('/api/crypto-prices');
+        if (!response.ok) {
+          throw new Error('Failed to fetch crypto prices');
+        }
+        const data = await response.json();
+
+        // Transform the CoinGecko API response to match our expected format
+        const cryptoList = [
+          { symbol: 'BTC', name: 'Bitcoin', price: data.bitcoin?.usd || 0, change: data.bitcoin?.usd_24h_change || 0 },
+          { symbol: 'ETH', name: 'Ethereum', price: data.ethereum?.usd || 0, change: data.ethereum?.usd_24h_change || 0 },
+          { symbol: 'ADA', name: 'Cardano', price: data.cardano?.usd || 0, change: data.cardano?.usd_24h_change || 0 },
+          { symbol: 'DOT', name: 'Polkadot', price: data.polkadot?.usd || 0, change: data.polkadot?.usd_24h_change || 0 },
+          { symbol: 'LINK', name: 'Chainlink', price: data.chainlink?.usd || 0, change: data.chainlink?.usd_24h_change || 0 },
+          { symbol: 'LTC', name: 'Litecoin', price: data.litecoin?.usd || 0, change: data.litecoin?.usd_24h_change || 0 },
+          { symbol: 'XLM', name: 'Stellar', price: data.stellar?.usd || 0, change: data.stellar?.usd_24h_change || 0 },
+          { symbol: 'TRX', name: 'Tron', price: data.tron?.usd || 0, change: data.tron?.usd_24h_change || 0 },
         ];
-        return mockData;
+
+        return cryptoList;
       } catch (error) {
         console.error('Error fetching crypto prices:', error);
         return [];
       }
     },
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   const updateScrollButtons = () => {

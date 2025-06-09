@@ -110,12 +110,11 @@ const getCoinFallbackIcon = (symbol: string): string => {
 };
 
 export function PriceTicker() {
-  const { data: prices, isLoading, error } = useQuery<CryptoPriceData[]>({
+  const { data: prices, isLoading, error } = useQuery<any[]>({
     queryKey: ["crypto-prices"],
     queryFn: async () => {
       try {
-        // Using CoinGecko API directly as fallback
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,cardano,polkadot,chainlink,litecoin,stellar,tron,staked-ether,wrapped-bitcoin,hyperliquid,sui,wrapped-steth,leo-token,the-open-network,ethena-usde,usd-coin&vs_currencies=usd&include_24hr_change=true');
+        const response = await fetch('/api/crypto-prices');
         if (!response.ok) {
           throw new Error('Failed to fetch crypto prices');
         }
@@ -123,23 +122,18 @@ export function PriceTicker() {
 
         // Transform the data to match your expected format
         const cryptoList = [
-          { symbol: 'BTC', name: 'Bitcoin', price: data.bitcoin?.usd || 0, change: data.bitcoin?.usd_24h_change || 0, icon: '₿' },
-          { symbol: 'ETH', name: 'Ethereum', price: data.ethereum?.usd || 0, change: data.ethereum?.usd_24h_change || 0, icon: 'Ξ' },
-          { symbol: 'ADA', name: 'Cardano', price: data.cardano?.usd || 0, change: data.cardano?.usd_24h_change || 0, icon: '₳' },
-          { symbol: 'DOT', name: 'Polkadot', price: data.polkadot?.usd || 0, change: data.polkadot?.usd_24h_change || 0, icon: '●' },
-          { symbol: 'LINK', name: 'Chainlink', price: data.chainlink?.usd || 0, change: data.chainlink?.usd_24h_change || 0, icon: '🔗' },
-          { symbol: 'LTC', name: 'Litecoin', price: data.litecoin?.usd || 0, change: data.litecoin?.usd_24h_change || 0, icon: 'Ł' },
-          { symbol: 'XLM', name: 'Stellar', price: data.stellar?.usd || 0, change: data.stellar?.usd_24h_change || 0, icon: '*' },
-          { symbol: 'TRX', name: 'Tron', price: data.tron?.usd || 0, change: data.tron?.usd_24h_change || 0, icon: '⚡' },
-          { symbol: 'STETH', name: 'Staked Ether', price: data['staked-ether']?.usd || 0, change: data['staked-ether']?.usd_24h_change || 0, icon: '🔒' },
-          { symbol: 'WBTC', name: 'Wrapped Bitcoin', price: data['wrapped-bitcoin']?.usd || 0, change: data['wrapped-bitcoin']?.usd_24h_change || 0, icon: '🔄' },
-          { symbol: 'HYPE', name: 'Hyperliquid', price: data.hyperliquid?.usd || 0, change: data.hyperliquid?.usd_24h_change || 0, icon: '🚀' },
-          { symbol: 'SUI', name: 'Sui', price: data.sui?.usd || 0, change: data.sui?.usd_24h_change || 0, icon: '🌊' },
-          { symbol: 'WSTETH', name: 'Wrapped stETH', price: data['wrapped-steth']?.usd || 0, change: data['wrapped-steth']?.usd_24h_change || 0, icon: '🔗' },
-          { symbol: 'LEO', name: 'LEO Token', price: data['leo-token']?.usd || 0, change: data['leo-token']?.usd_24h_change || 0, icon: '🦁' },
-          { symbol: 'TON', name: 'The Open Network', price: data['the-open-network']?.usd || 0, change: data['the-open-network']?.usd_24h_change || 0, icon: '💎' },
-          { symbol: 'USDS', name: 'Ethena USDe', price: data['ethena-usde']?.usd || 0, change: data['ethena-usde']?.usd_24h_change || 0, icon: '$' },
-          { symbol: 'USDC', name: 'USD Coin', price: data['usd-coin']?.usd || 0, change: data['usd-coin']?.usd_24h_change || 0, icon: '$' },
+          { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', current_price: data.bitcoin?.usd || 0, price_change_percentage_24h: data.bitcoin?.usd_24h_change || 0 },
+          { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', current_price: data.ethereum?.usd || 0, price_change_percentage_24h: data.ethereum?.usd_24h_change || 0 },
+          { id: 'cardano', symbol: 'ADA', name: 'Cardano', current_price: data.cardano?.usd || 0, price_change_percentage_24h: data.cardano?.usd_24h_change || 0 },
+          { id: 'polkadot', symbol: 'DOT', name: 'Polkadot', current_price: data.polkadot?.usd || 0, price_change_percentage_24h: data.polkadot?.usd_24h_change || 0 },
+          { id: 'chainlink', symbol: 'LINK', name: 'Chainlink', current_price: data.chainlink?.usd || 0, price_change_percentage_24h: data.chainlink?.usd_24h_change || 0 },
+          { id: 'litecoin', symbol: 'LTC', name: 'Litecoin', current_price: data.litecoin?.usd || 0, price_change_percentage_24h: data.litecoin?.usd_24h_change || 0 },
+          { id: 'stellar', symbol: 'XLM', name: 'Stellar', current_price: data.stellar?.usd || 0, price_change_percentage_24h: data.stellar?.usd_24h_change || 0 },
+          { id: 'tron', symbol: 'TRX', name: 'Tron', current_price: data.tron?.usd || 0, price_change_percentage_24h: data.tron?.usd_24h_change || 0 },
+          { id: 'staked-ether', symbol: 'STETH', name: 'Staked Ether', current_price: data['staked-ether']?.usd || 0, price_change_percentage_24h: data['staked-ether']?.usd_24h_change || 0 },
+          { id: 'wrapped-bitcoin', symbol: 'WBTC', name: 'Wrapped Bitcoin', current_price: data['wrapped-bitcoin']?.usd || 0, price_change_percentage_24h: data['wrapped-bitcoin']?.usd_24h_change || 0 },
+          { id: 'leo-token', symbol: 'LEO', name: 'LEO Token', current_price: data['leo-token']?.usd || 0, price_change_percentage_24h: data['leo-token']?.usd_24h_change || 0 },
+          { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin', current_price: data['usd-coin']?.usd || 0, price_change_percentage_24h: data['usd-coin']?.usd_24h_change || 0 },
         ];
 
         return cryptoList;
@@ -148,7 +142,7 @@ export function PriceTicker() {
         return [];
       }
     },
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   if (isLoading) {
