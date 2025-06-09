@@ -8,7 +8,6 @@ import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockcha
 import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
-import { Mail } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 
@@ -47,7 +46,12 @@ function WelcomePage() {
             className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
             onClick={login}
           >
-            <Mail className="h-5 w-5" />
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-.904.732-1.636 1.636-1.636h3.819l6.545 4.91 6.545-4.91h3.819c.904 0 1.636.732 1.636 1.636z" fill="#EA4335"/>
+              <path d="M0 5.457v.65l12 9 12-9v-.65c0-.904-.732-1.636-1.636-1.636H1.636C.732 3.821 0 4.553 0 5.457z" fill="#FBBC04"/>
+              <path d="M18.545 11.727V21h3.819c.904 0 1.636-.732 1.636-1.636V5.457L18.545 11.727z" fill="#34A853"/>
+              <path d="M5.455 11.727L0 5.457v13.907c0 .904.732 1.636 1.636 1.636h3.819V11.727z" fill="#C5221F"/>
+            </svg>
             Gmail
           </Button>
         </div>
