@@ -107,15 +107,24 @@
   }
 
   .btn-primary {
-    background-color: var(--color-primary); /* Defaults to original green theme */
-    color: white;
+    background-color: var(--color-primary) !important; /* Defaults to original green theme */
+    color: white !important;
     font-weight: 500;
   }
 
   .btn-secondary {
-    background-color: var(--color-primary); /* Defaults to original green theme */
-    color: white;
+    background-color: var(--color-primary) !important; /* Defaults to original green theme */
+    color: white !important;
     font-weight: 500;
+  }
+
+  /* Force all buttons to use the same green */
+  button.btn-primary,
+  .btn-primary,
+  button.btn-secondary,
+  .btn-secondary {
+    background-color: #34D399 !important;
+    border-color: #34D399 !important;
   }
 
   .accent-text {
