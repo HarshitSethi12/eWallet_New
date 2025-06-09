@@ -173,39 +173,18 @@
   }
 
   .animated-gradient-text {
-    color: #1E40AF;
+    color: #1E40AF !important;
     position: relative;
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
   }
 
   .animated-gradient-text::after {
     display: none;
   }
 
-  /* Add shimmer animation for extra flair */
-  @keyframes shimmer {
-    0% {
-      background-position: -100% 0;
-    }
-    100% {
-      background-position: 100% 0;
-    }
-  }
-
-  h1 .animated-gradient-text::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.15) 50%,
-      rgba(255, 255, 255, 0) 100%
-    );
-    z-index: 1;
-    animation: shimmer 3s infinite;
-    background-size: 200% 100%;
+  .animated-gradient-text::before {
+    display: none;
   }
 }
