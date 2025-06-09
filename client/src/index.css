@@ -20,13 +20,13 @@
   display: none;
 }
 
-/* Fresh Green Theme */
+/* Modern Blue & White Theme */
 :root {
-  --color-primary: #34D399;    /* Bright mint green for primary actions */
-  --color-secondary: #F9FAFB;  /* Clean white background */
-  --color-accent: #10B981;     /* Deeper green for accents */
-  --color-heading: #065F46;    /* Dark green for headings */
-  --color-body: #1F2937;       /* Dark gray for body text */
+  --color-primary: #2563EB;    /* Deep blue for primary actions */
+  --color-secondary: #FFFFFF;  /* Pure white background */
+  --color-accent: #0EA5E9;     /* Sky blue for accents */
+  --color-heading: #1E293B;    /* Dark slate for headings */
+  --color-body: #475569;       /* Medium gray for body text */
 }
 
 /* Professional Ocean Theme */
@@ -118,7 +118,7 @@
     font-weight: 500;
   }
 
-  /* Force all buttons to use the same green */
+  /* Force all buttons to use the new blue theme */
   button.btn-primary,
   .btn-primary,
   button.btn-secondary,
@@ -127,8 +127,8 @@
   [data-variant="default"],
   [data-variant="secondary"],
   button:not([class*="outline"]):not([class*="ghost"]):not([class*="link"]):not([class*="destructive"]) {
-    background-color: #34D399 !important;
-    border-color: #34D399 !important;
+    background-color: #2563EB !important;
+    border-color: #2563EB !important;
   }
 
   .accent-text {
