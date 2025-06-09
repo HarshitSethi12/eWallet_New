@@ -122,7 +122,11 @@
   button.btn-primary,
   .btn-primary,
   button.btn-secondary,
-  .btn-secondary {
+  .btn-secondary,
+  button[class*="bg-primary"],
+  [data-variant="default"],
+  [data-variant="secondary"],
+  button:not([class*="outline"]):not([class*="ghost"]):not([class*="link"]):not([class*="destructive"]) {
     background-color: #34D399 !important;
     border-color: #34D399 !important;
   }
