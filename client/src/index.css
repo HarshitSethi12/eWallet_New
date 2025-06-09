@@ -175,16 +175,27 @@
   .animated-gradient-text {
     color: #1E40AF !important;
     position: relative;
-    background: none !important;
-    -webkit-background-clip: unset !important;
-    background-clip: unset !important;
+    background: transparent !important;
+    background-image: none !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: #1E40AF !important;
   }
 
   .animated-gradient-text::after {
-    display: none;
+    display: none !important;
   }
 
   .animated-gradient-text::before {
-    display: none;
+    display: none !important;
+  }
+
+  /* Override any gradient animations */
+  .logo-shimmer.animated-gradient-text,
+  .animated-gradient-text.logo-shimmer {
+    color: #1E40AF !important;
+    -webkit-text-fill-color: #1E40AF !important;
+    background: none !important;
+    animation: none !important;
   }
 }
