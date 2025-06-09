@@ -15,7 +15,7 @@ function Navigation() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
 
   return (
-    <nav className="border-b" style={{ backgroundColor: 'var(--color-primary)' }}>
+    <nav className="border-b" style={{ backgroundColor: 'var(--color-nav)' }}>
       <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 flex items-center justify-between text-white">
         <div className="flex items-center flex-1 justify-center">
           <Link href="/">
@@ -27,7 +27,7 @@ function Navigation() {
                     fontFamily: "'Poppins', sans-serif", 
                     letterSpacing: "-0.01em",
                     paddingRight: "2px",
-                    color: "#1E40AF"
+                    color: "#FAF7F0"
                   }}
                 >
                   Bit
@@ -37,7 +37,7 @@ function Navigation() {
                   style={{ 
                     fontFamily: "'Poppins', sans-serif", 
                     letterSpacing: "-0.01em",
-                    color: "#1E40AF"
+                    color: "#9CAF88"
                   }}
                 >
                   Wallet

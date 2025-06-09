@@ -20,13 +20,14 @@
   display: none;
 }
 
-/* Modern Blue & White Theme */
+/* Natural Forest & Earth Theme */
 :root {
-  --color-primary: #2563EB;    /* Deep blue for primary actions */
-  --color-secondary: #FFFFFF;  /* Pure white background */
-  --color-accent: #0EA5E9;     /* Sky blue for accents */
-  --color-heading: #1E293B;    /* Dark slate for headings */
-  --color-body: #475569;       /* Medium gray for body text */
+  --color-primary: #228B22;    /* Forest green for primary actions */
+  --color-secondary: #FAF7F0;  /* Warm cream background */
+  --color-accent: #9CAF88;     /* Sage green for accents */
+  --color-heading: #3C2414;    /* Rich brown for headings */
+  --color-body: #5D4E37;       /* Earthy brown for body text */
+  --color-nav: #1B4332;        /* Deep forest for navigation */
 }
 
 /* Professional Ocean Theme */
@@ -118,7 +119,7 @@
     font-weight: 500;
   }
 
-  /* Force all buttons to use the new blue theme */
+  /* Force all buttons to use the natural forest theme */
   button.btn-primary,
   .btn-primary,
   button.btn-secondary,
@@ -127,8 +128,15 @@
   [data-variant="default"],
   [data-variant="secondary"],
   button:not([class*="outline"]):not([class*="ghost"]):not([class*="link"]):not([class*="destructive"]) {
-    background-color: #2563EB !important;
-    border-color: #2563EB !important;
+    background-color: #228B22 !important;
+    border-color: #228B22 !important;
+    color: white !important;
+  }
+
+  /* Hover effects for buttons */
+  button:hover:not([class*="outline"]):not([class*="ghost"]):not([class*="link"]):not([class*="destructive"]) {
+    background-color: #1F7A1F !important;
+    border-color: #1F7A1F !important;
   }
 
   .accent-text {
@@ -186,13 +194,13 @@
   }
 
   .animated-gradient-text {
-    color: #1E40AF !important;
+    color: #228B22 !important;
     position: relative;
     background: transparent !important;
     background-image: none !important;
     -webkit-background-clip: text !important;
     background-clip: text !important;
-    -webkit-text-fill-color: #1E40AF !important;
+    -webkit-text-fill-color: #228B22 !important;
   }
 
   .animated-gradient-text::after {
@@ -206,8 +214,8 @@
   /* Override any gradient animations */
   .logo-shimmer.animated-gradient-text,
   .animated-gradient-text.logo-shimmer {
-    color: #1E40AF !important;
-    -webkit-text-fill-color: #1E40AF !important;
+    color: #228B22 !important;
+    -webkit-text-fill-color: #228B22 !important;
     background: none !important;
     animation: none !important;
   }
