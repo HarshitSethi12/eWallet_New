@@ -22,20 +22,22 @@ function Navigation() {
             <Button variant="link" className="text-2xl sm:text-3xl hover:text-white/90 flex items-center py-1 sm:py-2">
               <span className="flex items-end">
                 <span 
-                  className="logo-shimmer font-bold animated-gradient-text" 
+                  className="font-bold" 
                   style={{ 
                     fontFamily: "'Poppins', sans-serif", 
                     letterSpacing: "-0.01em",
-                    paddingRight: "2px"
+                    paddingRight: "2px",
+                    color: "#1E40AF"
                   }}
                 >
                   Bit
                 </span>
                 <span 
-                  className="font-bold animated-gradient-text"
+                  className="font-bold"
                   style={{ 
                     fontFamily: "'Poppins', sans-serif", 
-                    letterSpacing: "-0.01em"
+                    letterSpacing: "-0.01em",
+                    color: "#1E40AF"
                   }}
                 >
                   Wallet
