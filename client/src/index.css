@@ -107,7 +107,7 @@
   }
 
   .btn-primary {
-    background-color: var(--color-primary); /* Defaults to original green theme */
+    background-color: var(--color-accent); /* Defaults to original green theme */
     color: white;
     font-weight: 500;
   }

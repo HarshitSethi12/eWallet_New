@@ -15,7 +15,7 @@ function Navigation() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
 
   return (
-    <nav className="border-b" style={{ backgroundColor: 'var(--color-accent)' }}>
+    <nav className="border-b" style={{ backgroundColor: 'var(--color-primary)' }}>
       <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 flex items-center justify-between text-white">
         <div className="flex items-center flex-1 justify-center">
           <Link href="/">
