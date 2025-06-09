@@ -221,12 +221,12 @@ export function HorizontalPriceTicker() {
   }
 
   return (
-    <div className="relative w-full bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+    <div className="relative w-full">
       {/* Left scroll button */}
       {canScrollLeft && (
         <button
           onClick={() => scroll('left')}
-          className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-gray-50 transition-colors"
+          className="absolute -left-4 sm:-left-6 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-gray-50 transition-colors border border-gray-200"
         >
           <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
         </button>
@@ -236,11 +236,13 @@ export function HorizontalPriceTicker() {
       {canScrollRight && (
         <button
           onClick={() => scroll('right')}
-          className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-gray-50 transition-colors"
+          className="absolute -right-4 sm:-right-6 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-gray-50 transition-colors border border-gray-200"
         >
           <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
         </button>
       )}
+
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
 
       {/* Price ticker content */}
       <div
@@ -304,6 +306,7 @@ export function HorizontalPriceTicker() {
         <p className="text-xs text-gray-500 text-center">
           Live market data • Updates every 30 seconds
         </p>
+      </div>
       </div>
     </div>
   );
