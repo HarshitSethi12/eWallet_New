@@ -213,29 +213,24 @@
   }
 
   .animated-gradient-text {
-    color: #87A96B !important;
-    position: relative;
-    background: transparent !important;
-    background-image: none !important;
-    -webkit-background-clip: text !important;
-    background-clip: text !important;
-    -webkit-text-fill-color: #87A96B !important;
+    background: linear-gradient(45deg, #0ea5e9, #10b981, #06b6d4, #059669, #0284c7, #047857);
+    background-size: 300% 300%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: gradientFlow 3s ease-in-out infinite;
   }
 
-  .animated-gradient-text::after {
-    display: none !important;
-  }
-
-  .animated-gradient-text::before {
-    display: none !important;
-  }
-
-  /* Override any gradient animations */
-  .logo-shimmer.animated-gradient-text,
-  .animated-gradient-text.logo-shimmer {
-    color: #87A96B !important;
-    -webkit-text-fill-color: #87A96B !important;
-    background: none !important;
-    animation: none !important;
+  @keyframes gradientFlow {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
   }
 }
