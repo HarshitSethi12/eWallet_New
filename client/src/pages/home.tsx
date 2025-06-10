@@ -29,7 +29,7 @@ function WelcomePage() {
         </div>
         <div className="text-center space-y-6 sm:space-y-8">
           <div className="space-y-3 sm:space-y-4">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-blue-800 tracking-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-blue-900 tracking-tight">
               Your Go-to Cryptocurrency Exchange
             </h1>
             <p className="text-xl sm:text-2xl text-gray-700 font-semibold">
