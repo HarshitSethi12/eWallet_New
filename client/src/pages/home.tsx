@@ -33,7 +33,10 @@ function WelcomePage() {
               BitWallet
             </h1>
             <p className="text-lg sm:text-xl lg:text-2xl text-gray-600 font-medium">
-              2025 BitWallet
+              Your Go-to Cryptocurrency Exchange
+            </p>
+            <p className="text-base sm:text-lg text-gray-500 font-normal">
+              Secure Cryptocurrency Management
             </p>
           </div>
         </div>
