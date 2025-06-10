@@ -30,12 +30,9 @@ function WelcomePage() {
         <div className="text-center space-y-6 sm:space-y-8">
           <div className="space-y-3 sm:space-y-4">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight">
-              BitWallet
+              Your Go-to Cryptocurrency Exchange
             </h1>
             <p className="text-lg sm:text-xl lg:text-2xl text-gray-600 font-medium">
-              Your Go-to Cryptocurrency Exchange
-            </p>
-            <p className="text-base sm:text-lg text-gray-500 font-normal">
               Secure Cryptocurrency Management
             </p>
           </div>
