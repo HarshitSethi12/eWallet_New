@@ -29,10 +29,10 @@ function WelcomePage() {
         </div>
         <div className="text-center space-y-6 sm:space-y-8">
           <div className="space-y-3 sm:space-y-4">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-blue-900 tracking-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-blue-900 tracking-tight">
               Your Go-to Cryptocurrency Exchange
             </h1>
-            <p className="text-xl sm:text-2xl font-semibold animated-gradient-text">
+            <p className="text-lg sm:text-xl font-semibold animated-gradient-text">
               Secure Cryptocurrency Management
             </p>
           </div>
