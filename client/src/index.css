@@ -233,4 +233,14 @@
       background-position: 0% 50%;
     }
   }
+
+  .natural-gradient-text {
+    background: linear-gradient(45deg, #8B4513, #87A96B, #228B22, #A0826D, #6B8E23, #8FBC8F);
+    background-size: 300% 300%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: gradientFlow 4s ease-in-out infinite;
+  }
 }
