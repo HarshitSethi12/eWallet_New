@@ -242,5 +242,8 @@
     -webkit-text-fill-color: transparent;
     color: transparent;
     animation: gradientFlow 4s ease-in-out infinite;
+    display: inline-block;
+    padding: 0.1em 0;
+    line-height: 1.2;
   }
 }
