@@ -92,9 +92,9 @@ function Footer() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col m-0 p-0" style={{ backgroundColor: 'var(--color-secondary)' }}>
+      <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--color-secondary)', margin: 0, padding: 0 }}>
         <Navigation />
-        <main className="flex-1">
+        <main className="flex-1 overflow-y-auto">
           <Router />
         </main>
         <Footer />
