@@ -226,7 +226,7 @@ export function HorizontalPriceTicker() {
       {canScrollLeft && (
         <button
           onClick={() => scroll('left')}
-          className="absolute -left-4 sm:-left-6 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-gray-50 transition-colors border border-gray-200"
+          className="absolute -left-8 sm:-left-10 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-gray-50 transition-colors border border-gray-200"
         >
           <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
         </button>
@@ -236,7 +236,7 @@ export function HorizontalPriceTicker() {
       {canScrollRight && (
         <button
           onClick={() => scroll('right')}
-          className="absolute -right-4 sm:-right-6 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-gray-50 transition-colors border border-gray-200"
+          className="absolute -right-8 sm:-right-10 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-1.5 sm:p-2 hover:bg-gray-50 transition-colors border border-gray-200"
         >
           <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
         </button>
