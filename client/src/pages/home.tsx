@@ -32,7 +32,7 @@ function WelcomePage() {
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-blue-900 tracking-tight">
               Your Go-to Cryptocurrency Exchange
             </h1>
-            <p className="text-xl sm:text-2xl text-gray-700 font-semibold">
+            <p className="text-xl sm:text-2xl font-semibold animated-gradient-text">
               Secure Cryptocurrency Management
             </p>
           </div>
