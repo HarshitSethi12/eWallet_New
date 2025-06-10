@@ -28,8 +28,8 @@ function WelcomePage() {
           </div>
         </div>
         <div className="text-center space-y-6 sm:space-y-8">
-          <div className="space-y-3 sm:space-y-4">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold natural-gradient-text tracking-tight">
+          <div className="space-y-3 sm:space-y-4 py-2">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold natural-gradient-text tracking-tight leading-tight">
               Your Go-to Cryptocurrency Exchange
             </h1>
             <p className="text-lg sm:text-xl font-semibold animated-gradient-text">
