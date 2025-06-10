@@ -71,8 +71,8 @@ function Footer() {
   return (
     <footer className="mt-auto border-t" style={{ backgroundColor: 'var(--color-footer)' }}>
       <div className="container max-w-5xl mx-auto px-3 py-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between text-white">
-          <div className="flex items-center mb-2 sm:mb-0">
+        <div className="flex flex-col sm:flex-row items-center justify-center text-white">
+          <div className="flex items-center">
             <span 
               className="text-lg font-medium"
               style={{ 
@@ -80,15 +80,8 @@ function Footer() {
                 color: "#F7F3E9"
               }}
             >
-              © 2024 BitWallet - Natural Digital Finance
+              © 2025 BitWallet
             </span>
-          </div>
-          <div className="flex items-center space-x-4 text-sm" style={{ color: "#A0826D" }}>
-            <span>Secure</span>
-            <span>•</span>
-            <span>Natural</span>
-            <span>•</span>
-            <span>Sustainable</span>
           </div>
         </div>
       </div>
