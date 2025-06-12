@@ -56,9 +56,11 @@ function WelcomePage() {
 
       {/* Live Market Prices Section */}
       <div className="w-full max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 mb-12 sm:mb-16">
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-center mb-6 sm:mb-8 natural-gradient-text leading-relaxed pb-1">
-          Live Market Prices
-        </h2>
+        <div className="flex justify-center items-center w-full">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-center mb-6 sm:mb-8 natural-gradient-text leading-relaxed pb-1">
+            Live Market Prices
+          </h2>
+        </div>
         <HorizontalPriceTicker />
       </div>
 
