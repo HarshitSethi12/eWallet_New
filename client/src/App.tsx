@@ -54,14 +54,16 @@ function Navigation() {
 }
 
 function Router() {
+  const { isAuthenticated } = useAuth();
+  
   return (
     <Switch>
-      <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/admin/sessions" component={AdminSessions} />
       <Route path="/send" component={Home} />
       <Route path="/receive" component={Home} />
-      <Route path="/signup" component={() => <div>Sign Up Page</div>} /> {/* Placeholder signup page */}
+      <Route path="/signup" component={() => <div>Sign Up Page</div>} />
+      <Route path="/" component={Home} />
       <Route component={NotFound} />
     </Switch>
   );

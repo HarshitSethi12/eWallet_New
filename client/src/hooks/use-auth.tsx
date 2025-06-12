@@ -1,6 +1,7 @@
-
+import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 interface User {
   id: string;
@@ -14,6 +15,7 @@ interface User {
 export function useAuth() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const { data: user, isLoading } = useQuery<User | null>({
     queryKey: ["/auth/user"],
@@ -24,6 +26,11 @@ export function useAuth() {
         return response.json();
       } catch {
         return null;
+      }
+    },
+    onSuccess: (user) => {
+      if (user) {
+        setLocation("/dashboard");
       }
     },
   });
