@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddressCard } from "@/components/address-card";
 import { TransactionList } from "@/components/transaction-list";
-import { Send, ArrowDownLeft, Wallet as WalletIcon, ShieldCheck, LogOut, Home } from "lucide-react";
+import { Send, ArrowDownLeft, Wallet as WalletIcon, ShieldCheck, LogOut } from "lucide-react";
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
 import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
