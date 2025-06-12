@@ -119,7 +119,7 @@ export function setupAuth(app: express.Express) {
       console.log('Session created with ID:', sessionDbId);
       req.session.sessionDbId = sessionDbId;
 
-      res.redirect('/?authenticated=true');
+      res.redirect('/dashboard');
     } catch (error) {
       console.error('Callback error:', error);
       res.redirect('/?error=auth_callback_failed');

@@ -90,15 +90,6 @@ export default function Dashboard() {
 
       {/* Navigation Buttons */}
       <div className="flex flex-wrap gap-4 justify-center">
-        <Link href="/">
-          <Button 
-            size="lg" 
-            className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-          >
-            <Home className="h-5 w-5" />
-            Home
-          </Button>
-        </Link>
         <Button 
           size="lg" 
           className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
