@@ -177,7 +177,7 @@ process.on('unhandledRejection', (reason, promise) => {
   // Configure port for different environments
   const port = parseInt(process.env.PORT || "5000", 10);
   const host = "0.0.0.0"; // Always bind to 0.0.0.0 for Cloud Run compatibility
-  
+
   // Add error handling for server startup
   server.on('error', (error: any) => {
     if (error.code === 'EADDRINUSE') {
@@ -199,7 +199,7 @@ process.on('unhandledRejection', (reason, promise) => {
       log('✅ Server closed successfully');
       process.exit(0);
     });
-    
+
     // Force close after 10 seconds
     setTimeout(() => {
       log('❌ Forcing server shutdown');
@@ -218,7 +218,7 @@ process.on('unhandledRejection', (reason, promise) => {
     log(`🚀 Server started successfully!`);
     log(`📍 Listening on ${host}:${port}`);
     log(`⚙️  Environment: ${app.get("env")}`);
-    
+
     // Environment-specific logging
     if (isProduction) {
       log(`🌐 Production deployment ready`);
@@ -229,11 +229,11 @@ process.on('unhandledRejection', (reason, promise) => {
         log(`🌐 Replit URL: https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
       }
     }
-    
+
     // Log essential environment variables for debugging
     const requiredEnvVars = ['DATABASE_URL', 'NODE_ENV'];
     const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
-    
+
     if (missingEnvVars.length > 0) {
       log(`⚠️  Missing environment variables: ${missingEnvVars.join(', ')}`);
     } else {
