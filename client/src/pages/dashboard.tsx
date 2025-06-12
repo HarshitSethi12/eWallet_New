@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import { PriceTicker } from "@/components/price-ticker";
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
-  
+
   const { data: wallet, isLoading: isLoadingWallet } = useQuery<Wallet | null>({
     queryKey: ["/api/wallet/primary"],
     queryFn: async () => {
@@ -105,7 +104,7 @@ export default function Dashboard() {
       {wallet ? (
         <div className="space-y-6">
           <AddressCard address={wallet.address} />
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/send">
               <Button size="lg" className="btn-primary flex items-center gap-2">
@@ -156,7 +155,7 @@ export default function Dashboard() {
           </Card>
         </div>
       )}
-      
+
       {/* Decorative element */}
       <div className="relative">
         <div className="absolute -z-10 top-0 inset-x-0 h-64 bg-gradient-to-b from-[#F2FFF5] to-transparent opacity-70 blur-2xl"></div>
