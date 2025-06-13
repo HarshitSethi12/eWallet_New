@@ -11,6 +11,7 @@ import type { Wallet, Transaction } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
 import { useAuth } from "@/hooks/use-auth";
 import { PriceTicker } from "@/components/price-ticker";
+import { AIChat } from "@/components/ai-chat";
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
@@ -125,13 +126,23 @@ export default function Dashboard() {
             <PriceTicker />
           </div>
 
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-center">Recent Transactions</h2>
-            {isLoadingTx ? (
-              <p className="text-center">Loading transactions...</p>
-            ) : (
-              <TransactionList transactions={transactions} />
-            )}
+          {/* Two column layout for transactions and AI chat */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Recent Transactions */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-center">Recent Transactions</h2>
+              {isLoadingTx ? (
+                <p className="text-center">Loading transactions...</p>
+              ) : (
+                <TransactionList transactions={transactions} />
+              )}
+            </div>
+
+            {/* AI Chat Assistant */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-center">AI Assistant</h2>
+              <AIChat wallet={wallet} transactions={transactions} />
+            </div>
           </div>
         </div>
       ) : (
