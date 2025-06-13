@@ -28,11 +28,6 @@ export function useAuth() {
         return null;
       }
     },
-    onSuccess: (user) => {
-      if (user) {
-        setLocation("/dashboard");
-      }
-    },
   });
 
   const loginMutation = useMutation({
