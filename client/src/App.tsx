@@ -16,8 +16,18 @@ function Navigation() {
 
   return (
     <nav className="border-b" style={{ backgroundColor: 'var(--color-nav)' }}>
-      <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 flex items-center justify-between text-white">
-        <div className="flex items-center flex-1 justify-center">
+      <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 flex items-center text-white">
+        {/* Left spacer for balance when user is authenticated */}
+        <div className="flex-1">
+          {isAuthenticated && user && (
+            <div className="w-full flex justify-start">
+              {/* Empty div to balance the right side */}
+            </div>
+          )}
+        </div>
+
+        {/* Centered BitWallet title */}
+        <div className="flex items-center justify-center">
           <Link href="/">
             <Button variant="link" className="text-2xl sm:text-3xl hover:text-white/90 flex items-center py-1 sm:py-2">
               <span className="flex items-end">
@@ -47,26 +57,28 @@ function Navigation() {
           </Link>
         </div>
 
-        {/* User Profile and Sign Out - Only show when authenticated */}
-        {isAuthenticated && user && (
-          <div className="flex items-center gap-3">
-            <img 
-              src={user.picture} 
-              alt={user.name} 
-              className="w-8 h-8 rounded-full border-2 border-white/20 shadow-lg"
-            />
-            <Button 
-              size="sm" 
-              variant="outline"
-              className="text-white border-white/20 hover:bg-white/10 hover:text-white"
-              onClick={logout}
-              disabled={isLoggingOut}
-            >
-              <LogOut className="h-4 w-4 mr-1" />
-              {isLoggingOut ? "Signing out..." : "Sign Out"}
-            </Button>
-          </div>
-        )}
+        {/* Right side - User Profile and Sign Out */}
+        <div className="flex-1 flex justify-end">
+          {isAuthenticated && user && (
+            <div className="flex items-center gap-3">
+              <img 
+                src={user.picture} 
+                alt={user.name} 
+                className="w-8 h-8 rounded-full border-2 border-white/20 shadow-lg"
+              />
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="text-white border-white/20 hover:bg-white/10 hover:text-white"
+                onClick={logout}
+                disabled={isLoggingOut}
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                {isLoggingOut ? "Signing out..." : "Sign Out"}
+              </Button>
+            </div>
+          )}
+        </div>
 
       </div>
     </nav>
