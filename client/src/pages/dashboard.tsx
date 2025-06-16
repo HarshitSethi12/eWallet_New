@@ -57,39 +57,15 @@ export default function Dashboard() {
 
   return (
     <div className="container max-w-4xl mx-auto px-3 sm:px-4 space-y-8 sm:space-y-12 md:space-y-16 py-6 sm:py-8 md:py-12">
-      {/* Header Section */}
-      <div className="text-center space-y-4 sm:space-y-6">
-        <div className="relative inline-flex items-center justify-center w-28 h-28 sm:w-32 sm:h-32 mb-2 sm:mb-0">
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#30D158] via-teal-400 to-[#0A3665] opacity-20 blur-xl animate-pulse"></div>
-          <div className="absolute inset-2 bg-gradient-to-br from-[#F2FFF5] to-white rounded-full opacity-90"></div>
-          <div className="relative z-10 flex items-center justify-center icon-group icon-float">
-            <WalletIcon className="w-8 h-8 sm:w-10 sm:h-10 text-[#30D158] transform -translate-x-2 sm:-translate-x-4" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }} />
-            <RiExchangeFundsFill className="w-12 h-12 sm:w-14 sm:h-14 text-teal-500" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))" }} />
-            <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 text-[#0A3665] transform translate-x-2 sm:translate-x-4" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }} />
-          </div>
-        </div>
-      </div>
-
-      
-
       {/* Wallet Section */}
       {wallet ? (
         <div className="space-y-6">
-          <AddressCard address={wallet.address} />
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/send">
-              <Button size="lg" className="btn-primary flex items-center gap-2">
-                <Send className="h-5 w-5" />
-                Send
-              </Button>
-            </Link>
-            <Link href="/receive">
-              <Button size="lg" className="btn-primary flex items-center gap-2">
-                <ArrowDownLeft className="h-5 w-5" />
-                Receive
-              </Button>
-            </Link>
+          {/* Display wallet balance only */}
+          <div className="text-center">
+            <div className="text-4xl font-bold text-green-600 mb-2">
+              ₿ {(wallet.balance / 100000000).toFixed(8)}
+            </div>
+            <p className="text-lg text-gray-600">Current Balance</p>
           </div>
 
           {/* Price Ticker Section */}
