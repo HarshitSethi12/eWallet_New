@@ -60,14 +60,6 @@ export default function Dashboard() {
       {/* Wallet Section */}
       {wallet ? (
         <div className="space-y-6">
-          {/* Display wallet balance only */}
-          <div className="text-center">
-            <div className="text-4xl font-bold text-green-600 mb-2">
-              ₿ {wallet.balance ? (wallet.balance / 100000000).toFixed(8) : '0.00000000'}
-            </div>
-            <p className="text-lg text-gray-600">Current Balance</p>
-          </div>
-
           {/* Price Ticker Section */}
           <div className="space-y-4">
             <PriceTicker />
