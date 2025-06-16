@@ -213,7 +213,7 @@ process.on('unhandledRejection', (reason, promise) => {
   // Start server with proper error handling and host binding
   server.listen({
     port: port,
-    host: host
+    host: "0.0.0.0"
   }, () => {
     log(`🚀 Server started successfully!`);
     log(`📍 Listening on ${host}:${port}`);

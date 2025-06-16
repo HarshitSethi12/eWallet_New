@@ -83,8 +83,8 @@
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
-    background-color: var(--color-secondary); /* Defaults to original green theme */
-    color: var(--color-body); /* Defaults to original green theme */
+    background-color: #F2FFF5;
+    color: #1e293b;
     @apply antialiased bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
