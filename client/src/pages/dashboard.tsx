@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddressCard } from "@/components/address-card";
 import { TransactionList } from "@/components/transaction-list";
+import { AiChat } from "@/components/ai-chat";
 import { Send, ArrowDownLeft, Wallet as WalletIcon, ShieldCheck, LogOut } from "lucide-react";
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
 import { apiRequest } from "@/lib/queryClient";
@@ -11,7 +12,6 @@ import type { Wallet, Transaction } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
 import { useAuth } from "@/hooks/use-auth";
 import { PriceTicker } from "@/components/price-ticker";
-import { AIChat } from "@/components/ai-chat";
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
@@ -65,24 +65,18 @@ export default function Dashboard() {
             <PriceTicker />
           </div>
 
-          {/* Two column layout for transactions and AI chat */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Recent Transactions */}
-            <div className="space-y-4">
-              <h2 className="text-2xl font-bold text-center">Recent Transactions</h2>
-              {isLoadingTx ? (
-                <p className="text-center">Loading transactions...</p>
-              ) : (
-                <TransactionList transactions={transactions} />
-              )}
-            </div>
-
-            {/* AI Chat Assistant */}
-            <div className="space-y-4">
-              <h2 className="text-2xl font-bold text-center">AI Assistant</h2>
-              <AIChat wallet={wallet} transactions={transactions} />
-            </div>
+          {/* AI Assistant Section */}
+          <div className="space-y-4">
+            <AiChat />
           </div>
+
+          {/* Two column layout for transactions and AI chat */}
+          {/* Recent Transactions */}
+          {isLoadingTx ? (
+            <p className="text-center">Loading transactions...</p>
+          ) : (
+            <TransactionList transactions={transactions} />
+          )}
         </div>
       ) : (
         <div className="text-center space-y-6">
