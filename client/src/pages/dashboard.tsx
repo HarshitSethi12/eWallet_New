@@ -68,14 +68,7 @@ export default function Dashboard() {
             <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 text-[#0A3665] transform translate-x-2 sm:translate-x-4" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }} />
           </div>
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight px-2 leading-tight relative">
-          <span className="relative z-10" style={{ 
-            color: '#0A3665',
-            textShadow: '1px 1px 2px rgba(48, 209, 88, 0.1)'
-          }}>
-            Welcome to Your Dashboard
-          </span>
-        </h1>
+        
         <div className="flex items-center justify-center gap-4">
           <img 
             src={user?.picture} 
