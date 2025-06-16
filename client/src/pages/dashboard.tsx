@@ -67,6 +67,16 @@ export default function Dashboard() {
           alt={user?.name} 
           className="w-10 h-10 rounded-full border-2 border-white shadow-lg"
         />
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="ml-2"
+          onClick={logout}
+          disabled={isLoggingOut}
+        >
+          <LogOut className="h-4 w-4 mr-1" />
+          {isLoggingOut ? "Signing out..." : "Sign Out"}
+        </Button>
       </div>
       
       {/* Header Section */}
@@ -82,18 +92,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Navigation Buttons */}
-      <div className="flex flex-wrap gap-4 justify-center">
-        <Button 
-          size="lg" 
-          className="btn-primary px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-          onClick={logout}
-          disabled={isLoggingOut}
-        >
-          <LogOut className="h-5 w-5" />
-          {isLoggingOut ? "Signing out..." : "Sign Out"}
-        </Button>
-      </div>
+      
 
       {/* Wallet Section */}
       {wallet ? (
