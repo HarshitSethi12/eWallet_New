@@ -57,25 +57,6 @@ export default function Dashboard() {
 
   return (
     <div className="container max-w-4xl mx-auto px-3 sm:px-4 space-y-8 sm:space-y-12 md:space-y-16 py-6 sm:py-8 md:py-12">
-      {/* User Info Header */}
-      <div className="flex justify-end items-center gap-3 mb-4">
-        <img 
-          src={user?.picture} 
-          alt={user?.name} 
-          className="w-10 h-10 rounded-full border-2 border-white shadow-lg"
-        />
-        <Button 
-          size="sm" 
-          variant="outline"
-          className="ml-2"
-          onClick={logout}
-          disabled={isLoggingOut}
-        >
-          <LogOut className="h-4 w-4 mr-1" />
-          {isLoggingOut ? "Signing out..." : "Sign Out"}
-        </Button>
-      </div>
-      
       {/* Header Section */}
       <div className="text-center space-y-4 sm:space-y-6">
         <div className="relative inline-flex items-center justify-center w-28 h-28 sm:w-32 sm:h-32 mb-2 sm:mb-0">

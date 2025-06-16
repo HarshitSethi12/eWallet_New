@@ -55,7 +55,7 @@ function Navigation() {
 
 function Router() {
   const { isAuthenticated } = useAuth();
-  
+
   return (
     <Switch>
       <Route path="/dashboard" component={Dashboard} />
