@@ -3,12 +3,12 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddressCard } from "@/components/address-card";
-import { TransactionList } from "@/components/transaction-list";
+
 import { AiChat } from "@/components/ai-chat";
 import { Send, ArrowDownLeft, Wallet as WalletIcon, ShieldCheck, LogOut } from "lucide-react";
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
 import { apiRequest } from "@/lib/queryClient";
-import type { Wallet, Transaction } from "@shared/schema";
+import type { Wallet } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
 import { useAuth } from "@/hooks/use-auth";
 import { PriceTicker } from "@/components/price-ticker";
@@ -30,10 +30,7 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
-  const { data: transactions = [], isLoading: isLoadingTx } = useQuery<Transaction[]>({
-    queryKey: [`/api/transactions/${wallet?.address}`],
-    enabled: !!wallet?.address && isAuthenticated,
-  });
+  
 
   if (!isAuthenticated) {
     return (
@@ -70,13 +67,7 @@ export default function Dashboard() {
             <AiChat />
           </div>
 
-          {/* Two column layout for transactions and AI chat */}
-          {/* Recent Transactions */}
-          {isLoadingTx ? (
-            <p className="text-center">Loading transactions...</p>
-          ) : (
-            <TransactionList transactions={transactions} />
-          )}
+          
         </div>
       ) : (
         <div className="text-center space-y-6">
