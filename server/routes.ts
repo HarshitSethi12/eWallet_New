@@ -87,38 +87,6 @@ export async function registerRoutes(app: Express) {
     return res.status(204).end();
   });
 
-  // AI Chat endpoint
-  app.post("/api/ai-chat", async (req, res) => {
-    try {
-      const { message, context } = req.body;
-      
-      // Create a prompt with wallet context
-      const systemPrompt = `You are a helpful Bitcoin wallet assistant. You have access to the user's wallet information:
-- Balance: ${context.balance} BTC
-- Wallet Address: ${context.address}
-- Total Transactions: ${context.totalTransactions}
-- Recent Transactions: ${JSON.stringify(context.recentTransactions, null, 2)}
-
-Answer questions about their wallet, explain Bitcoin concepts, provide transaction insights, and give helpful advice. Be friendly and informative.`;
-
-      // For demonstration, we'll use a mock response
-      // In production, you'd call OpenAI API here
-      const mockResponses = [
-        `Based on your wallet data, you have ${context.balance} BTC across ${context.totalTransactions} transactions. Your wallet address ${context.address} shows recent activity.`,
-        "I can help you understand your Bitcoin transactions, check your balance, or explain crypto concepts. What would you like to know?",
-        "Your wallet is looking good! Bitcoin is a decentralized digital currency that allows peer-to-peer transactions without intermediaries.",
-        `You've made ${context.totalTransactions} transactions so far. Would you like me to analyze your spending patterns or explain any specific transaction?`
-      ];
-
-      const response = mockResponses[Math.floor(Math.random() * mockResponses.length)];
-
-      res.json({ response });
-    } catch (error) {
-      console.error('AI Chat error:', error);
-      res.status(500).json({ error: 'Failed to process AI request' });
-    }
-  });
-
   // Crypto prices endpoint
   app.get("/api/crypto-prices", async (req, res) => {
     try {
