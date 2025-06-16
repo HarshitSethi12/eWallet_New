@@ -57,6 +57,18 @@ export default function Dashboard() {
 
   return (
     <div className="container max-w-4xl mx-auto px-3 sm:px-4 space-y-8 sm:space-y-12 md:space-y-16 py-6 sm:py-8 md:py-12">
+      {/* User Info Header */}
+      <div className="flex justify-end items-center gap-3 mb-4">
+        <p className="text-lg font-medium animated-gradient-text">
+          {user?.name}
+        </p>
+        <img 
+          src={user?.picture} 
+          alt={user?.name} 
+          className="w-10 h-10 rounded-full border-2 border-white shadow-lg"
+        />
+      </div>
+      
       {/* Header Section */}
       <div className="text-center space-y-4 sm:space-y-6">
         <div className="relative inline-flex items-center justify-center w-28 h-28 sm:w-32 sm:h-32 mb-2 sm:mb-0">
@@ -67,17 +79,6 @@ export default function Dashboard() {
             <RiExchangeFundsFill className="w-12 h-12 sm:w-14 sm:h-14 text-teal-500" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))" }} />
             <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 text-[#0A3665] transform translate-x-2 sm:translate-x-4" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }} />
           </div>
-        </div>
-        
-        <div className="flex items-center justify-center gap-4">
-          <img 
-            src={user?.picture} 
-            alt={user?.name} 
-            className="w-12 h-12 rounded-full border-2 border-white shadow-lg"
-          />
-          <p className="text-lg md:text-xl font-medium animated-gradient-text">
-            {user?.name}
-          </p>
         </div>
       </div>
 
