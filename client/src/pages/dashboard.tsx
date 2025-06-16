@@ -59,9 +59,6 @@ export default function Dashboard() {
     <div className="container max-w-4xl mx-auto px-3 sm:px-4 space-y-8 sm:space-y-12 md:space-y-16 py-6 sm:py-8 md:py-12">
       {/* User Info Header */}
       <div className="flex justify-end items-center gap-3 mb-4">
-        <p className="text-lg font-medium animated-gradient-text">
-          {user?.name}
-        </p>
         <img 
           src={user?.picture} 
           alt={user?.name} 
