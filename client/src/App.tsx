@@ -68,12 +68,12 @@ function Navigation() {
               />
               <Button 
                 size="sm" 
-                variant="outline"
-                className="text-white border-white/20 hover:bg-white/10 hover:text-white"
+                variant="ghost"
+                className="text-white/80 hover:bg-white/10 hover:text-white px-2 py-1 h-8 text-xs"
                 onClick={logout}
                 disabled={isLoggingOut}
               >
-                <LogOut className="h-4 w-4 mr-1" />
+                <LogOut className="h-3 w-3 mr-1" />
                 {isLoggingOut ? "Signing out..." : "Sign Out"}
               </Button>
             </div>
