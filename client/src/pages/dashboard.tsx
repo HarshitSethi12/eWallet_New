@@ -57,17 +57,18 @@ export default function Dashboard() {
       {/* Wallet Section */}
       {wallet ? (
         <div className="space-y-6">
-          {/* Price Ticker Section */}
-          <div className="space-y-4">
-            <PriceTicker />
-          </div>
+          {/* Two column layout for AI assistant and price ticker */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* AI Assistant Section - Left Side */}
+            <div className="space-y-4">
+              <AiChat />
+            </div>
 
-          {/* AI Assistant Section */}
-          <div className="space-y-4">
-            <AiChat />
+            {/* Price Ticker Section - Right Side */}
+            <div className="space-y-4">
+              <PriceTicker />
+            </div>
           </div>
-
-          
         </div>
       ) : (
         <div className="text-center space-y-6">
