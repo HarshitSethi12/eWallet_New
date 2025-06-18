@@ -265,7 +265,7 @@ You can ask me:
   };
 
   return (
-    <Card className="h-full max-h-[70vh] flex flex-col">
+    <Card className="h-full flex flex-col">
       <CardHeader className="flex-shrink-0">
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5" />
@@ -274,7 +274,7 @@ You can ask me:
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col flex-1 p-0 min-h-0">
-        <ScrollArea className="flex-1 p-4 min-h-0 max-h-[calc(70vh-140px)]" ref={scrollRef}>
+        <ScrollArea className="flex-1 p-4 min-h-0" ref={scrollRef}>
           <div className="space-y-4">
             {messages.map((message) => (
               <div

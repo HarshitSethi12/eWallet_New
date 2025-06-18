@@ -55,25 +55,25 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col h-screen">
       {/* Main content container that takes remaining space between header and footer */}
-      <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-4 max-w-none">
+      <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 max-w-none">
         {/* Wallet Section */}
         {wallet ? (
-          <div className="h-full max-h-[calc(100vh-120px)]">
+          <div className="h-full">
             {/* Two column layout for AI assistant and price ticker - Equal half-half spacing */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
               {/* AI Assistant Section - Left Side */}
-              <div className="flex flex-col h-full max-h-[70vh]">
+              <div className="flex flex-col h-full">
                 <AiChat />
               </div>
 
               {/* Price Ticker Section - Right Side */}
-              <div className="flex flex-col h-full max-h-[70vh]">
+              <div className="flex flex-col h-full">
                 <PriceTicker />
               </div>
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full max-h-[calc(100vh-120px)]">
+          <div className="flex items-center justify-center h-full">
             <Card className="w-full max-w-md">
               <CardHeader>
                 <CardTitle>Create Your Wallet</CardTitle>
