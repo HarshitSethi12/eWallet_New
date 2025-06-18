@@ -53,9 +53,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen overflow-hidden">
       {/* Main content container that takes remaining space between header and footer */}
-      <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 max-w-none">
+      <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-4 max-w-none overflow-hidden">
         {/* Wallet Section */}
         {wallet ? (
           <div className="h-full">
