@@ -53,48 +53,46 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto px-3 sm:px-4 space-y-8 sm:space-y-12 md:space-y-16 py-6 sm:py-8 md:py-12">
-      {/* Wallet Section */}
-      {wallet ? (
-        <div className="space-y-6">
-          {/* Two column layout for AI assistant and price ticker - Equal half-half spacing */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-            {/* AI Assistant Section - Left Side */}
-            <div className="flex flex-col h-full">
-              <AiChat />
-            </div>
+    <div className="flex flex-col h-screen">
+      {/* Main content container that takes remaining space between header and footer */}
+      <div className="flex-1 container max-w-7xl mx-auto px-3 sm:px-4 py-4">
+        {/* Wallet Section */}
+        {wallet ? (
+          <div className="h-full">
+            {/* Two column layout for AI assistant and price ticker - Equal half-half spacing */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+              {/* AI Assistant Section - Left Side */}
+              <div className="flex flex-col h-full">
+                <AiChat />
+              </div>
 
-            {/* Price Ticker Section - Right Side */}
-            <div className="flex flex-col h-full">
-              <PriceTicker />
+              {/* Price Ticker Section - Right Side */}
+              <div className="flex flex-col h-full">
+                <PriceTicker />
+              </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="text-center space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Create Your Wallet</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p>No wallet found. Create one to get started with cryptocurrency management.</p>
-              <Button 
-                className="btn-primary w-full" 
-                onClick={() => {
-                  // Mock wallet creation for now
-                  console.log("Creating wallet...");
-                }}
-              >
-                Create Wallet
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Decorative element */}
-      <div className="relative">
-        <div className="absolute -z-10 top-0 inset-x-0 h-64 bg-gradient-to-b from-[#F2FFF5] to-transparent opacity-70 blur-2xl"></div>
+        ) : (
+        <div className="flex items-center justify-center h-full">
+            <Card className="w-full max-w-md">
+              <CardHeader>
+                <CardTitle>Create Your Wallet</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p>No wallet found. Create one to get started with cryptocurrency management.</p>
+                <Button 
+                  className="btn-primary w-full" 
+                  onClick={() => {
+                    // Mock wallet creation for now
+                    console.log("Creating wallet...");
+                  }}
+                >
+                  Create Wallet
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

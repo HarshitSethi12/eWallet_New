@@ -265,16 +265,16 @@ You can ask me:
   };
 
   return (
-    <Card className="h-[500px] flex flex-col">
-      <CardHeader>
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex-shrink-0">
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5" />
           AI Assistant
           <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Live Prices</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col h-full p-0">
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <CardContent className="flex flex-col flex-1 p-0 min-h-0">
+        <ScrollArea className="flex-1 p-4 min-h-0" ref={scrollRef}>
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -318,7 +318,7 @@ You can ask me:
             )}
           </div>
         </ScrollArea>
-        <div className="p-4 border-t">
+        <div className="flex-shrink-0 p-4 border-t">
           <div className="flex gap-2">
             <Input
               value={input}
