@@ -180,14 +180,14 @@ export function PriceTicker() {
   }
 
   return (
-    <Card className="border-none shadow-lg h-full flex flex-col">
+    <Card className="border-none shadow-lg h-full max-h-[70vh] flex flex-col">
       <CardHeader className="flex-shrink-0">
         <CardTitle className="flex items-center gap-2" style={{ color: 'var(--color-heading)' }}>
           <span>Market Prices</span>
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto space-y-4 min-h-0">
+      <CardContent className="flex-1 overflow-y-auto space-y-4 min-h-0 max-h-[calc(70vh-100px)]">
         {prices?.map((crypto) => {
           const isPositive = crypto.price_change_percentage_24h > 0;
           const isNeutral = Math.abs(crypto.price_change_percentage_24h) < 0.01;
