@@ -73,7 +73,7 @@ export default function Dashboard() {
                 <div className="space-y-6">
                   <PriceTicker />
                   <DexSwap />
-                  <TransactionList />
+                  <TransactionList transactions={[]} walletAddress={wallet.address} />
                 </div>
               </div>
             </div>
