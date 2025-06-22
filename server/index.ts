@@ -80,11 +80,25 @@ process.on('unhandledRejection', (reason, promise) => {
 (async () => {
   try {
     // Validate critical environment variables
-    if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL environment variable is required');
+    const requiredEnvVars = ['DATABASE_URL'];
+    const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+    
+    if (missingEnvVars.length > 0) {
+      log(`❌ Missing required environment variables: ${missingEnvVars.join(', ')}`);
+      log('Please set these in the Secrets tool and redeploy');
+      throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
     }
 
-    log('✅ Environment validation passed');
+    // Warn about missing optional environment variables
+    const optionalEnvVars = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'SESSION_SECRET'];
+    const missingOptionalVars = optionalEnvVars.filter(envVar => !process.env[envVar]);
+    
+    if (missingOptionalVars.length > 0) {
+      log(`⚠️  Missing optional environment variables: ${missingOptionalVars.join(', ')}`);
+      log('Some features may not work without these variables');
+    }
+
+    log('✅ Environment validation completed');
 
     // Add admin routes for session management FIRST
   app.get("/api/admin/sessions", async (req, res) => {
