@@ -34,19 +34,22 @@ export function setupAuth(app: express.Express) {
 
       // Handle different Replit domains and development URLs
       const host = req.get('host');
-      let baseUrl;
+      const proto = req.get('x-forwarded-proto') || req.protocol;
 
-      if (host?.includes('replit.dev') || host?.includes('repl.co')) {
-        baseUrl = `https://${host}`;
-      } else if (req.get('x-forwarded-proto')) {
-        baseUrl = `${req.get('x-forwarded-proto')}://${host}`;
-      } else {
-        baseUrl = `${req.protocol}://${host}`;
-      }
+      // Always use https for production deployment
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? `https://${host}` 
+        : `${proto}://${host}`;
 
       const redirectUri = `${baseUrl}/auth/callback`;
 
-      console.log('Generated redirect URI:', redirectUri);
+      console.log('Auth environment:', {
+        host,
+        proto,
+        baseUrl,
+        redirectUri,
+        nodeEnv: process.env.NODE_ENV
+      });
 
       const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
@@ -74,19 +77,22 @@ export function setupAuth(app: express.Express) {
 
       // Handle different Replit domains and development URLs
       const host = req.get('host');
-      let baseUrl;
+      const proto = req.get('x-forwarded-proto') || req.protocol;
 
-      if (host?.includes('replit.dev') || host?.includes('repl.co')) {
-        baseUrl = `https://${host}`;
-      } else if (req.get('x-forwarded-proto')) {
-        baseUrl = `${req.get('x-forwarded-proto')}://${host}`;
-      } else {
-        baseUrl = `${req.protocol}://${host}`;
-      }
+      // Always use https for production deployment
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? `https://${host}` 
+        : `${proto}://${host}`;
 
       const redirectUri = `${baseUrl}/auth/callback`;
 
-      console.log('Using redirect URI for token exchange:', redirectUri);
+      console.log('Callback environment:', {
+        host,
+        proto,
+        baseUrl,
+        redirectUri,
+        nodeEnv: process.env.NODE_ENV
+      });
 
       // Set redirect URI properly
       const oauth2Client = new OAuth2Client(
@@ -151,15 +157,12 @@ export function setupAuth(app: express.Express) {
 
       // Handle different Replit domains and development URLs
       const host = req.get('host');
-      let baseUrl;
+      const proto = req.get('x-forwarded-proto') || req.protocol;
 
-      if (host?.includes('replit.dev') || host?.includes('repl.co')) {
-        baseUrl = `https://${host}`;
-      } else if (req.get('x-forwarded-proto')) {
-        baseUrl = `${req.get('x-forwarded-proto')}://${host}`;
-      } else {
-        baseUrl = `${req.protocol}://${host}`;
-      }
+      // Always use https for production deployment
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? `https://${host}` 
+        : `${proto}://${host}`;
 
       const redirectUri = `${baseUrl}/auth/callback`;
 
