@@ -48,7 +48,9 @@ export function setupAuth(app: express.Express) {
         proto,
         baseUrl,
         redirectUri,
-        nodeEnv: process.env.NODE_ENV
+        nodeEnv: process.env.NODE_ENV,
+        clientId: process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Missing',
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Missing'
       });
 
       const url = oauth2Client.generateAuthUrl({
@@ -241,5 +243,30 @@ export function setupAuth(app: express.Express) {
     } else {
       res.status(401).json({ error: 'Not authenticated' });
     }
+  });
+
+  // Debug endpoint to check OAuth configuration
+  app.get('/auth/debug', (req, res) => {
+    const host = req.get('host');
+    const proto = req.get('x-forwarded-proto') || req.protocol;
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? `https://${host}` 
+      : `${proto}://${host}`;
+    const redirectUri = `${baseUrl}/auth/callback`;
+
+    res.json({
+      host,
+      proto,
+      baseUrl,
+      redirectUri,
+      nodeEnv: process.env.NODE_ENV,
+      hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
+      hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+      headers: {
+        'x-forwarded-proto': req.get('x-forwarded-proto'),
+        'host': req.get('host'),
+        'user-agent': req.get('user-agent')
+      }
+    });
   });
 }
