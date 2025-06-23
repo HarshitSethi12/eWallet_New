@@ -2,10 +2,15 @@ import express, { type Request, Response, NextFunction } from "express";
 import { Server } from "http";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
+
+// Create __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Environment configuration
 const isProduction = process.env.NODE_ENV === "production";
