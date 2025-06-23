@@ -193,7 +193,7 @@ process.on('unhandledRejection', (reason, promise) => {
     await setupVite(app, server);
   } else {
     // Serve static files from the client build
-    const buildPath = path.join(__dirname, 'public');
+    const buildPath = path.join(process.cwd(), 'dist', 'public');
     if (!fs.existsSync(buildPath)) {
       throw new Error(`Could not find the build directory: ${buildPath}, make sure to build the client first`);
     }
