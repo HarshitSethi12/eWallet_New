@@ -198,6 +198,11 @@ process.on('unhandledRejection', (reason, promise) => {
       throw new Error(`Could not find the build directory: ${buildPath}, make sure to build the client first`);
     }
     app.use(express.static(buildPath));
+
+    // Serve index.html for all non-API routes
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(buildPath, 'index.html'));
+    });
   }
 
   // Configure port for different environments
