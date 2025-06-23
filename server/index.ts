@@ -192,8 +192,8 @@ process.on('unhandledRejection', (reason, promise) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    // Serve static files from the client build
-    const buildPath = path.join(process.cwd(), 'dist', 'public');
+    const buildPath = path.resolve(__dirname, "../public");
+
     if (!fs.existsSync(buildPath)) {
       throw new Error(`Could not find the build directory: ${buildPath}, make sure to build the client first`);
     }
@@ -201,7 +201,9 @@ process.on('unhandledRejection', (reason, promise) => {
 
     // Serve index.html for all non-API routes
     app.get('*', (req, res) => {
-      res.sendFile(path.join(buildPath, 'index.html'));
+      if (!req.path.startsWith('/api/')) {
+        res.sendFile(path.join(buildPath, 'index.html'));
+      }
     });
   }
 
