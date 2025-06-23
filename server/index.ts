@@ -82,7 +82,7 @@ process.on('unhandledRejection', (reason, promise) => {
     // Validate critical environment variables
     const requiredEnvVars = ['DATABASE_URL'];
     const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
-    
+
     if (missingEnvVars.length > 0) {
       log(`❌ Missing required environment variables: ${missingEnvVars.join(', ')}`);
       log('Please set these in the Secrets tool and redeploy');
@@ -92,7 +92,7 @@ process.on('unhandledRejection', (reason, promise) => {
     // Warn about missing optional environment variables
     const optionalEnvVars = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'SESSION_SECRET'];
     const missingOptionalVars = optionalEnvVars.filter(envVar => !process.env[envVar]);
-    
+
     if (missingOptionalVars.length > 0) {
       log(`⚠️  Missing optional environment variables: ${missingOptionalVars.join(', ')}`);
       log('Some features may not work without these variables');
@@ -185,7 +185,12 @@ process.on('unhandledRejection', (reason, promise) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // Serve static files from the client build
+    const buildPath = path.join(__dirname, 'public');
+    if (!fs.existsSync(buildPath)) {
+      throw new Error(`Could not find the build directory: ${buildPath}, make sure to build the client first`);
+    }
+    app.use(express.static(buildPath));
   }
 
   // Configure port for different environments
