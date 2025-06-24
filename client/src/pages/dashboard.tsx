@@ -56,13 +56,13 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col h-screen">
       {/* Main content container that takes remaining space between header and footer */}
-      <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 max-w-none">
-        <div className="max-w-7xl mx-auto h-full">
+      <div className="flex-1 w-full p-8 max-w-none">
+        <div className="h-full max-w-none mx-auto">
           {/* Wallet Section */}
           {wallet ? (
-            <div className="h-full flex items-start justify-center">
-              {/* Two column layout for AI assistant and price ticker - Fixed height with proper spacing */}
-              <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px]">
+            <div className="h-full flex items-center justify-center">
+              {/* Two column layout for AI assistant and price ticker - Enhanced size with equal spacing */}
+              <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100vh-12rem)]">
                 {/* AI Assistant Section - Left Side */}
                 <div className="flex flex-col h-full">
                   <AiChat />
