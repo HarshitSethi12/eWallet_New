@@ -147,7 +147,7 @@ export function PriceTicker() {
 
   if (isLoading) {
     return (
-      <Card className="border-none shadow-lg">
+      <Card className="shadow-lg">
         <CardHeader>
           <CardTitle style={{ color: 'var(--color-heading)' }}>Market Prices</CardTitle>
         </CardHeader>
@@ -168,7 +168,7 @@ export function PriceTicker() {
 
   if (error) {
     return (
-      <Card className="border-none shadow-lg">
+      <Card className="shadow-lg">
         <CardHeader>
           <CardTitle style={{ color: 'var(--color-heading)' }}>Market Prices</CardTitle>
         </CardHeader>
@@ -180,7 +180,7 @@ export function PriceTicker() {
   }
 
   return (
-    <Card className="border-none shadow-lg">
+    <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center gap-2" style={{ color: 'var(--color-heading)' }}>
           <span>Market Prices</span>
