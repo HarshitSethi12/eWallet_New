@@ -14,20 +14,30 @@ const __dirname = path.dirname(__filename);
 
 // Environment configuration
 const isProduction = process.env.NODE_ENV === "production";
-const isDevelopment = process.env.NODE_ENV === "development" || !isProduction;
+const isDevelopment = process.env.NODE_ENV === "development";
+
+// If neither is explicitly set, default to development
+if (!isProduction && !isDevelopment) {
+  process.env.NODE_ENV = "development";
+}
 
 const app = express();
 
-// Configure app for production environment
+// Configure app environment
 if (isProduction) {
   app.set('env', 'production');
+} else {
+  app.set('env', 'development');
 }
 
 // Trust proxy for correct IP addresses in production
 app.set('trust proxy', true);
 
 // Add startup logging
-log(`🔧 Starting server in ${isProduction ? 'production' : 'development'} mode`);
+const currentMode = process.env.NODE_ENV || 'development';
+log(`🔧 Starting server in ${currentMode} mode`);
+log(`🔧 Environment: NODE_ENV=${currentMode}`);
+log(`🔧 Server mode: ${app.get('env')}`);
 log(`🔧 Node.js version: ${process.version}`);
 log(`🔧 Process ID: ${process.pid}`);
 
