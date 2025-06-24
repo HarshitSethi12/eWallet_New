@@ -60,8 +60,8 @@ export default function Dashboard() {
         {/* Wallet Section */}
         {wallet ? (
           <div className="h-full">
-            {/* Two column layout for AI assistant and price ticker - Equal half-half spacing */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+            {/* Two column layout for AI assistant and price ticker - Fixed height */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
               {/* AI Assistant Section - Left Side */}
               <div className="flex flex-col h-full">
                 <AiChat />
@@ -69,7 +69,7 @@ export default function Dashboard() {
 
               {/* Price Ticker Section - Right Side */}
               <div className="flex flex-col h-full">
-                <div className="space-y-6">
+                <div className="h-full">
                   <PriceTicker />
                 </div>
               </div>

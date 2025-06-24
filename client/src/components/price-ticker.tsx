@@ -147,11 +147,11 @@ export function PriceTicker() {
 
   if (isLoading) {
     return (
-      <Card className="shadow-lg">
-        <CardHeader>
+      <Card className="shadow-lg h-[600px] flex flex-col">
+        <CardHeader className="flex-shrink-0">
           <CardTitle style={{ color: 'var(--color-heading)' }}>Market Prices</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 overflow-hidden p-6">
           <div className="animate-pulse space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex justify-between items-center">
@@ -168,11 +168,11 @@ export function PriceTicker() {
 
   if (error) {
     return (
-      <Card className="shadow-lg">
-        <CardHeader>
+      <Card className="shadow-lg h-[600px] flex flex-col">
+        <CardHeader className="flex-shrink-0">
           <CardTitle style={{ color: 'var(--color-heading)' }}>Market Prices</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex items-center justify-center">
           <p className="text-center text-gray-500">Unable to load prices</p>
         </CardContent>
       </Card>
@@ -180,14 +180,15 @@ export function PriceTicker() {
   }
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader>
+    <Card className="shadow-lg h-[600px] flex flex-col">
+      <CardHeader className="flex-shrink-0">
         <CardTitle className="flex items-center gap-2" style={{ color: 'var(--color-heading)' }}>
           <span>Market Prices</span>
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex-1 overflow-hidden p-0">
+        <div className="h-full overflow-y-auto p-6 space-y-4">
         {prices?.map((crypto) => {
           const isPositive = crypto.price_change_percentage_24h > 0;
           const isNeutral = Math.abs(crypto.price_change_percentage_24h) < 0.01;
@@ -238,9 +239,10 @@ export function PriceTicker() {
         })}
 
         <div className="pt-2 border-t">
-          <p className="text-xs text-gray-400 text-center">
-            Prices update every 30 seconds • Powered by CoinGecko
-          </p>
+            <p className="text-xs text-gray-400 text-center">
+              Prices update every 30 seconds • Powered by CoinGecko
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
