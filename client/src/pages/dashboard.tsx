@@ -56,46 +56,48 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col h-screen">
       {/* Main content container that takes remaining space between header and footer */}
-      <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-4 max-w-none">
-        {/* Wallet Section */}
-        {wallet ? (
-          <div className="h-full">
-            {/* Two column layout for AI assistant and price ticker - Fixed height */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
-              {/* AI Assistant Section - Left Side */}
-              <div className="flex flex-col h-full">
-                <AiChat />
-              </div>
+      <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 max-w-none">
+        <div className="max-w-7xl mx-auto h-full">
+          {/* Wallet Section */}
+          {wallet ? (
+            <div className="h-full flex items-start justify-center">
+              {/* Two column layout for AI assistant and price ticker - Fixed height with proper spacing */}
+              <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px]">
+                {/* AI Assistant Section - Left Side */}
+                <div className="flex flex-col h-full">
+                  <AiChat />
+                </div>
 
-              {/* Price Ticker Section - Right Side */}
-              <div className="flex flex-col h-full">
-                <div className="h-full">
-                  <PriceTicker />
+                {/* Price Ticker Section - Right Side */}
+                <div className="flex flex-col h-full">
+                  <div className="h-full">
+                    <PriceTicker />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <Card className="w-full max-w-md">
-              <CardHeader>
-                <CardTitle>Create Your Wallet</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p>No wallet found. Create one to get started with cryptocurrency management.</p>
-                <Button 
-                  className="btn-primary w-full" 
-                  onClick={() => {
-                    // Mock wallet creation for now
-                    console.log("Creating wallet...");
-                  }}
-                >
-                  Create Wallet
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+            <div className="flex items-center justify-center h-full">
+              <Card className="w-full max-w-md">
+                <CardHeader>
+                  <CardTitle>Create Your Wallet</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p>No wallet found. Create one to get started with cryptocurrency management.</p>
+                  <Button 
+                    className="btn-primary w-full" 
+                    onClick={() => {
+                      // Mock wallet creation for now
+                      console.log("Creating wallet...");
+                    }}
+                  >
+                    Create Wallet
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
