@@ -12,8 +12,7 @@ import type { Wallet } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
 import { useAuth } from "@/hooks/use-auth";
 import { PriceTicker } from "@/components/price-ticker";
-import { TransactionList } from "@/components/transaction-list";
-import { DexSwap } from "@/components/dex-swap";
+
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
@@ -72,8 +71,6 @@ export default function Dashboard() {
               <div className="flex flex-col h-full">
                 <div className="space-y-6">
                   <PriceTicker />
-                  <DexSwap />
-                  <TransactionList transactions={[]} walletAddress={wallet.address} />
                 </div>
               </div>
             </div>
