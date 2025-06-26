@@ -122,5 +122,104 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  app.post('/api/swap-quote', async (req, res) => {
+    const { fromToken, toToken, amount, userAddress, aggregator } = req.body;
+
+    try {
+      let quote;
+
+      switch (aggregator) {
+        case '1inch':
+          quote = await get1inchQuote(fromToken, toToken, amount, userAddress);
+          break;
+        case 'paraswap':
+          quote = await getParaswapQuote(fromToken, toToken, amount, userAddress);
+          break;
+        case '0x':
+          quote = await get0xQuote(fromToken, toToken, amount, userAddress);
+          break;
+        case 'uniswap':
+          quote = await getUniswapQuote(fromToken, toToken, amount, userAddress);
+          break;
+        default:
+          // Return mock data for development
+          quote = {
+            inputAmount: amount,
+            outputAmount: (parseFloat(amount) * 3245.67).toString(),
+            price: 3245.67,
+            priceImpact: 0.12,
+            fee: 0.25,
+            aggregator: aggregator || 'mock',
+            gas: '0.003',
+            route: [fromToken, toToken]
+          };
+      }
+
+      res.json(quote);
+    } catch (error) {
+      console.error('Swap quote error:', error);
+      res.status(500).json({ error: 'Failed to fetch swap quote', details: error.message });
+    }
+  });
   return createServer(app);
+}
+
+async function get1inchQuote(fromToken: string, toToken: string, amount: string, userAddress: string) {
+  // Implement 1inch quote logic here
+  console.log("calling 1inch quote")
+  return {
+    inputAmount: amount,
+    outputAmount: (parseFloat(amount) * 3245.67).toString(),
+    price: 3245.67,
+    priceImpact: 0.12,
+    fee: 0.25,
+    aggregator: '1inch',
+    gas: '0.003',
+    route: [fromToken, toToken]
+  };
+}
+
+async function getParaswapQuote(fromToken: string, toToken: string, amount: string, userAddress: string) {
+  // Implement Paraswap quote logic here
+  console.log("calling paraswap quote")
+  return {
+    inputAmount: amount,
+    outputAmount: (parseFloat(amount) * 3244.12).toString(),
+    price: 3244.12,
+    priceImpact: 0.15,
+    fee: 0.30,
+    aggregator: 'paraswap',
+    gas: '0.004',
+    route: [fromToken, toToken]
+  };
+}
+
+async function get0xQuote(fromToken: string, toToken: string, amount: string, userAddress: string) {
+  // Implement 0x quote logic here
+  console.log("calling 0x quote")
+  return {
+    inputAmount: amount,
+    outputAmount: (parseFloat(amount) * 3243.89).toString(),
+    price: 3243.89,
+    priceImpact: 0.10,
+    fee: 0.20,
+    aggregator: '0x',
+    gas: '0.003',
+    route: [fromToken, toToken]
+  };
+}
+
+async function getUniswapQuote(fromToken: string, toToken: string, amount: string, userAddress: string) {
+  // Implement Uniswap quote logic here
+  console.log("calling uniswap quote")
+  return {
+    inputAmount: amount,
+    outputAmount: (parseFloat(amount) * 3241.23).toString(),
+    price: 3241.23,
+    priceImpact: 0.18,
+    fee: 0.35,
+    aggregator: 'uniswap',
+    gas: '0.005',
+    route: [fromToken, toToken]
+  };
 }

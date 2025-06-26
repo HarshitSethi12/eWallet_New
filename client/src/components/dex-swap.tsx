@@ -12,6 +12,16 @@ interface SwapQuote {
   price: number;
   priceImpact: number;
   fee: number;
+  aggregator: string;
+  gas: string;
+  route: string[];
+}
+
+interface AggregatorQuote {
+  name: string;
+  logo: string;
+  quote: SwapQuote;
+  isLoading: boolean;
 }
 
 const SUPPORTED_TOKENS = [
@@ -27,43 +37,80 @@ export function DexSwap() {
   const [toToken, setToToken] = useState(SUPPORTED_TOKENS[1]);
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
-  const [quote, setQuote] = useState<SwapQuote | null>(null);
+  const [quotes, setQuotes] = useState<AggregatorQuote[]>([]);
+  const [selectedQuote, setSelectedQuote] = useState<SwapQuote | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
 
-  const getSwapQuote = async (inputAmount: string) => {
+  const AGGREGATORS = [
+    { name: '1inch', logo: '🔄', enabled: true },
+    { name: 'Paraswap', logo: '🌊', enabled: true },
+    { name: '0x', logo: '⚡', enabled: true },
+    { name: 'Uniswap', logo: '🦄', enabled: true }
+  ];
+
+  const getSwapQuotes = async (inputAmount: string) => {
     if (!inputAmount || !fromToken || !toToken) return;
 
     setIsLoading(true);
+    setQuotes([]);
+    
     try {
-      // In a real implementation, you'd call DEX aggregator APIs like:
-      // - 1inch API
-      // - 0x API
-      // - Paraswap API
-      // - Or directly integrate with Uniswap contracts
+      // Fetch quotes from multiple aggregators simultaneously
+      const aggregatorPromises = AGGREGATORS.filter(agg => agg.enabled).map(async (aggregator) => {
+        try {
+          const response = await fetch('/api/swap-quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fromToken: fromToken.address,
+              toToken: toToken.address,
+              amount: inputAmount,
+              userAddress: account,
+              aggregator: aggregator.name.toLowerCase()
+            })
+          });
 
-      const response = await fetch('/api/swap-quote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fromToken: fromToken.address,
-          toToken: toToken.address,
-          amount: inputAmount,
-          userAddress: account
-        })
+          const quoteData = await response.json();
+          return {
+            name: aggregator.name,
+            logo: aggregator.logo,
+            quote: { ...quoteData, aggregator: aggregator.name },
+            isLoading: false
+          };
+        } catch (error) {
+          console.error(`Failed to get quote from ${aggregator.name}:`, error);
+          return {
+            name: aggregator.name,
+            logo: aggregator.logo,
+            quote: null,
+            isLoading: false
+          };
+        }
       });
 
-      const quoteData = await response.json();
-      setQuote(quoteData);
-      setToAmount(quoteData.outputAmount);
+      const results = await Promise.all(aggregatorPromises);
+      const validQuotes = results.filter(result => result.quote !== null);
+      
+      setQuotes(validQuotes);
+      
+      // Auto-select the best quote (highest output amount)
+      if (validQuotes.length > 0) {
+        const bestQuote = validQuotes.reduce((best, current) => 
+          parseFloat(current.quote.outputAmount) > parseFloat(best.quote.outputAmount) ? current : best
+        );
+        setSelectedQuote(bestQuote.quote);
+        setToAmount(bestQuote.quote.outputAmount);
+      }
     } catch (error) {
-      console.error('Failed to get quote:', error);
+      console.error('Failed to get quotes:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const executeSwap = async () => {
-    if (!quote || !isConnected) return;
+    if (!selectedQuote || !isConnected) return;
 
     setIsLoading(true);
     try {
@@ -105,7 +152,7 @@ export function DexSwap() {
   useEffect(() => {
     if (fromAmount) {
       const debounceTimer = setTimeout(() => {
-        getSwapQuote(fromAmount);
+        getSwapQuotes(fromAmount);
       }, 500);
       return () => clearTimeout(debounceTimer);
     }
@@ -194,33 +241,92 @@ export function DexSwap() {
           </div>
         </div>
 
-        {/* Quote Information */}
-        {quote && (
-          <div className="bg-gray-50 p-3 rounded-md space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span>Price:</span>
-              <span>1 {fromToken.symbol} = {quote.price.toFixed(4)} {toToken.symbol}</span>
+        {/* Best Quote Display */}
+        {selectedQuote && (
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-700">Best Rate</span>
+              <div className="flex items-center space-x-2">
+                <span className="text-lg">{quotes.find(q => q.quote === selectedQuote)?.logo}</span>
+                <span className="text-sm font-semibold text-green-600">
+                  {selectedQuote.aggregator}
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>Fee:</span>
-              <span>{quote.fee}%</span>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Rate:</span>
+                <span className="font-medium">1 {fromToken.symbol} = {selectedQuote.price.toFixed(6)} {toToken.symbol}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Gas Fee:</span>
+                <span>{selectedQuote.gas} ETH</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Price Impact:</span>
+                <span className={selectedQuote.priceImpact > 5 ? 'text-red-600' : 'text-green-600'}>
+                  {selectedQuote.priceImpact.toFixed(2)}%
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>Price Impact:</span>
-              <span className={quote.priceImpact > 5 ? 'text-red-600' : 'text-green-600'}>
-                {quote.priceImpact.toFixed(2)}%
-              </span>
-            </div>
+          </div>
+        )}
+
+        {/* Compare All Quotes Button */}
+        {quotes.length > 1 && (
+          <Button 
+            variant="outline" 
+            onClick={() => setShowComparison(!showComparison)}
+            className="w-full"
+          >
+            {showComparison ? 'Hide' : 'Compare'} All Quotes ({quotes.length})
+          </Button>
+        )}
+
+        {/* Aggregator Comparison */}
+        {showComparison && quotes.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-700">Compare Quotes:</h4>
+            {quotes.map((quote, index) => (
+              <div 
+                key={quote.name}
+                className={`p-3 rounded-md border cursor-pointer transition-colors ${
+                  selectedQuote === quote.quote 
+                    ? 'border-green-500 bg-green-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => {
+                  setSelectedQuote(quote.quote);
+                  setToAmount(quote.quote.outputAmount);
+                }}
+              >
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg">{quote.logo}</span>
+                    <span className="text-sm font-medium">{quote.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium">
+                      {parseFloat(quote.quote.outputAmount).toFixed(4)} {toToken.symbol}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Gas: {quote.quote.gas} ETH
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
         {/* Swap Button */}
         <Button 
           onClick={executeSwap}
-          disabled={!quote || isLoading || !fromAmount}
+          disabled={!selectedQuote || isLoading || !fromAmount}
           className="w-full"
         >
-          {isLoading ? 'Processing...' : 'Swap Tokens'}
+          {isLoading ? 'Getting Best Rates...' : 
+           selectedQuote ? `Swap via ${selectedQuote.aggregator}` : 'Enter Amount'}
         </Button>
       </CardContent>
     </Card>
