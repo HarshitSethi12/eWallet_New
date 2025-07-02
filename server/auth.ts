@@ -34,13 +34,10 @@ export function setupAuth(app: express.Express) {
 
       // Handle different Replit domains and development URLs
       const host = req.get('host');
-      const proto = req.get('x-forwarded-proto') || req.protocol;
+      const proto = req.get('x-forwarded-proto') || 'https';
 
-      // Always use https for production deployment
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? `https://${host}` 
-        : `${proto}://${host}`;
-
+      // For Replit, always use https regardless of environment
+      const baseUrl = `https://${host}`;
       const redirectUri = `${baseUrl}/auth/callback`;
 
       console.log('Auth environment:', {
@@ -50,8 +47,16 @@ export function setupAuth(app: express.Express) {
         redirectUri,
         nodeEnv: process.env.NODE_ENV,
         clientId: process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Missing',
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Missing'
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Missing',
+        fullUrl: req.url,
+        originalUrl: req.originalUrl
       });
+
+      // Validate environment variables
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        console.error('Missing Google OAuth credentials');
+        return res.redirect('/?error=missing_credentials');
+      }
 
       const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
@@ -63,6 +68,7 @@ export function setupAuth(app: express.Express) {
         prompt: 'select_account'  // Force account selection every time
       });
 
+      console.log('Redirecting to Google OAuth URL:', url);
       res.redirect(url);
     } catch (error) {
       console.error('Auth error:', error);
@@ -73,19 +79,24 @@ export function setupAuth(app: express.Express) {
   app.get('/auth/callback', async (req, res) => {
     try {
       const code = req.query.code as string;
+      const error = req.query.error as string;
+
+      if (error) {
+        console.error('OAuth error from Google:', error);
+        return res.redirect(`/?error=oauth_${error}`);
+      }
+
       if (!code) {
+        console.error('No authorization code received from Google');
         return res.redirect('/?error=no_code');
       }
 
       // Handle different Replit domains and development URLs
       const host = req.get('host');
-      const proto = req.get('x-forwarded-proto') || req.protocol;
+      const proto = req.get('x-forwarded-proto') || 'https';
 
-      // Always use https for production deployment
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? `https://${host}` 
-        : `${proto}://${host}`;
-
+      // For Replit, always use https
+      const baseUrl = `https://${host}`;
       const redirectUri = `${baseUrl}/auth/callback`;
 
       console.log('Callback environment:', {
@@ -93,7 +104,9 @@ export function setupAuth(app: express.Express) {
         proto,
         baseUrl,
         redirectUri,
-        nodeEnv: process.env.NODE_ENV
+        nodeEnv: process.env.NODE_ENV,
+        code: code ? 'Present' : 'Missing',
+        error: error || 'None'
       });
 
       // Set redirect URI properly
@@ -103,11 +116,18 @@ export function setupAuth(app: express.Express) {
         redirectUri
       );
 
+      console.log('Attempting to exchange code for tokens...');
       const { tokens } = await oauth2Client.getToken(code);
       oauth2Client.setCredentials(tokens);
 
+      console.log('Fetching user info...');
       const userInfo = await oauth2Client.request({
         url: 'https://www.googleapis.com/oauth2/v3/userinfo'
+      });
+
+      console.log('User info received:', {
+        email: userInfo.data.email,
+        name: userInfo.data.name
       });
 
       req.session.user = userInfo.data;
@@ -127,9 +147,10 @@ export function setupAuth(app: express.Express) {
       console.log('Session created with ID:', sessionDbId);
       req.session.sessionDbId = sessionDbId;
 
+      console.log('Redirecting to dashboard...');
       res.redirect('/dashboard');
     } catch (error) {
-      console.error('Callback error:', error);
+      console.error('Callback error details:', error);
       res.redirect('/?error=auth_callback_failed');
     }
   });
@@ -248,10 +269,8 @@ export function setupAuth(app: express.Express) {
   // Debug endpoint to check OAuth configuration
   app.get('/auth/debug', (req, res) => {
     const host = req.get('host');
-    const proto = req.get('x-forwarded-proto') || req.protocol;
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? `https://${host}` 
-      : `${proto}://${host}`;
+    const proto = req.get('x-forwarded-proto') || 'https';
+    const baseUrl = `https://${host}`;
     const redirectUri = `${baseUrl}/auth/callback`;
 
     res.json({
@@ -262,11 +281,20 @@ export function setupAuth(app: express.Express) {
       nodeEnv: process.env.NODE_ENV,
       hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
       hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+      googleClientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
+      googleClientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
+      sessionSecret: process.env.SESSION_SECRET ? 'Set' : 'Missing',
       headers: {
         'x-forwarded-proto': req.get('x-forwarded-proto'),
+        'x-forwarded-host': req.get('x-forwarded-host'),
         'host': req.get('host'),
-        'user-agent': req.get('user-agent')
-      }
+        'user-agent': req.get('user-agent'),
+        'referer': req.get('referer')
+      },
+      url: req.url,
+      originalUrl: req.originalUrl,
+      protocol: req.protocol,
+      secure: req.secure
     });
   });
 }
