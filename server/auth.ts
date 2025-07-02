@@ -26,11 +26,13 @@ export function setupAuth(app: express.Express) {
 
   app.get('/auth/google', async (req, res) => {
     try {
-      // Create OAuth client with proper configuration
-      const oauth2Client = new OAuth2Client(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET
-      );
+      // Validate environment variables first
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        console.error('Missing Google OAuth credentials');
+        console.error('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Missing');
+        console.error('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Missing');
+        return res.redirect('/?error=missing_credentials');
+      }
 
       // Handle different Replit domains and development URLs
       const host = req.get('host');
@@ -40,35 +42,39 @@ export function setupAuth(app: express.Express) {
       const baseUrl = `https://${host}`;
       const redirectUri = `${baseUrl}/auth/callback`;
 
+      console.log('=== GOOGLE AUTH DEBUG ===');
       console.log('Auth environment:', {
         host,
         proto,
         baseUrl,
         redirectUri,
         nodeEnv: process.env.NODE_ENV,
-        clientId: process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Missing',
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Missing',
+        clientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0,
+        clientSecretLength: process.env.GOOGLE_CLIENT_SECRET?.length || 0,
         fullUrl: req.url,
         originalUrl: req.originalUrl
       });
 
-      // Validate environment variables
-      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-        console.error('Missing Google OAuth credentials');
-        return res.redirect('/?error=missing_credentials');
-      }
+      // Create OAuth client with proper configuration
+      const oauth2Client = new OAuth2Client(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        redirectUri
+      );
 
       const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: [
           'https://www.googleapis.com/auth/userinfo.profile',
-          'https://www.googleapis.com/auth/userinfo.email'
+          'https://www.googleapis.com/auth/userinfo.email',
+          'openid'
         ],
         redirect_uri: redirectUri,
-        prompt: 'select_account'  // Force account selection every time
+        prompt: 'consent'  // Force consent screen every time for testing
       });
 
-      console.log('Redirecting to Google OAuth URL:', url);
+      console.log('Generated OAuth URL:', url);
+      console.log('=== END DEBUG ===');
       res.redirect(url);
     } catch (error) {
       console.error('Auth error:', error);
