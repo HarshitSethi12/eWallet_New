@@ -70,7 +70,9 @@ export function setupAuth(app: express.Express) {
           'openid'
         ],
         redirect_uri: redirectUri,
-        prompt: 'consent'  // Force consent screen every time for testing
+        prompt: 'consent',  // Force consent screen every time for testing
+        include_granted_scopes: true,
+        response_type: 'code'
       });
 
       console.log('Generated OAuth URL:', url);
