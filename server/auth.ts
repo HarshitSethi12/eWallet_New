@@ -4,14 +4,26 @@ import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { storage } from './storage';
+import twilio from 'twilio';
+import NodeCache from 'node-cache';
 
 declare module 'express-session' {
   interface SessionData {
     user?: any;
     state?: string;
     sessionDbId?: number;
+    phoneNumber?: string;
+    isPhoneVerified?: boolean;
   }
 }
+
+// OTP cache - stores OTP codes for 5 minutes
+const otpCache = new NodeCache({ stdTTL: 300 });
+
+// Initialize Twilio client
+const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null;
 
 export function setupAuth(app: express.Express) {
   app.use(session({
@@ -261,6 +273,127 @@ export function setupAuth(app: express.Express) {
       res.json(req.session.user);
     } else {
       res.status(401).json({ error: 'Not authenticated' });
+    }
+  });
+
+  // Phone/OTP authentication routes
+  app.post('/auth/phone/send-otp', async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ error: 'Phone number is required' });
+      }
+
+      // Validate phone number format (basic validation)
+      const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        return res.status(400).json({ error: 'Invalid phone number format' });
+      }
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Store OTP in cache with phone number as key
+      otpCache.set(phoneNumber, otp);
+      
+      console.log(`Generated OTP for ${phoneNumber}: ${otp}`);
+
+      // Send OTP via SMS
+      if (twilioClient && process.env.TWILIO_PHONE_NUMBER) {
+        try {
+          await twilioClient.messages.create({
+            body: `Your BitWallet verification code is: ${otp}. This code will expire in 5 minutes.`,
+            from: process.env.TWILIO_PHONE_NUMBER,
+            to: phoneNumber
+          });
+          
+          res.json({ 
+            success: true, 
+            message: 'OTP sent successfully',
+            // Include OTP in response for development only
+            ...(process.env.NODE_ENV === 'development' && { otp })
+          });
+        } catch (twilioError) {
+          console.error('Twilio SMS error:', twilioError);
+          // For development, still return success with OTP
+          res.json({ 
+            success: true, 
+            message: 'OTP generated (SMS service unavailable)',
+            otp // Always include OTP if SMS fails
+          });
+        }
+      } else {
+        // Development mode - return OTP directly
+        res.json({ 
+          success: true, 
+          message: 'OTP generated (development mode)',
+          otp 
+        });
+      }
+    } catch (error) {
+      console.error('Send OTP error:', error);
+      res.status(500).json({ error: 'Failed to send OTP' });
+    }
+  });
+
+  app.post('/auth/phone/verify-otp', async (req, res) => {
+    try {
+      const { phoneNumber, otp } = req.body;
+      
+      if (!phoneNumber || !otp) {
+        return res.status(400).json({ error: 'Phone number and OTP are required' });
+      }
+
+      // Get stored OTP from cache
+      const storedOtp = otpCache.get(phoneNumber);
+      
+      if (!storedOtp) {
+        return res.status(400).json({ error: 'OTP expired or invalid' });
+      }
+
+      if (storedOtp !== otp) {
+        return res.status(400).json({ error: 'Invalid OTP' });
+      }
+
+      // OTP is valid, remove from cache
+      otpCache.del(phoneNumber);
+
+      // Create user session
+      const phoneUser = {
+        id: `phone_${phoneNumber}`,
+        phone: phoneNumber,
+        name: `User ${phoneNumber.slice(-4)}`,
+        provider: 'phone',
+        picture: null
+      };
+
+      req.session.user = phoneUser;
+      req.session.phoneNumber = phoneNumber;
+      req.session.isPhoneVerified = true;
+
+      // Track login session
+      const sessionData = {
+        userId: null,
+        email: null,
+        name: phoneUser.name,
+        phone: phoneNumber,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        sessionId: req.sessionID,
+      };
+
+      const sessionDbId = await storage.createUserSession(sessionData);
+      req.session.sessionDbId = sessionDbId;
+
+      res.json({ 
+        success: true, 
+        message: 'Phone verified successfully',
+        user: phoneUser
+      });
+    } catch (error) {
+      console.error('Verify OTP error:', error);
+      res.status(500).json({ error: 'Failed to verify OTP' });
     }
   });
 

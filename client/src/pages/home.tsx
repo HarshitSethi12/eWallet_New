@@ -8,9 +8,12 @@ import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockcha
 import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
+import { PhoneAuth } from "@/components/phone-auth";
 import { useAuth } from "@/hooks/use-auth";
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 import React from "react";
+import { LogIn, Phone } from "lucide-react";
+import { useState } from "react";
 
 function WelcomePage() {
   const { login } = useAuth();
@@ -74,7 +77,8 @@ function WelcomePage() {
 }
 
 export default function Home() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, login, loginWithApple, isLoading } = useAuth();
+  const [showPhoneAuth, setShowPhoneAuth] = useState(false);
   const [, setLocation] = useLocation();
 
   // Redirect authenticated users directly to dashboard
@@ -89,5 +93,60 @@ export default function Home() {
     return null;
   }
 
-  return <WelcomePage />;
+  return (
+    <div className="flex flex-col items-center justify-center h-screen">
+      <Card className="w-[400px]">
+        <CardHeader>
+          <CardTitle>Authentication</CardTitle>
+        </CardHeader>
+        <CardContent>
+          
+          
+          <div className="space-y-4">
+            {!showPhoneAuth ? (
+              <>
+                <Button 
+                  onClick={login}
+                  className="w-full bg-white text-black hover:bg-gray-100 border border-gray-300"
+                  size="lg"
+                >
+                  <LogIn className="mr-2 h-5 w-5" />
+                  Continue with Google
+                </Button>
+
+                <Button 
+                  onClick={loginWithApple}
+                  className="w-full bg-black text-white hover:bg-gray-800"
+                  size="lg"
+                >
+                  <LogIn className="mr-2 h-5 w-5" />
+                  Continue with Apple
+                </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-gray-500">or</span>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => setShowPhoneAuth(true)}
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                  size="lg"
+                >
+                  <Phone className="mr-2 h-5 w-5" />
+                  Continue with Phone
+                </Button>
+              </>
+            ) : (
+              <PhoneAuth onSuccess={() => window.location.reload()} />
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

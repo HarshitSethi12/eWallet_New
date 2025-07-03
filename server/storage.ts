@@ -33,9 +33,10 @@ export interface IStorage {
 
   // Session operations
   createUserSession(sessionData: {
-    userId?: number | null;
-    email: string;
+    userId: number | null;
+    email: string | null;
     name: string;
+    phone?: string;
     ipAddress: string;
     userAgent: string;
     sessionId: string;
@@ -120,17 +121,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUserSession(sessionData: {
-    userId?: number | null;
-    email: string;
+    userId: number | null;
+    email: string | null;
     name: string;
+    phone?: string;
     ipAddress: string;
     userAgent: string;
     sessionId: string;
   }): Promise<number> {
     const result = await db.insert(userSessions).values({
-      ...sessionData,
-      loginTime: new Date(),
-    }).returning();
+        userId: sessionData.userId,
+        email: sessionData.email,
+        name: sessionData.name,
+        phone: sessionData.phone,
+        ipAddress: sessionData.ipAddress,
+        userAgent: sessionData.userAgent,
+        sessionId: sessionData.sessionId,
+        loginTime: new Date(),
+        isActive: true
+      }).returning();
     return result[0].id;
   }
 

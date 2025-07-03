@@ -5,11 +5,13 @@ import { useLocation } from "wouter";
 
 interface User {
   id: string;
-  email: string;
+  email?: string;
   name: string;
-  given_name: string;
-  family_name: string;
-  picture: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string | null;
+  phone?: string;
+  provider?: string;
 }
 
 export function useAuth() {
