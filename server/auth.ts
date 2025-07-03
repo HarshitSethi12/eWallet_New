@@ -70,7 +70,7 @@ export function setupAuth(app: express.Express) {
           'openid'
         ],
         redirect_uri: redirectUri,
-        prompt: 'consent select_account',  // Force account selection and consent
+        prompt: 'select_account consent',
         include_granted_scopes: true,
         response_type: 'code'
       });
