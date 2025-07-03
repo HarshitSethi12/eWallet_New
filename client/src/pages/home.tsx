@@ -12,6 +12,7 @@ import { PhoneAuth } from "@/components/phone-auth";
 import { useAuth } from "@/hooks/use-auth";
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogIn, Phone } from "lucide-react";
 import { useState } from "react";
 
@@ -100,8 +101,8 @@ export default function Home() {
           <CardTitle>Authentication</CardTitle>
         </CardHeader>
         <CardContent>
-          
-          
+
+
           <div className="space-y-4">
             {!showPhoneAuth ? (
               <>
