@@ -55,19 +55,15 @@ export function setupAuth(app: express.Express) {
         originalUrl: req.originalUrl
       });
 
-      // Manually construct OAuth URL to avoid parameter conflicts
-      const scopes = encodeURIComponent([
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/userinfo.email',
-        'openid'
-      ].join(' '));
-
-      const url = `https://accounts.google.com/oauth/authorize?` +
-        `client_id=${process.env.GOOGLE_CLIENT_ID}` +
-        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&response_type=code` +
-        `&scope=${scopes}` +
-        `&access_type=offline`;
+      // Generate completely clean OAuth URL with minimal parameters
+      const baseUrl = 'https://accounts.google.com/oauth/authorize';
+      const params = new URLSearchParams();
+      params.set('client_id', process.env.GOOGLE_CLIENT_ID!);
+      params.set('redirect_uri', redirectUri);
+      params.set('response_type', 'code');
+      params.set('scope', 'openid email profile');
+      
+      const url = `${baseUrl}?${params.toString()}`;
 
       console.log('Generated OAuth URL:', url);
       console.log('=== END DEBUG ===');
