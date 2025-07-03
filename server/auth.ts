@@ -55,21 +55,19 @@ export function setupAuth(app: express.Express) {
         originalUrl: req.originalUrl
       });
 
-      // Create OAuth client with proper configuration
-      const oauth2Client = new OAuth2Client(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
-        redirectUri
-      );
+      // Manually construct OAuth URL to avoid parameter conflicts
+      const scopes = encodeURIComponent([
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'openid'
+      ].join(' '));
 
-      const url = oauth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: [
-          'https://www.googleapis.com/auth/userinfo.profile',
-          'https://www.googleapis.com/auth/userinfo.email',
-          'openid'
-        ]
-      });
+      const url = `https://accounts.google.com/oauth/authorize?` +
+        `client_id=${process.env.GOOGLE_CLIENT_ID}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&response_type=code` +
+        `&scope=${scopes}` +
+        `&access_type=offline`;
 
       console.log('Generated OAuth URL:', url);
       console.log('=== END DEBUG ===');
