@@ -72,8 +72,7 @@ export function setupAuth(app: express.Express) {
         redirect_uri: redirectUri,
         prompt: 'consent select_account',  // Force account selection and consent
         include_granted_scopes: true,
-        response_type: 'code',
-        approval_prompt: 'force'  // Force approval prompt
+        response_type: 'code'
       });
 
       console.log('Generated OAuth URL:', url);
