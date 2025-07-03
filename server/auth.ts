@@ -68,10 +68,7 @@ export function setupAuth(app: express.Express) {
           'https://www.googleapis.com/auth/userinfo.profile',
           'https://www.googleapis.com/auth/userinfo.email',
           'openid'
-        ],
-        redirect_uri: redirectUri,
-        prompt: 'consent',
-        response_type: 'code'
+        ]
       });
 
       console.log('Generated OAuth URL:', url);
