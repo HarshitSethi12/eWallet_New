@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -8,13 +9,9 @@ import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockcha
 import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
-import { PhoneAuth } from "@/components/phone-auth";
 import { useAuth } from "@/hooks/use-auth";
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogIn, Phone } from "lucide-react";
-import { useState } from "react";
 
 function WelcomePage() {
   const { login } = useAuth();
@@ -77,77 +74,105 @@ function WelcomePage() {
   );
 }
 
-export default function Home() {
-  const { user, isAuthenticated, login, loginWithApple, isLoading } = useAuth();
-  const [showPhoneAuth, setShowPhoneAuth] = useState(false);
+function DashboardPage() {
+  const { user, logout, isLoggingOut } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Redirect authenticated users directly to dashboard
-  React.useEffect(() => {
-    if (isAuthenticated && user) {
-      setLocation("/dashboard");
-    }
-  }, [isAuthenticated, user, setLocation]);
+  const { data: wallets } = useQuery({
+    queryKey: ["/api/wallets"],
+    queryFn: () => apiRequest("/api/wallets"),
+  });
 
-  // Don't render anything if authenticated - just redirect
-  if (isAuthenticated && user) {
-    return null;
-  }
+  const { data: transactions } = useQuery({
+    queryKey: ["/api/transactions"],
+    queryFn: () => apiRequest("/api/transactions"),
+  });
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen">
-      <Card className="w-[400px]">
-        <CardHeader>
-          <CardTitle>Authentication</CardTitle>
-        </CardHeader>
-        <CardContent>
-
-
-          <div className="space-y-4">
-            {!showPhoneAuth ? (
-              <>
-                <Button 
-                  onClick={login}
-                  className="w-full bg-white text-black hover:bg-gray-100 border border-gray-300"
-                  size="lg"
-                >
-                  <LogIn className="mr-2 h-5 w-5" />
-                  Continue with Google
-                </Button>
-
-                <Button 
-                  onClick={loginWithApple}
-                  className="w-full bg-black text-white hover:bg-gray-800"
-                  size="lg"
-                >
-                  <LogIn className="mr-2 h-5 w-5" />
-                  Continue with Apple
-                </Button>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 text-gray-500">or</span>
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={() => setShowPhoneAuth(true)}
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
-                  size="lg"
-                >
-                  <Phone className="mr-2 h-5 w-5" />
-                  Continue with Phone
-                </Button>
-              </>
-            ) : (
-              <PhoneAuth onSuccess={() => window.location.reload()} />
-            )}
+    <div className="container max-w-5xl mx-auto px-3 sm:px-4 space-y-6 sm:space-y-8 py-6 sm:py-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <img 
+            src={user?.picture} 
+            alt={user?.name} 
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-white shadow-lg"
+          />
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Welcome back!</h1>
+            <p className="text-sm sm:text-base text-gray-600">{user?.name}</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex gap-2 sm:gap-3">
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setLocation("/send")}
+          >
+            <Send className="h-4 w-4" />
+            Send
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setLocation("/receive")}
+          >
+            <ArrowDownLeft className="h-4 w-4" />
+            Receive
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={logout}
+            disabled={isLoggingOut}
+            className="flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            {isLoggingOut ? "Signing out..." : "Sign Out"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Live Market Prices */}
+      <div className="w-full">
+        <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">Live Market Prices</h2>
+        <HorizontalPriceTicker />
+      </div>
+
+      {/* Wallets */}
+      <div>
+        <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">Your Wallets</h2>
+        <div className="grid gap-4 sm:gap-6">
+          {wallets?.length === 0 ? (
+            <div className="text-center py-8 sm:py-12">
+              <WalletIcon className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500 text-sm sm:text-base">No wallets found. Create your first wallet to get started!</p>
+            </div>
+          ) : (
+            wallets?.map((wallet: Wallet) => (
+              <AddressCard key={wallet.id} wallet={wallet} />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Recent Transactions */}
+      <div>
+        <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">Recent Transactions</h2>
+        <TransactionList transactions={transactions || []} />
+      </div>
     </div>
   );
+}
+
+export default function Home() {
+  const { isAuthenticated, user } = useAuth();
+
+  if (isAuthenticated && user) {
+    return <DashboardPage />;
+  }
+
+  return <WelcomePage />;
 }
