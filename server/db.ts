@@ -21,12 +21,3 @@ export const contacts = pgTable("contacts", {
   address: text("address").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
-
-export const metamaskUsers = pgTable("metamask_users", {
-  id: serial("id").primaryKey(),
-  address: text("address").notNull().unique(),
-  displayName: text("display_name").notNull(),
-  ensName: text("ens_name"),
-  lastLogin: timestamp("last_login").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-});

@@ -47,15 +47,22 @@ export const userSessions = pgTable("user_sessions", {
   loginTime: timestamp("login_time").defaultNow(),
   logoutTime: timestamp("logout_time"),
   duration: integer("duration"), // duration in minutes
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
-  sessionId: text("session_id"),
+});
+
+export const metamaskUsers = pgTable("metamask_users", {
+  id: serial("id").primaryKey(),
+  address: text("address").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  ensName: text("ens_name"),
+  lastLogin: timestamp("last_login").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true });
 export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true });
 export const insertContactSchema = createInsertSchema(contacts).omit({ id: true });
 export const insertUserSessionSchema = createInsertSchema(userSessions).omit({ id: true });
+export const insertMetaMaskUserSchema = createInsertSchema(metamaskUsers).omit({ id: true });
 
 export type Wallet = typeof wallets.$inferSelect;
 export type InsertWallet = z.infer<typeof insertWalletSchema>;
@@ -65,3 +72,5 @@ export type Contact = typeof contacts.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type UserSession = typeof userSessions.$inferSelect;
 export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+export type MetaMaskUser = typeof metamaskUsers.$inferSelect;
+export type InsertMetaMaskUser = z.infer<typeof insertMetaMaskUserSchema>;
