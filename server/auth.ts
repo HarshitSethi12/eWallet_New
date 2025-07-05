@@ -68,14 +68,14 @@ export function setupAuth(app: express.Express) {
       });
 
       // Generate completely clean OAuth URL with minimal parameters
-      const baseUrl = 'https://accounts.google.com/oauth/authorize';
+      const oauthBaseUrl = 'https://accounts.google.com/oauth/authorize';
       const params = new URLSearchParams();
       params.set('client_id', process.env.GOOGLE_CLIENT_ID!);
       params.set('redirect_uri', redirectUri);
       params.set('response_type', 'code');
       params.set('scope', 'openid email profile');
       
-      const url = `${baseUrl}?${params.toString()}`;
+      const url = `${oauthBaseUrl}?${params.toString()}`;
 
       console.log('Generated OAuth URL:', url);
       console.log('=== END DEBUG ===');
