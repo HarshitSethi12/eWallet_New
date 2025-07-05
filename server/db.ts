@@ -2,6 +2,7 @@ import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
+import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 neonConfig.webSocketConstructor = ws;
 
@@ -13,3 +14,19 @@ if (!process.env.DATABASE_URL) {
 
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle({ client: pool, schema });
+
+export const contacts = pgTable("contacts", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const metamaskUsers = pgTable("metamask_users", {
+  id: serial("id").primaryKey(),
+  address: text("address").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  ensName: text("ens_name"),
+  lastLogin: timestamp("last_login").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});

@@ -10,6 +10,7 @@ import {
   wallets,
   transactions,
   contacts,
+  metamaskUsers,
   userSessions
 } from "@shared/schema";
 import { db } from "./db";
@@ -44,6 +45,10 @@ export interface IStorage {
   endUserSession(sessionId: number): Promise<void>;
   getAllUserSessions(): Promise<any[]>;
   getUserSessionsByEmail(email: string): Promise<any[]>;
+
+  getMetaMaskUser(address: string): Promise<any>;
+  createMetaMaskUser(userData: { address: string; displayName: string; lastLogin: string }): Promise<any>;
+  updateMetaMaskUserLogin(address: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -118,6 +123,22 @@ export class DatabaseStorage implements IStorage {
 
   async deleteContact(id: number): Promise<void> {
     await db.delete(contacts).where(eq(contacts.id, id));
+  }
+
+  async getMetaMaskUser(address: string) {
+    const result = await db.select().from(metamaskUsers).where(eq(metamaskUsers.address, address.toLowerCase())).limit(1);
+    return result[0] || null;
+  }
+
+  async createMetaMaskUser(userData: { address: string; displayName: string; lastLogin: string }) {
+    const result = await db.insert(metamaskUsers).values(userData).returning();
+    return result[0];
+  }
+
+  async updateMetaMaskUserLogin(address: string) {
+    await db.update(metamaskUsers)
+      .set({ lastLogin: new Date().toISOString() })
+      .where(eq(metamaskUsers.address, address.toLowerCase()));
   }
 
   async createUserSession(sessionData: {

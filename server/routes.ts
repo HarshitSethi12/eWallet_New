@@ -2,8 +2,61 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import { insertWalletSchema, insertTransactionSchema, insertContactSchema } from "@shared/schema";
+import { ethers } from "ethers";
 
 export async function registerRoutes(app: Express) {
+  // MetaMask Authentication
+  app.post("/api/auth/metamask", async (req, res) => {
+    try {
+      const { address, message, signature } = req.body;
+
+      if (!address || !message || !signature) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Verify the signature
+      const recoveredAddress = ethers.verifyMessage(message, signature);
+      
+      if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
+        return res.status(401).json({ error: "Invalid signature" });
+      }
+
+      // Check if user exists in our system, create if not
+      let user = await storage.getMetaMaskUser(address);
+      if (!user) {
+        user = await storage.createMetaMaskUser({
+          address: address.toLowerCase(),
+          displayName: `${address.slice(0, 6)}...${address.slice(-4)}`,
+          lastLogin: new Date().toISOString()
+        });
+      } else {
+        // Update last login
+        await storage.updateMetaMaskUserLogin(address);
+      }
+
+      // Create session
+      req.session.user = {
+        id: user.id,
+        address: user.address,
+        displayName: user.displayName,
+        authMethod: 'metamask'
+      };
+
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          address: user.address,
+          displayName: user.displayName,
+          authMethod: 'metamask'
+        }
+      });
+    } catch (error) {
+      console.error('MetaMask authentication error:', error);
+      res.status(500).json({ error: "Authentication failed" });
+    }
+  });
+
   // Wallet routes
   app.get("/api/wallet/primary", async (req, res) => {
     // For demo purposes, we'll create a default wallet if none exists

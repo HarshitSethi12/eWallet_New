@@ -6,6 +6,13 @@ interface MetaMaskState {
   account: string | null;
   chainId: string | null;
   isLoading: boolean;
+  isAuthenticated: boolean;
+}
+
+interface MetaMaskUser {
+  address: string;
+  ensName?: string;
+  displayName: string;
 }
 
 export function useMetaMask() {
@@ -13,7 +20,8 @@ export function useMetaMask() {
     isConnected: false,
     account: null,
     chainId: null,
-    isLoading: false
+    isLoading: false,
+    isAuthenticated: false
   });
 
   const connectWallet = async () => {
@@ -37,7 +45,8 @@ export function useMetaMask() {
         isConnected: true,
         account: accounts[0],
         chainId,
-        isLoading: false
+        isLoading: false,
+        isAuthenticated: false
       });
     } catch (error) {
       console.error('Failed to connect wallet:', error);
@@ -45,12 +54,71 @@ export function useMetaMask() {
     }
   };
 
+  const authenticateWithWallet = async () => {
+    if (!state.account) {
+      throw new Error('No wallet connected');
+    }
+
+    setState(prev => ({ ...prev, isLoading: true }));
+
+    try {
+      // Create a message to sign for authentication
+      const message = `Sign this message to authenticate with BitWallet.\n\nAddress: ${state.account}\nTimestamp: ${Date.now()}`;
+      
+      const signature = await window.ethereum.request({
+        method: 'personal_sign',
+        params: [message, state.account]
+      });
+
+      // Send signature to backend for verification
+      const response = await fetch('/api/auth/metamask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: state.account,
+          message,
+          signature
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Authentication failed');
+      }
+
+      const userData = await response.json();
+      
+      setState(prev => ({ 
+        ...prev, 
+        isAuthenticated: true, 
+        isLoading: false 
+      }));
+
+      return userData;
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      setState(prev => ({ ...prev, isLoading: false }));
+      throw error;
+    }
+  };
+
+  const getUserInfo = (): MetaMaskUser | null => {
+    if (!state.account) return null;
+    
+    return {
+      address: state.account,
+      displayName: `${state.account.slice(0, 6)}...${state.account.slice(-4)}`
+    };
+  };
+
   const disconnectWallet = () => {
     setState({
       isConnected: false,
       account: null,
       chainId: null,
-      isLoading: false
+      isLoading: false,
+      isAuthenticated: false
     });
   };
 
@@ -81,6 +149,8 @@ export function useMetaMask() {
   return {
     ...state,
     connectWallet,
-    disconnectWallet
+    disconnectWallet,
+    authenticateWithWallet,
+    getUserInfo
   };
 }
