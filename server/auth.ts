@@ -53,6 +53,12 @@ export function setupAuth(app: express.Express) {
       // For Replit, always use https regardless of environment
       const baseUrl = `https://${host}`;
       const redirectUri = `${baseUrl}/auth/callback`;
+      
+      // Validate that we have the required OAuth credentials
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        console.error('Missing Google OAuth credentials');
+        return res.redirect('/?error=missing_credentials');
+      }
 
       console.log('=== GOOGLE AUTH DEBUG ===');
       console.log('Auth environment:', {
@@ -118,6 +124,12 @@ export function setupAuth(app: express.Express) {
         code: code ? 'Present' : 'Missing',
         error: error || 'None'
       });
+
+      // Validate environment variables in callback as well
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        console.error('Missing Google OAuth credentials in callback');
+        return res.redirect('/?error=missing_credentials');
+      }
 
       // Set redirect URI properly
       const oauth2Client = new OAuth2Client(

@@ -16,6 +16,17 @@ import React from "react";
 
 function WelcomePage() {
   const { login } = useAuth();
+  const [location] = useLocation();
+  
+  // Check for authentication errors in URL
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    if (error) {
+      console.error('Authentication error:', error);
+      // You can add a toast notification here if needed
+    }
+  }, [location]);
 
   return (
     <div className="container max-w-4xl mx-auto px-3 sm:px-4 space-y-8 sm:space-y-12 md:space-y-16 py-6 sm:py-8 md:py-12">
