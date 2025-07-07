@@ -37,39 +37,12 @@ function WelcomePage() {
         const message = `Sign this message to authenticate with your wallet: ${Date.now()}`;
         const signature = await signMessage(message);
         if (signature) {
+          // This will automatically route to dashboard on success
           loginWithMetaMask({ message, signature, address });
         }
       }
     } catch (error) {
       console.error('MetaMask authentication error:', error);
-    }
-  };
-
-  // Force logout function for MetaMask users on welcome page
-  const handleForceLogout = async () => {
-    try {
-      if (user?.provider === 'metamask') {
-        // Clear MetaMask connection
-        disconnectWallet();
-        // Clear all local storage
-        window.localStorage.clear();
-        window.sessionStorage.clear();
-        
-        // Make logout request to server
-        await fetch('/auth/logout', { 
-          method: 'POST',
-          credentials: 'include' 
-        });
-        
-        // Force reload to clear all state
-        window.location.href = '/';
-      } else {
-        logout();
-      }
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Force reload as fallback
-      window.location.href = '/';
     }
   };
 
@@ -109,14 +82,14 @@ function WelcomePage() {
               <Button
                 size="sm"
                 className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => window.location.href = '/'}
+                onClick={() => window.location.href = '/dashboard'}
               >
                 Go to Dashboard
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={handleForceLogout}
+                onClick={logout}
                 disabled={isLoggingOut}
                 className="flex items-center gap-2"
               >
@@ -217,33 +190,7 @@ function DashboardPage() {
     console.log('📊 Manual session check result:', status);
   };
 
-  // Force logout function for MetaMask users
-  const handleForceLogout = async () => {
-    try {
-      if (user?.provider === 'metamask') {
-        // Clear MetaMask connection
-        disconnectWallet();
-        // Clear all local storage
-        window.localStorage.clear();
-        window.sessionStorage.clear();
-        
-        // Make logout request to server
-        await fetch('/auth/logout', { 
-          method: 'POST',
-          credentials: 'include' 
-        });
-        
-        // Force reload to clear all state
-        window.location.href = '/';
-      } else {
-        logout();
-      }
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Force reload as fallback
-      window.location.href = '/';
-    }
-  };
+  
 
   const { data: wallets } = useQuery({
     queryKey: ["/api/wallets"],
@@ -318,7 +265,7 @@ function DashboardPage() {
           <Button 
             size="sm" 
             variant="outline"
-            onClick={handleForceLogout}
+            onClick={logout}
             disabled={isLoggingOut}
             className="flex items-center gap-2"
           >
@@ -384,10 +331,15 @@ function DashboardPage() {
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
+  const [, setLocation] = useLocation();
 
-  if (isAuthenticated && user) {
-    return <DashboardPage />;
-  }
+  // If user is authenticated, redirect to dashboard instead of showing dashboard here
+  React.useEffect(() => {
+    if (isAuthenticated && user) {
+      setLocation("/dashboard");
+    }
+  }, [isAuthenticated, user, setLocation]);
 
+  // Always show welcome page on home route
   return <WelcomePage />;
 }

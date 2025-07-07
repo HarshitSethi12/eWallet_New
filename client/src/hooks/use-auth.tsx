@@ -47,18 +47,17 @@ export function useAuth() {
   });
 
   const metamaskLoginMutation = useMutation({
-    mutationFn: async (signature: { message: string; signature: string; address: string }) => {
+    mutationFn: async ({ message, signature, address }: { message: string; signature: string; address: string }) => {
       const response = await fetch("/api/auth/metamask", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(signature),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ message, signature, address }),
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "MetaMask authentication failed");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "MetaMask authentication failed");
       }
 
       return response.json();
@@ -70,10 +69,8 @@ export function useAuth() {
         title: "Welcome!",
         description: "You have been signed in with MetaMask.",
       });
-      // Force a page refresh to ensure proper routing
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Route to dashboard after successful authentication
+      setLocation("/dashboard");
     },
     onError: (error) => {
       console.error('❌ MetaMask authentication failed:', error);
@@ -87,26 +84,47 @@ export function useAuth() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/auth/logout");
+      // Clear MetaMask connection if user is using MetaMask
+      if (user?.provider === 'metamask') {
+        try {
+          // Clear localStorage and sessionStorage
+          window.localStorage.clear();
+          window.sessionStorage.clear();
+        } catch (error) {
+          console.error('Error clearing storage:', error);
+        }
+      }
+
+      const response = await fetch("/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
       if (!response.ok) throw new Error("Logout failed");
     },
     onSuccess: () => {
       queryClient.clear();
-      // If user was authenticated with MetaMask, also disconnect the wallet
-      if (user?.provider === 'metamask' && window.ethereum) {
-        // Clear MetaMask connection state
-        window.localStorage.removeItem('metamask-connected');
+
+      // Force a complete page reload for MetaMask users to ensure clean state
+      if (user?.provider === 'metamask') {
+        window.location.href = '/';
+      } else {
+        setLocation("/");
+      }
+
+      toast({
+        title: "Signed out",
+        description: "You have been signed out successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error("Logout failed:", error);
+      // Force reload as fallback for MetaMask users
+      if (user?.provider === 'metamask') {
+        window.location.href = '/';
       }
       toast({
-        title: "Logged out successfully",
-        description: "You have been signed out of your account.",
-      });
-      window.location.href = "/";
-    },
-    onError: () => {
-      toast({
         title: "Logout failed",
-        description: "There was an error signing you out. Please try again.",
+        description: "There was an error signing you out.",
         variant: "destructive",
       });
     },
