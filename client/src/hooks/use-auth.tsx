@@ -167,21 +167,21 @@ export function useAuth() {
 
   // Enhanced logging for debugging
   React.useEffect(() => {
-    if (user?.data) {
+    if (user) {
       console.log('🔐 Auth Status - User found:', {
-        provider: user.data.provider || user.data.authMethod,
-        address: user.data.walletAddress || user.data.address,
-        name: user.data.name || user.data.displayName,
-        isAuthenticated: !!user?.data
+        provider: user.provider || user.authMethod,
+        address: user.walletAddress || user.address,
+        name: user.name || user.displayName,
+        isAuthenticated: !!user
       });
     } else {
-      console.log('🔓 Auth Status - No user found, isAuthenticated:', !!user?.data);
+      console.log('🔓 Auth Status - No user found, isAuthenticated:', !!user);
     }
-  }, [user?.data]);
+  }, [user]);
 
   return {
-    user: user?.data || null,
-    isAuthenticated: !!user?.data,
+    user: user || null,
+    isAuthenticated: !!user,
     login: loginMutation.mutate,
     loginWithApple: appleLoginMutation.mutate,
     loginWithMetaMask: metamaskLoginMutation.mutate,

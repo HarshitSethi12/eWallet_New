@@ -27,7 +27,7 @@ export function useMetaMask() {
   const connectWallet = async () => {
     if (!window.ethereum) {
       alert('MetaMask is not installed!');
-      return;
+      return null;
     }
 
     setState(prev => ({ ...prev, isLoading: true }));
@@ -48,9 +48,13 @@ export function useMetaMask() {
         isLoading: false,
         isAuthenticated: false
       });
+
+      // Return the connected account address
+      return accounts[0];
     } catch (error) {
       console.error('Failed to connect wallet:', error);
       setState(prev => ({ ...prev, isLoading: false }));
+      return null;
     }
   };
 
