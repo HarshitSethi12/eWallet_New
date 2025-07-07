@@ -2,6 +2,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { useMetaMask } from "./use-metamask";
 
 interface User {
   id: string;
@@ -12,6 +13,7 @@ interface User {
   picture?: string | null;
   phone?: string;
   provider?: string;
+  walletAddress?: string;
 }
 
 export function useAuth() {
@@ -44,6 +46,39 @@ export function useAuth() {
     },
   });
 
+  const metamaskLoginMutation = useMutation({
+    mutationFn: async (signature: { message: string; signature: string; address: string }) => {
+      const response = await fetch("/api/auth/metamask", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(signature),
+      });
+      
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || "MetaMask authentication failed");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/auth/user"] });
+      toast({
+        title: "Welcome!",
+        description: "You have been signed in with MetaMask.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Authentication failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch("/auth/logout");
@@ -72,7 +107,9 @@ export function useAuth() {
     isAuthenticated: !!user,
     login: loginMutation.mutate,
     loginWithApple: appleLoginMutation.mutate,
+    loginWithMetaMask: metamaskLoginMutation.mutate,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
+    isMetaMaskLoading: metamaskLoginMutation.isPending,
   };
 }
