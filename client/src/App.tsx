@@ -61,11 +61,19 @@ function Navigation() {
         <div className="flex-1 flex justify-end">
           {isAuthenticated && user && (
             <div className="flex items-center gap-3">
-              <img 
-                src={user.picture} 
-                alt={user.name} 
-                className="w-8 h-8 rounded-full border-2 border-white/20 shadow-lg"
-              />
+              {user.picture ? (
+                <img 
+                  src={user.picture} 
+                  alt={user.name} 
+                  className="w-8 h-8 rounded-full border-2 border-white/20 shadow-lg"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full border-2 border-white/20 shadow-lg bg-orange-500 flex items-center justify-center">
+                  <span className="text-white text-xs font-semibold">
+                    {user.provider === 'metamask' ? 'MM' : user.name?.[0] || 'U'}
+                  </span>
+                </div>
+              )}
               <Button 
                 size="sm" 
                 variant="ghost"
