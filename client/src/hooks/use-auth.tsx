@@ -55,12 +55,12 @@ export function useAuth() {
         },
         body: JSON.stringify(signature),
       });
-      
+
       if (!response.ok) {
         const error = await response.text();
         throw new Error(error || "MetaMask authentication failed");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -106,15 +106,64 @@ export function useAuth() {
     },
   });
 
+  // Check session status function
+  const checkSessionStatus = async () => {
+    try {
+      console.log('🔍 Checking session status...');
+      const response = await fetch("/auth/user", {
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        console.log('✅ Session active:', userData);
+        return {
+          isActive: true,
+          user: userData,
+          provider: userData.provider || userData.authMethod
+        };
+      } else {
+        console.log('❌ Session expired or invalid');
+        return {
+          isActive: false,
+          user: null,
+          provider: null
+        };
+      }
+    } catch (error) {
+      console.error('🚨 Session check failed:', error);
+      return {
+        isActive: false,
+        user: null,
+        provider: null,
+        error: error.message
+      };
+    }
+  };
+
+  // Enhanced logging for debugging
+  React.useEffect(() => {
+    if (user?.data) {
+      console.log('🔐 Auth Status - User found:', {
+        provider: user.data.provider || user.data.authMethod,
+        address: user.data.walletAddress || user.data.address,
+        name: user.data.name || user.data.displayName,
+        isAuthenticated: !!user?.data
+      });
+    } else {
+      console.log('🔓 Auth Status - No user found, isAuthenticated:', !!user?.data);
+    }
+  }, [user?.data]);
+
   return {
-    user,
-    isLoading,
-    isAuthenticated: !!user,
+    user: user?.data || null,
+    isAuthenticated: !!user?.data,
     login: loginMutation.mutate,
     loginWithApple: appleLoginMutation.mutate,
     loginWithMetaMask: metamaskLoginMutation.mutate,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
     isMetaMaskLoading: metamaskLoginMutation.isPending,
+    checkSessionStatus,
   };
 }

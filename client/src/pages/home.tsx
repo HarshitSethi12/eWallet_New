@@ -121,9 +121,17 @@ function WelcomePage() {
 }
 
 function DashboardPage() {
-  const { user, logout, isLoggingOut } = useAuth();
+  const { user, logout, isLoggingOut, checkSessionStatus } = useAuth();
   const { disconnectWallet } = useMetaMask();
   const [, setLocation] = useLocation();
+  const [sessionStatus, setSessionStatus] = React.useState(null);
+
+  // Manual session check function
+  const handleCheckSession = async () => {
+    const status = await checkSessionStatus();
+    setSessionStatus(status);
+    console.log('📊 Manual session check result:', status);
+  };
 
   // Force logout function for MetaMask users
   const handleForceLogout = async () => {
@@ -217,6 +225,15 @@ function DashboardPage() {
           <Button 
             size="sm" 
             variant="outline"
+            className="flex items-center gap-2"
+            onClick={handleCheckSession}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Check Session
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
             onClick={handleForceLogout}
             disabled={isLoggingOut}
             className="flex items-center gap-2"
@@ -226,6 +243,28 @@ function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {/* Session Status Display */}
+      {sessionStatus && (
+        <Card className="p-4">
+          <h3 className="text-lg font-semibold mb-2">Session Status</h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${sessionStatus.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span>{sessionStatus.isActive ? 'Active' : 'Inactive'}</span>
+            </div>
+            {sessionStatus.provider && (
+              <p><strong>Provider:</strong> {sessionStatus.provider}</p>
+            )}
+            {sessionStatus.user?.address && (
+              <p><strong>Address:</strong> {sessionStatus.user.address}</p>
+            )}
+            {sessionStatus.error && (
+              <p className="text-red-600"><strong>Error:</strong> {sessionStatus.error}</p>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Live Market Prices */}
       <div className="w-full">
