@@ -63,14 +63,20 @@ export function useAuth() {
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('✅ MetaMask authentication successful:', data);
       queryClient.invalidateQueries({ queryKey: ["/auth/user"] });
       toast({
         title: "Welcome!",
         description: "You have been signed in with MetaMask.",
       });
+      // Force a page refresh to ensure proper routing
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     },
     onError: (error) => {
+      console.error('❌ MetaMask authentication failed:', error);
       toast({
         title: "Authentication failed",
         description: error.message,
