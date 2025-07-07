@@ -113,6 +113,9 @@ export function useMetaMask() {
   };
 
   const disconnectWallet = () => {
+    // Clear localStorage
+    window.localStorage.removeItem('metamask-connected');
+    
     setState({
       isConnected: false,
       account: null,

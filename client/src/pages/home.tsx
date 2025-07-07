@@ -122,7 +122,36 @@ function WelcomePage() {
 
 function DashboardPage() {
   const { user, logout, isLoggingOut } = useAuth();
+  const { disconnectWallet } = useMetaMask();
   const [, setLocation] = useLocation();
+
+  // Force logout function for MetaMask users
+  const handleForceLogout = async () => {
+    try {
+      if (user?.provider === 'metamask') {
+        // Clear MetaMask connection
+        disconnectWallet();
+        // Clear all local storage
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+        
+        // Make logout request to server
+        await fetch('/auth/logout', { 
+          method: 'POST',
+          credentials: 'include' 
+        });
+        
+        // Force reload to clear all state
+        window.location.href = '/';
+      } else {
+        logout();
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Force reload as fallback
+      window.location.href = '/';
+    }
+  };
 
   const { data: wallets } = useQuery({
     queryKey: ["/api/wallets"],
@@ -188,7 +217,7 @@ function DashboardPage() {
           <Button 
             size="sm" 
             variant="outline"
-            onClick={logout}
+            onClick={handleForceLogout}
             disabled={isLoggingOut}
             className="flex items-center gap-2"
           >

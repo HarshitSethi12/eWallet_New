@@ -13,6 +13,10 @@ import Dashboard from "@/pages/dashboard";
 
 function Navigation() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
+  
+  // Debug log to see what's happening
+  console.log('Navigation - User:', user);
+  console.log('Navigation - isAuthenticated:', isAuthenticated);
 
   return (
     <nav className="border-b" style={{ backgroundColor: 'var(--color-nav)' }}>
