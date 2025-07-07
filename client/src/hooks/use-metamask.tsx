@@ -146,11 +146,31 @@ export function useMetaMask() {
     };
   }, []);
 
+  const signMessage = async (message: string) => {
+    if (!state.account || !window.ethereum) {
+      throw new Error('No wallet connected');
+    }
+
+    try {
+      const signature = await window.ethereum.request({
+        method: 'personal_sign',
+        params: [message, state.account]
+      });
+      return signature;
+    } catch (error) {
+      console.error('Failed to sign message:', error);
+      throw error;
+    }
+  };
+
   return {
     ...state,
     connectWallet,
     disconnectWallet,
     authenticateWithWallet,
-    getUserInfo
+    getUserInfo,
+    signMessage,
+    isConnecting: state.isLoading,
+    account: state.account
   };
 }

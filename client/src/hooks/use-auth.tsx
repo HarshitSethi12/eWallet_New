@@ -86,6 +86,11 @@ export function useAuth() {
     },
     onSuccess: () => {
       queryClient.clear();
+      // If user was authenticated with MetaMask, also disconnect the wallet
+      if (user?.provider === 'metamask' && window.ethereum) {
+        // Clear MetaMask connection state
+        window.localStorage.removeItem('metamask-connected');
+      }
       toast({
         title: "Logged out successfully",
         description: "You have been signed out of your account.",
