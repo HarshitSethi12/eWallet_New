@@ -129,7 +129,7 @@ function WelcomePage() {
       )}
 
       {/* Hero Section */}
-      <div className="text-center space-y-4 sm:space-y-6"></div>
+      <div className="text-center space-y-4 sm:space-y-6">
         <div className="relative inline-flex items-center justify-center w-28 h-28 sm:w-32 sm:h-32 mb-2 sm:mb-0">
           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#30D158] via-teal-400 to-[#0A3665] opacity-20 blur-xl animate-pulse"></div>
           <div className="absolute inset-2 bg-gradient-to-br from-[#F2FFF5] to-white rounded-full opacity-90"></div>
