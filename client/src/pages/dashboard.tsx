@@ -11,11 +11,13 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Wallet } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
 import { useAuth } from "@/hooks/use-auth";
+import { useMetaMask } from "@/hooks/use-metamask";
 import { PriceTicker } from "@/components/price-ticker";
 
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
+  const { disconnectWallet } = useMetaMask();
 
   const { data: wallet, isLoading: isLoadingWallet } = useQuery<Wallet | null>({
     queryKey: ["/api/wallet/primary"],
@@ -53,11 +55,59 @@ export default function Dashboard() {
     );
   }
 
+  const handleDisconnect = () => {
+    // Disconnect MetaMask and logout
+    disconnectWallet();
+    logout();
+  };
+
   return (
     <div className="flex flex-col h-screen">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b bg-white">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+            <WalletIcon className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Dashboard</h1>
+            <p className="text-sm text-gray-600">
+              {user?.provider === 'metamask' ? 
+                `${user.walletAddress?.slice(0, 6)}...${user.walletAddress?.slice(-4)}` : 
+                user?.name
+              }
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {user?.provider === 'metamask' && (
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={handleDisconnect}
+              disabled={isLoggingOut}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              {isLoggingOut ? "Disconnecting..." : "Disconnect Wallet"}
+            </Button>
+          )}
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={logout}
+            disabled={isLoggingOut}
+            className="flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            {isLoggingOut ? "Signing out..." : "Sign Out"}
+          </Button>
+        </div>
+      </div>
+      
       {/* Main content container that takes remaining space between header and footer */}
       <div className="flex-1 w-full px-8 py-8 max-w-none">
-        <div className="h-full max-w-none mx-auto">
+        <div className="h-full max-w-none mx-auto"></div>
           {/* Wallet Section */}
           {wallet ? (
             <div className="h-full flex items-center justify-center">

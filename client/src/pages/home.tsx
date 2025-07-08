@@ -42,16 +42,9 @@ function WelcomePage() {
     try {
       console.log('🔵 Attempting to connect to MetaMask...');
       
-      // First try normal connection
-      let address = await connectWallet();
-      console.log('🔵 First connection attempt result:', address);
-      
-      // If no address returned, try force reconnect
-      if (!address) {
-        console.log('🔵 Attempting force reconnect...');
-        address = await forceReconnect();
-        console.log('🔵 Force reconnect result:', address);
-      }
+      // Connect to MetaMask
+      const address = await connectWallet();
+      console.log('🔵 Connection result:', address);
       
       if (address) {
         console.log('✅ MetaMask connected successfully:', address);
@@ -67,6 +60,7 @@ function WelcomePage() {
           loginWithMetaMask({ message, signature, address });
         } else {
           console.warn('❌ No signature received');
+          alert('Signature required to authenticate. Please try again.');
         }
       } else {
         console.warn('❌ Could not connect to MetaMask');
@@ -75,18 +69,8 @@ function WelcomePage() {
     } catch (error) {
       console.error('❌ MetaMask authentication error:', error);
       
-      // Show user-friendly error message with specific guidance
-      if (error.code === 4001) {
-        alert('Connection request was rejected. Please try again and approve the connection in MetaMask.');
-      } else if (error.code === -32002) {
-        alert('MetaMask has a pending request. Please:\n1. Click the MetaMask extension icon\n2. Complete or cancel any pending requests\n3. Try connecting again');
-      } else if (error.message?.includes('pending')) {
-        alert('MetaMask appears to have pending requests. Please:\n1. Open MetaMask extension\n2. Complete or cancel any pending requests\n3. Try again');
-      } else if (error.message?.includes('timed out')) {
-        alert('Connection timed out. Please:\n1. Open MetaMask extension\n2. Make sure you\'re logged in\n3. Clear any pending requests\n4. Try again');
-      } else {
-        alert(`Connection failed: ${error.message || 'Please try again.'}`);
-      }
+      // Show user-friendly error message
+      alert(`Connection failed: ${error.message || 'Please try again.'}`);
       
       // Reset connection state on error
       disconnectWallet();

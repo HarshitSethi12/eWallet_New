@@ -88,7 +88,7 @@ export function useAuth() {
       if (user?.provider === 'metamask') {
         try {
           // Clear localStorage and sessionStorage
-          window.localStorage.clear();
+          window.localStorage.removeItem('metamask-connected');
           window.sessionStorage.clear();
         } catch (error) {
           console.error('Error clearing storage:', error);

@@ -29,8 +29,7 @@ export function useMetaMask() {
     
     if (!window.ethereum) {
       console.error('❌ MetaMask not found');
-      alert('MetaMask is not installed!');
-      return null;
+      throw new Error('MetaMask is not installed!');
     }
 
     console.log('🔵 MetaMask detected, attempting connection...');
@@ -39,10 +38,6 @@ export function useMetaMask() {
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      // Check if MetaMask is locked
-      const isUnlocked = await window.ethereum._metamask?.isUnlocked?.();
-      console.log('🔵 MetaMask unlock status:', isUnlocked);
-
       // Check for pending requests by trying to get accounts first
       console.log('🔵 Checking for existing connection...');
       const currentAccounts = await window.ethereum.request({
@@ -56,22 +51,19 @@ export function useMetaMask() {
         accounts = currentAccounts;
         console.log('🔵 Using existing connection');
       } else {
-        // Request new connection with timeout to detect stuck state
+        // Request new connection
         console.log('🔵 Requesting new connection...');
-        
-        // Add a timeout to detect if MetaMask is stuck
-        const connectionPromise = window.ethereum.request({
+        accounts = await window.ethereum.request({
           method: 'eth_requestAccounts'
         });
-        
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Connection request timed out - MetaMask may be in pending state')), 10000);
-        });
-        
-        accounts = await Promise.race([connectionPromise, timeoutPromise]);
         console.log('🔵 New accounts received:', accounts);
       }
       
+      // Ensure we have at least one account
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts returned from MetaMask');
+      }
+
       const chainId = await window.ethereum.request({
         method: 'eth_chainId'
       });
@@ -100,19 +92,19 @@ export function useMetaMask() {
         isAuthenticated: false
       });
       
-      // Handle specific error codes
+      // Handle specific error codes and provide user-friendly messages
       if (error.code === 4001) {
         console.log('👤 User rejected the connection request');
+        throw new Error('Connection request was rejected. Please try again and approve the connection in MetaMask.');
       } else if (error.code === -32002) {
         console.log('⏳ Request already pending in MetaMask');
-        // For pending requests, we need to guide the user
-        error.message = 'A connection request is already pending in MetaMask. Please check your MetaMask extension and complete or cancel the pending request.';
+        throw new Error('A connection request is already pending in MetaMask. Please check your MetaMask extension and complete or cancel the pending request.');
       } else if (error.message?.includes('timed out')) {
         console.log('⏰ Connection request timed out - likely pending state');
-        error.message = 'Connection timed out. MetaMask may have a pending request. Please open MetaMask and complete or cancel any pending requests.';
+        throw new Error('Connection timed out. MetaMask may have a pending request. Please open MetaMask and complete or cancel any pending requests.');
       }
       
-      throw error; // Re-throw to let the calling function handle it
+      throw error; // Re-throw the original error if it's not one of the above
     }
   };
 
