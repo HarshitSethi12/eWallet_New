@@ -1,9 +1,9 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddressCard } from "@/components/address-card";
-
 import { AiChat } from "@/components/ai-chat";
 import { Send, ArrowDownLeft, Wallet as WalletIcon, ShieldCheck, LogOut } from "lucide-react";
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
@@ -13,7 +13,6 @@ import { RiExchangeFundsFill } from "react-icons/ri";
 import { useAuth } from "@/hooks/use-auth";
 import { useMetaMask } from "@/hooks/use-metamask";
 import { PriceTicker } from "@/components/price-ticker";
-
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
@@ -32,8 +31,6 @@ export default function Dashboard() {
     },
     enabled: isAuthenticated,
   });
-
-
 
   if (!isAuthenticated) {
     return (
@@ -107,7 +104,7 @@ export default function Dashboard() {
       
       {/* Main content container that takes remaining space between header and footer */}
       <div className="flex-1 w-full px-8 py-8 max-w-none">
-        <div className="h-full max-w-none mx-auto"></div>
+        <div className="h-full max-w-none mx-auto">
           {/* Wallet Section */}
           {wallet ? (
             <div className="h-full flex items-center justify-center">
@@ -126,7 +123,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-        ) : (
+          ) : (
             <div className="flex items-center justify-center h-full">
               <Card className="w-full max-w-md">
                 <CardHeader>
