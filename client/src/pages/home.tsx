@@ -17,7 +17,7 @@ import React from "react";
 
 function WelcomePage() {
   const { login, loginWithMetaMask, isMetaMaskLoading, user, isAuthenticated, logout, isLoggingOut } = useAuth();
-  const { connectWallet, signMessage, account, isConnecting, disconnectWallet } = useMetaMask();
+  const { connectWallet, signMessage, account, isConnecting, disconnectWallet, forceReconnect } = useMetaMask();
   const [location] = useLocation();
   
   // Check for authentication errors in URL
@@ -31,28 +31,59 @@ function WelcomePage() {
   }, [location]);
 
   const handleMetaMaskLogin = async () => {
+    console.log('🔵 MetaMask button clicked');
+    
+    // Check if MetaMask is installed
+    if (!window.ethereum) {
+      alert('MetaMask is not installed! Please install MetaMask extension.');
+      return;
+    }
+
     try {
+      console.log('🔵 Attempting to connect to MetaMask...');
+      
       // First try normal connection
       let address = await connectWallet();
+      console.log('🔵 First connection attempt result:', address);
       
       // If no address returned, try force reconnect
       if (!address) {
-        console.log('Attempting force reconnect...');
-        address = await connectWallet();
+        console.log('🔵 Attempting force reconnect...');
+        address = await forceReconnect();
+        console.log('🔵 Force reconnect result:', address);
       }
       
       if (address) {
+        console.log('✅ MetaMask connected successfully:', address);
         const message = `Sign this message to authenticate with your wallet: ${Date.now()}`;
+        console.log('🔵 Requesting signature for message:', message);
+        
         const signature = await signMessage(message);
+        console.log('🔵 Signature received:', signature ? 'Yes' : 'No');
+        
         if (signature) {
+          console.log('🔵 Calling loginWithMetaMask...');
           // This will automatically route to dashboard on success
           loginWithMetaMask({ message, signature, address });
+        } else {
+          console.warn('❌ No signature received');
         }
       } else {
-        console.warn('Could not connect to MetaMask');
+        console.warn('❌ Could not connect to MetaMask');
+        alert('Could not connect to MetaMask. Please try again.');
       }
     } catch (error) {
-      console.error('MetaMask authentication error:', error);
+      console.error('❌ MetaMask authentication error:', error);
+      
+      // Show user-friendly error message
+      if (error.code === 4001) {
+        alert('Connection request was rejected. Please try again and approve the connection.');
+      } else if (error.code === -32002) {
+        alert('MetaMask is already processing a request. Please check your MetaMask extension.');
+      } else {
+        alert('An error occurred while connecting to MetaMask. Please try again.');
+      }
+      
       // Reset connection state on error
       disconnectWallet();
     }

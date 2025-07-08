@@ -25,34 +25,48 @@ export function useMetaMask() {
   });
 
   const connectWallet = async () => {
+    console.log('🔵 connectWallet called');
+    
     if (!window.ethereum) {
+      console.error('❌ MetaMask not found');
       alert('MetaMask is not installed!');
       return null;
     }
+
+    console.log('🔵 MetaMask detected, attempting connection...');
 
     // Reset state before attempting connection
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
+      // Check if MetaMask is locked
+      const isUnlocked = await window.ethereum._metamask?.isUnlocked?.();
+      console.log('🔵 MetaMask unlock status:', isUnlocked);
+
       // First, try to get current accounts (if already connected)
       const currentAccounts = await window.ethereum.request({
         method: 'eth_accounts'
       });
+      console.log('🔵 Current accounts:', currentAccounts);
 
       let accounts;
       if (currentAccounts.length > 0) {
         // Already connected, use existing accounts
         accounts = currentAccounts;
+        console.log('🔵 Using existing connection');
       } else {
         // Request new connection
+        console.log('🔵 Requesting new connection...');
         accounts = await window.ethereum.request({
           method: 'eth_requestAccounts'
         });
+        console.log('🔵 New accounts received:', accounts);
       }
       
       const chainId = await window.ethereum.request({
         method: 'eth_chainId'
       });
+      console.log('🔵 Chain ID:', chainId);
 
       setState({
         isConnected: true,
@@ -62,10 +76,11 @@ export function useMetaMask() {
         isAuthenticated: false
       });
 
+      console.log('✅ Wallet connected successfully:', accounts[0]);
       // Return the connected account address
       return accounts[0];
     } catch (error) {
-      console.error('Failed to connect wallet:', error);
+      console.error('❌ Failed to connect wallet:', error);
       
       // Reset state completely on error
       setState({
@@ -76,12 +91,14 @@ export function useMetaMask() {
         isAuthenticated: false
       });
       
-      // Handle user rejection specifically
+      // Handle specific error codes
       if (error.code === 4001) {
-        console.log('User rejected the connection request');
+        console.log('👤 User rejected the connection request');
+      } else if (error.code === -32002) {
+        console.log('⏳ Request already pending in MetaMask');
       }
       
-      return null;
+      throw error; // Re-throw to let the calling function handle it
     }
   };
 
@@ -192,18 +209,24 @@ export function useMetaMask() {
   }, []);
 
   const signMessage = async (message: string) => {
+    console.log('🔵 signMessage called with:', { message, account: state.account });
+    
     if (!state.account || !window.ethereum) {
-      throw new Error('No wallet connected');
+      const error = new Error('No wallet connected');
+      console.error('❌', error.message);
+      throw error;
     }
 
     try {
+      console.log('🔵 Requesting signature from MetaMask...');
       const signature = await window.ethereum.request({
         method: 'personal_sign',
         params: [message, state.account]
       });
+      console.log('✅ Signature received:', signature ? 'Yes' : 'No');
       return signature;
     } catch (error) {
-      console.error('Failed to sign message:', error);
+      console.error('❌ Failed to sign message:', error);
       throw error;
     }
   };
