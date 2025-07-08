@@ -34,30 +34,16 @@ export function useMetaMask() {
 
     console.log('🔵 MetaMask detected, attempting connection...');
 
-    // Reset state before attempting connection
+    // Reset loading state
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      // Check for pending requests by trying to get accounts first
-      console.log('🔵 Checking for existing connection...');
-      const currentAccounts = await window.ethereum.request({
-        method: 'eth_accounts'
+      console.log('🔵 Requesting account access...');
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
       });
-      console.log('🔵 Current accounts:', currentAccounts);
-
-      let accounts;
-      if (currentAccounts.length > 0) {
-        // Already connected, use existing accounts
-        accounts = currentAccounts;
-        console.log('🔵 Using existing connection');
-      } else {
-        // Request new connection
-        console.log('🔵 Requesting new connection...');
-        accounts = await window.ethereum.request({
-          method: 'eth_requestAccounts'
-        });
-        console.log('🔵 New accounts received:', accounts);
-      }
+      
+      console.log('🔵 Accounts received:', accounts);
       
       // Ensure we have at least one account
       if (!accounts || accounts.length === 0) {
@@ -69,6 +55,7 @@ export function useMetaMask() {
       });
       console.log('🔵 Chain ID:', chainId);
 
+      // Update state with connection info
       setState({
         isConnected: true,
         account: accounts[0],
@@ -78,7 +65,6 @@ export function useMetaMask() {
       });
 
       console.log('✅ Wallet connected successfully:', accounts[0]);
-      // Return the connected account address
       return accounts[0];
     } catch (error) {
       console.error('❌ Failed to connect wallet:', error);
@@ -243,11 +229,11 @@ export function useMetaMask() {
   }, []);
 
   const signMessage = async (message: string) => {
-    console.log('🔵 signMessage called with:', { message, account: state.account });
+    console.log('🔵 signMessage called with:', { message, account: state.account, isConnected: state.isConnected });
     
-    if (!state.account || !window.ethereum) {
+    if (!state.isConnected || !state.account || !window.ethereum) {
       const error = new Error('No wallet connected');
-      console.error('❌', error.message);
+      console.error('❌', error.message, { isConnected: state.isConnected, account: state.account });
       throw error;
     }
 
