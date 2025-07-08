@@ -131,7 +131,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMetaMaskUser(userData: { address: string; displayName: string; lastLogin: Date }) {
-    const result = await db.insert(metamaskUsers).values(userData).returning();
+    const result = await db.insert(metamaskUsers).values({
+      ...userData,
+      lastLogin: userData.lastLogin.toISOString()
+    }).returning();
     return result[0];
   }
 
