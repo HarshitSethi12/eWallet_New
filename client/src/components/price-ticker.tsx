@@ -216,7 +216,7 @@ export function PriceTicker() {
 
               <div className="text-right">
                 <p className="font-bold text-lg" style={{ color: 'var(--color-heading)' }}>
-                  ${crypto.current_price.toLocaleString()}
+                  ${crypto.current_price?.toLocaleString() || 'N/A'}
                 </p>
                 <div className={`flex items-center gap-1 text-sm ${
                   isNeutral ? 'text-gray-500' : isPositive ? 'text-green-500' : 'text-red-500'
