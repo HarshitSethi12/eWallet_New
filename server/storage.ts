@@ -130,7 +130,7 @@ export class DatabaseStorage implements IStorage {
     return result[0] || null;
   }
 
-  async createMetaMaskUser(userData: { address: string; displayName: string; lastLogin: string }) {
+  async createMetaMaskUser(userData: { address: string; displayName: string; lastLogin: Date }) {
     const result = await db.insert(metamaskUsers).values(userData).returning();
     return result[0];
   }

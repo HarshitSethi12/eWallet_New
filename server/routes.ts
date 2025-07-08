@@ -27,7 +27,7 @@ export async function registerRoutes(app: Express) {
         user = await storage.createMetaMaskUser({
           address: address.toLowerCase(),
           displayName: `${address.slice(0, 6)}...${address.slice(-4)}`,
-          lastLogin: new Date().toISOString()
+          lastLogin: new Date()
         });
       } else {
         // Update last login
