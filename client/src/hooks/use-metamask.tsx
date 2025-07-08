@@ -30,12 +30,25 @@ export function useMetaMask() {
       return null;
     }
 
+    // Reset state before attempting connection
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts'
+      // First, try to get current accounts (if already connected)
+      const currentAccounts = await window.ethereum.request({
+        method: 'eth_accounts'
       });
+
+      let accounts;
+      if (currentAccounts.length > 0) {
+        // Already connected, use existing accounts
+        accounts = currentAccounts;
+      } else {
+        // Request new connection
+        accounts = await window.ethereum.request({
+          method: 'eth_requestAccounts'
+        });
+      }
       
       const chainId = await window.ethereum.request({
         method: 'eth_chainId'
@@ -53,7 +66,21 @@ export function useMetaMask() {
       return accounts[0];
     } catch (error) {
       console.error('Failed to connect wallet:', error);
-      setState(prev => ({ ...prev, isLoading: false }));
+      
+      // Reset state completely on error
+      setState({
+        isConnected: false,
+        account: null,
+        chainId: null,
+        isLoading: false,
+        isAuthenticated: false
+      });
+      
+      // Handle user rejection specifically
+      if (error.code === 4001) {
+        console.log('User rejected the connection request');
+      }
+      
       return null;
     }
   };
@@ -129,6 +156,17 @@ export function useMetaMask() {
     });
   };
 
+  const forceReconnect = async () => {
+    // Force disconnect first
+    disconnectWallet();
+    
+    // Small delay to ensure state is reset
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Try to connect again
+    return connectWallet();
+  };
+
   useEffect(() => {
     if (!window.ethereum) return;
 
@@ -177,6 +215,7 @@ export function useMetaMask() {
     authenticateWithWallet,
     getUserInfo,
     signMessage,
+    forceReconnect,
     isConnecting: state.isLoading,
     account: state.account
   };

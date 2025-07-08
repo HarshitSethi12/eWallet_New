@@ -32,7 +32,15 @@ function WelcomePage() {
 
   const handleMetaMaskLogin = async () => {
     try {
-      const address = await connectWallet();
+      // First try normal connection
+      let address = await connectWallet();
+      
+      // If no address returned, try force reconnect
+      if (!address) {
+        console.log('Attempting force reconnect...');
+        address = await connectWallet();
+      }
+      
       if (address) {
         const message = `Sign this message to authenticate with your wallet: ${Date.now()}`;
         const signature = await signMessage(message);
@@ -40,9 +48,13 @@ function WelcomePage() {
           // This will automatically route to dashboard on success
           loginWithMetaMask({ message, signature, address });
         }
+      } else {
+        console.warn('Could not connect to MetaMask');
       }
     } catch (error) {
       console.error('MetaMask authentication error:', error);
+      // Reset connection state on error
+      disconnectWallet();
     }
   };
 
