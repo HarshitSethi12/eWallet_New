@@ -75,13 +75,17 @@ function WelcomePage() {
     } catch (error) {
       console.error('❌ MetaMask authentication error:', error);
       
-      // Show user-friendly error message
+      // Show user-friendly error message with specific guidance
       if (error.code === 4001) {
-        alert('Connection request was rejected. Please try again and approve the connection.');
+        alert('Connection request was rejected. Please try again and approve the connection in MetaMask.');
       } else if (error.code === -32002) {
-        alert('MetaMask is already processing a request. Please check your MetaMask extension.');
+        alert('MetaMask has a pending request. Please:\n1. Click the MetaMask extension icon\n2. Complete or cancel any pending requests\n3. Try connecting again');
+      } else if (error.message?.includes('pending')) {
+        alert('MetaMask appears to have pending requests. Please:\n1. Open MetaMask extension\n2. Complete or cancel any pending requests\n3. Try again');
+      } else if (error.message?.includes('timed out')) {
+        alert('Connection timed out. Please:\n1. Open MetaMask extension\n2. Make sure you\'re logged in\n3. Clear any pending requests\n4. Try again');
       } else {
-        alert('An error occurred while connecting to MetaMask. Please try again.');
+        alert(`Connection failed: ${error.message || 'Please try again.'}`);
       }
       
       // Reset connection state on error
@@ -182,22 +186,28 @@ function WelcomePage() {
               </svg>
             </Button>
             
-            <Button
-              size="lg"
-              className="btn-primary px-4 sm:px-6 py-3 sm:py-4 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
-              onClick={handleMetaMaskLogin}
-              disabled={isConnecting || isMetaMaskLoading}
-            >
-              <span className="text-base sm:text-lg font-semibold">
-                {isConnecting || isMetaMaskLoading ? "Connecting..." : "MetaMask"}
-              </span>
-              <svg className="h-6 w-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22.46 5.64L13.04.96c-.28-.14-.6-.14-.88 0L2.54 5.64c-.28.14-.46.42-.46.72v10.28c0 .3.18.58.46.72l9.5 4.68c.14.07.3.1.46.1s.32-.03.46-.1l9.5-4.68c.28-.14.46-.42-.46.72V6.36c0-.3-.18-.58-.46-.72zM12 3.12l7.56 3.72L12 10.56 4.44 6.84 12 3.12zm0 9.44l-7.5-3.69v7.5l7.5 3.69v-7.5zm1 7.5l7.5-3.69v-7.5L13 12.56v7.5z" fill="#F6851B"/>
-                <path d="M12 10.56l7.56-3.72L12 3.12 4.44 6.84 12 10.56z" fill="#E2761B"/>
-                <path d="M4.5 8.87v7.5l7.5 3.69v-7.5l-7.5-3.69z" fill="#E4761B"/>
-                <path d="M13 12.56v7.5l7.5-3.69v-7.5L13 12.56z" fill="#763D16"/>
-              </svg>
-            </Button>
+            <div className="flex flex-col items-center gap-3">
+              <Button
+                size="lg"
+                className="btn-primary px-4 sm:px-6 py-3 sm:py-4 text-base sm:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
+                onClick={handleMetaMaskLogin}
+                disabled={isConnecting || isMetaMaskLoading}
+              >
+                <span className="text-base sm:text-lg font-semibold">
+                  {isConnecting || isMetaMaskLoading ? "Connecting..." : "MetaMask"}
+                </span>
+                <svg className="h-6 w-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22.46 5.64L13.04.96c-.28-.14-.6-.14-.88 0L2.54 5.64c-.28.14-.46.42-.46.72v10.28c0 .3.18.58.46.72l9.5 4.68c.14.07.3.1.46.1s.32-.03.46-.1l9.5-4.68c.28-.14.46-.42-.46.72V6.36c0-.3-.18-.58-.46-.72zM12 3.12l7.56 3.72L12 10.56 4.44 6.84 12 3.12zm0 9.44l-7.5-3.69v7.5l7.5 3.69v-7.5zm1 7.5l7.5-3.69v-7.5L13 12.56v7.5z" fill="#F6851B"/>
+                  <path d="M12 10.56l7.56-3.72L12 3.12 4.44 6.84 12 10.56z" fill="#E2761B"/>
+                  <path d="M4.5 8.87v7.5l7.5 3.69v-7.5l-7.5-3.69z" fill="#E4761B"/>
+                  <path d="M13 12.56v7.5l7.5-3.69v-7.5L13 12.56z" fill="#763D16"/>
+                </svg>
+              </Button>
+              
+              <p className="text-xs text-gray-500 text-center max-w-xs">
+                If MetaMask is not responding, click the extension icon and complete any pending requests
+              </p>
+            </div>
           </div>
         )}
       </div>

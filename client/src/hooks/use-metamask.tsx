@@ -43,7 +43,8 @@ export function useMetaMask() {
       const isUnlocked = await window.ethereum._metamask?.isUnlocked?.();
       console.log('🔵 MetaMask unlock status:', isUnlocked);
 
-      // First, try to get current accounts (if already connected)
+      // Check for pending requests by trying to get accounts first
+      console.log('🔵 Checking for existing connection...');
       const currentAccounts = await window.ethereum.request({
         method: 'eth_accounts'
       });
@@ -55,11 +56,19 @@ export function useMetaMask() {
         accounts = currentAccounts;
         console.log('🔵 Using existing connection');
       } else {
-        // Request new connection
+        // Request new connection with timeout to detect stuck state
         console.log('🔵 Requesting new connection...');
-        accounts = await window.ethereum.request({
+        
+        // Add a timeout to detect if MetaMask is stuck
+        const connectionPromise = window.ethereum.request({
           method: 'eth_requestAccounts'
         });
+        
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Connection request timed out - MetaMask may be in pending state')), 10000);
+        });
+        
+        accounts = await Promise.race([connectionPromise, timeoutPromise]);
         console.log('🔵 New accounts received:', accounts);
       }
       
@@ -96,6 +105,11 @@ export function useMetaMask() {
         console.log('👤 User rejected the connection request');
       } else if (error.code === -32002) {
         console.log('⏳ Request already pending in MetaMask');
+        // For pending requests, we need to guide the user
+        error.message = 'A connection request is already pending in MetaMask. Please check your MetaMask extension and complete or cancel the pending request.';
+      } else if (error.message?.includes('timed out')) {
+        console.log('⏰ Connection request timed out - likely pending state');
+        error.message = 'Connection timed out. MetaMask may have a pending request. Please open MetaMask and complete or cancel any pending requests.';
       }
       
       throw error; // Re-throw to let the calling function handle it
@@ -173,12 +187,40 @@ export function useMetaMask() {
     });
   };
 
+  const clearPendingRequests = async () => {
+    console.log('🔵 Attempting to clear pending requests...');
+    if (!window.ethereum) return false;
+
+    try {
+      // Try to get accounts to see if there's a pending request
+      await window.ethereum.request({
+        method: 'eth_accounts'
+      });
+      console.log('✅ No pending requests detected');
+      return true;
+    } catch (error) {
+      if (error.code === -32002) {
+        console.log('⚠️ Pending request detected');
+        return false;
+      }
+      return true;
+    }
+  };
+
   const forceReconnect = async () => {
+    console.log('🔵 Force reconnect initiated...');
+    
+    // First check for pending requests
+    const canProceed = await clearPendingRequests();
+    if (!canProceed) {
+      throw new Error('MetaMask has pending requests. Please open MetaMask and complete or cancel them first.');
+    }
+    
     // Force disconnect first
     disconnectWallet();
     
     // Small delay to ensure state is reset
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Try to connect again
     return connectWallet();
