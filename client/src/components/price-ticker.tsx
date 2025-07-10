@@ -189,7 +189,7 @@ export function PriceTicker() {
       </CardHeader>
       <CardContent className="space-y-4">
         {prices?.map((crypto) => {
-          const isPositive = crypto.price_change_percentage_24h > 0;
+          const isPositive = (crypto.price_change_percentage_24h || 0) >= 0;
           const isNeutral = Math.abs(crypto.price_change_percentage_24h) < 0.01;
 
           return (
