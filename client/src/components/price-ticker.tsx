@@ -229,7 +229,7 @@ export function PriceTicker() {
                     <TrendingDown className="h-3 w-3" />
                   )}
                   <span>
-                    {isPositive ? '+' : ''}{crypto.price_change_percentage_24h.toFixed(2)}%
+                    {isPositive ? '+' : ''}{(crypto.price_change_percentage_24h || 0).toFixed(2)}%
                   </span>
                 </div>
               </div>
