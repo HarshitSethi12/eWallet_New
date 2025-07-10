@@ -137,7 +137,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateMetaMaskUserLogin(address: string) {
     await db.update(metamaskUsers)
-      .set({ lastLogin: new Date() })
+      .set({ lastLogin: new Date().toISOString() })
       .where(eq(metamaskUsers.address, address.toLowerCase()));
   }
 
