@@ -169,29 +169,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async endUserSession(sessionId: number): Promise<void> {
-    const session = await db.select().from(userSessions).where(eq(userSessions.id, sessionId));
+    const session = await db.select().from(sessions).where(eq(sessions.id, sessionId));
     if (session[0]) {
       const loginTime = new Date(session[0].loginTime);
       const logoutTime = new Date();
-      const duration = Math.floor((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)); // duration in minutes
 
-      await db.update(userSessions)
+      await db.update(sessions)
         .set({ 
-          logoutTime,
-          duration 
+          logoutTime
         })
-        .where(eq(userSessions.id, sessionId));
+        .where(eq(sessions.id, sessionId));
     }
   }
 
   async getAllUserSessions(): Promise<any[]> {
-    return await db.select().from(userSessions).orderBy(desc(userSessions.loginTime));
+    return await db.select().from(sessions).orderBy(desc(sessions.loginTime));
   }
 
   async getUserSessionsByEmail(email: string): Promise<any[]> {
-    return await db.select().from(userSessions)
-      .where(eq(userSessions.email, email))
-      .orderBy(desc(userSessions.loginTime));
+    return await db.select().from(sessions)
+      .where(eq(sessions.email, email))
+      .orderBy(desc(sessions.loginTime));
   }
 }
 
