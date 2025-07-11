@@ -52,10 +52,27 @@ export default function Dashboard() {
     );
   }
 
-  const handleDisconnect = () => {
-    // Disconnect MetaMask and logout
-    disconnectWallet();
-    logout();
+  const handleDisconnect = async () => {
+    try {
+      // Disconnect MetaMask first
+      disconnectWallet();
+      
+      // Clear MetaMask connection state
+      window.localStorage.removeItem('metamask-connected');
+      window.sessionStorage.clear();
+      
+      // Call logout to clear session
+      logout();
+      
+      // Force navigation to homepage as backup
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+    } catch (error) {
+      console.error('Error during disconnect:', error);
+      // Force navigation even if there's an error
+      window.location.href = '/';
+    }
   };
 
   return (

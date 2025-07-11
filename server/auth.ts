@@ -177,7 +177,7 @@ export function setupAuth(app: express.Express) {
     }
   });
 
-  app.get('/auth/logout', async (req, res) => {
+  app.post('/auth/logout', async (req, res) => {
     const sessionDbId = req.session.sessionDbId;
 
     // Update session end time if we have a tracked session
