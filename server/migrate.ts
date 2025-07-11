@@ -19,6 +19,24 @@ async function runMigrations() {
     `);
     console.log('✅ metamask_users table created');
 
+    // Create sessions table (used by storage.ts)
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        email TEXT,
+        name TEXT NOT NULL,
+        wallet_address TEXT,
+        phone TEXT,
+        ip_address TEXT NOT NULL,
+        user_agent TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        login_time TIMESTAMP DEFAULT NOW(),
+        logout_time TIMESTAMP
+      )
+    `);
+    console.log('✅ sessions table created');
+
     // Create user_sessions table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS user_sessions (
