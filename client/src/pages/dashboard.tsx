@@ -77,27 +77,15 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex gap-2">
-          {user?.provider === 'metamask' && (
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={handleDisconnect}
-              disabled={isLoggingOut}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              {isLoggingOut ? "Disconnecting..." : "Disconnect Wallet"}
-            </Button>
-          )}
           <Button 
             size="sm" 
             variant="outline"
-            onClick={logout}
+            onClick={handleDisconnect}
             disabled={isLoggingOut}
             className="flex items-center gap-2"
           >
             <LogOut className="h-4 w-4" />
-            {isLoggingOut ? "Signing out..." : "Sign Out"}
+            {isLoggingOut ? "Disconnecting..." : "Disconnect Wallet"}
           </Button>
         </div>
       </div>
