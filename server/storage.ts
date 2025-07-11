@@ -11,10 +11,9 @@ import {
   transactions,
   contacts,
   metamaskUsers,
-  userSessions,
-  sessions
+  userSessions
 } from "@shared/schema";
-import { db } from "./db";
+import { db, sessions } from "./db";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
