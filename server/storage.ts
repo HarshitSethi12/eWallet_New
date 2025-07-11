@@ -37,6 +37,7 @@ export interface IStorage {
     userId: number | null;
     email: string | null;
     name: string;
+    walletAddress?: string;
     phone?: string;
     ipAddress: string;
     userAgent: string;
@@ -145,6 +146,7 @@ export class DatabaseStorage implements IStorage {
     userId: number | null;
     email: string | null;
     name: string;
+    walletAddress?: string;
     phone?: string;
     ipAddress: string;
     userAgent: string;
@@ -154,6 +156,7 @@ export class DatabaseStorage implements IStorage {
         userId: sessionData.userId,
         email: sessionData.email,
         name: sessionData.name,
+        walletAddress: sessionData.walletAddress || null,
         phone: sessionData.phone,
         ipAddress: sessionData.ipAddress,
         userAgent: sessionData.userAgent,

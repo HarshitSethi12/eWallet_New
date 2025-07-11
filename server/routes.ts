@@ -42,6 +42,22 @@ export async function registerRoutes(app: Express) {
 
       req.session.isAuthenticated = true;
 
+      // Track login session in database (same as Gmail auth)
+      const sessionData = {
+        userId: null,
+        email: null,
+        name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+        walletAddress: address,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        sessionId: req.sessionID,
+      };
+
+      console.log('Creating MetaMask session with data:', sessionData);
+      const sessionDbId = await storage.createUserSession(sessionData);
+      console.log('MetaMask session created with ID:', sessionDbId);
+      req.session.sessionDbId = sessionDbId;
+
       console.log('✅ MetaMask session created for:', address);
       console.log('🔵 Session after auth:', req.session);
 
