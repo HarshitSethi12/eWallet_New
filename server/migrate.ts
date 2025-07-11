@@ -36,6 +36,15 @@ async function runMigrations() {
         is_active BOOLEAN DEFAULT TRUE
       )
     `);
+
+    // Add missing columns to existing table if they don't exist
+    await db.execute(sql`
+      ALTER TABLE user_sessions 
+      ADD COLUMN IF NOT EXISTS phone TEXT,
+      ADD COLUMN IF NOT EXISTS wallet_address TEXT,
+      ADD COLUMN IF NOT EXISTS duration INTEGER,
+      ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE
+    `);
     console.log('✅ user_sessions table created');
 
     // Create wallets table
