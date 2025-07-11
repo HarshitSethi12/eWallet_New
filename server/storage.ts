@@ -11,7 +11,8 @@ import {
   transactions,
   contacts,
   metamaskUsers,
-  userSessions
+  userSessions,
+  sessions
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -152,7 +153,7 @@ export class DatabaseStorage implements IStorage {
     userAgent: string;
     sessionId: string;
   }): Promise<number> {
-    const result = await db.insert(userSessions).values({
+    const [session] = await db.insert(sessions).values({
         userId: sessionData.userId,
         email: sessionData.email,
         name: sessionData.name,
@@ -164,7 +165,7 @@ export class DatabaseStorage implements IStorage {
         loginTime: new Date(),
         isActive: true
       }).returning();
-    return result[0].id;
+    return session[0].id;
   }
 
   async endUserSession(sessionId: number): Promise<void> {
