@@ -38,13 +38,15 @@ async function runMigrations() {
     `);
 
     // Add missing columns to existing table if they don't exist
-    await db.execute(sql`
-      ALTER TABLE user_sessions 
-      ADD COLUMN IF NOT EXISTS phone TEXT,
-      ADD COLUMN IF NOT EXISTS wallet_address TEXT,
-      ADD COLUMN IF NOT EXISTS duration INTEGER,
-      ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE
-    `);
+    try {
+      await db.execute(sql`ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS phone TEXT`);
+      await db.execute(sql`ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS wallet_address TEXT`);
+      await db.execute(sql`ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS duration INTEGER`);
+      await db.execute(sql`ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
+      console.log('✅ user_sessions table columns added');
+    } catch (error) {
+      console.log('⚠️  Some columns might already exist:', error.message);
+    }
     console.log('✅ user_sessions table created');
 
     // Create wallets table

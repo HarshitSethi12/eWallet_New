@@ -41,12 +41,14 @@ export const userSessions = pgTable("user_sessions", {
   email: text("email"),
   name: text("name").notNull(),
   phone: text("phone"),
+  walletAddress: text("wallet_address"),
   ipAddress: text("ip_address").notNull(),
   userAgent: text("user_agent").notNull(),
   sessionId: text("session_id").notNull(),
   loginTime: timestamp("login_time").defaultNow(),
   logoutTime: timestamp("logout_time"),
   duration: integer("duration"), // duration in minutes
+  isActive: boolean("is_active").default(true),
 });
 
 export const metamaskUsers = pgTable("metamask_users", {
