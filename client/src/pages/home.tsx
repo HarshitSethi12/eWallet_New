@@ -384,13 +384,6 @@ export default function Home() {
   const { isAuthenticated, user } = useAuth();
   const [, setLocation] = useLocation();
 
-  // If user is authenticated, redirect to dashboard instead of showing dashboard here
-  React.useEffect(() => {
-    if (isAuthenticated && user) {
-      setLocation("/dashboard");
-    }
-  }, [isAuthenticated, user, setLocation]);
-
   // Always show welcome page on home route
   return <WelcomePage />;
 }
