@@ -7,6 +7,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
+import session from 'express-session';
 
 // Create __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -290,3 +291,22 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 }
 })();
+
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'fallback-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // Set to true in production with HTTPS
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24 // 24 hours
+  }
+}));
+
+// Error handling middleware for API routes
+app.use('/api', (err: any, req: any, res: any, next: any) => {
+  console.error('❌ API Error:', err);
+  res.setHeader('Content-Type', 'application/json');
+  res.status(500).json({ error: 'Internal server error' });
+});

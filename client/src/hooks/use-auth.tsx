@@ -184,10 +184,61 @@ export function useAuth() {
     isAuthenticated: !!user,
     login: loginMutation.mutate,
     loginWithApple: appleLoginMutation.mutate,
-    loginWithMetaMask: metamaskLoginMutation.mutate,
+    loginWithMetaMask: async ({ message, signature, address }: { message: string; signature: string; address: string }) => {
+      setIsMetaMaskLoading(true);
+      try {
+        console.log('🔵 Sending MetaMask auth to server:', { message, signature, address });
+
+        const response = await fetch('/api/auth/metamask', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message, signature, address }),
+          credentials: 'include'
+        });
+
+        console.log('🔵 Server response status:', response.status);
+        console.log('🔵 Server response headers:', response.headers.get('content-type'));
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Server error response:', errorText);
+          throw new Error(`Authentication failed with status: ${response.status}`);
+        }
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const responseText = await response.text();
+          console.error('❌ Expected JSON but got:', responseText);
+          throw new Error('Server returned invalid response format');
+        }
+
+        const data = await response.json();
+        console.log('✅ MetaMask authentication successful:', data);
+        queryClient.invalidateQueries({ queryKey: ["/auth/user"] });
+        toast({
+          title: "Welcome!",
+          description: "You have been signed in with MetaMask.",
+        });
+        // Route to dashboard after successful authentication
+        setLocation("/dashboard");
+
+      } catch (error) {
+        console.error('❌ MetaMask authentication failed:', error);
+        toast({
+          title: "Authentication failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setIsMetaMaskLoading(false);
+      }
+    },
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
-    isMetaMaskLoading: metamaskLoginMutation.isPending,
+    isMetaMaskLoading: false,
     checkSessionStatus,
   };
 }
