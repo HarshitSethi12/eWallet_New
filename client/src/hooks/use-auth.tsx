@@ -20,6 +20,7 @@ export function useAuth() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const [isMetaMaskLoading, setIsMetaMaskLoading] = React.useState(false);
 
   const { data: user, isLoading } = useQuery<User | null>({
     queryKey: ["/auth/user"],
@@ -238,7 +239,7 @@ export function useAuth() {
     },
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
-    isMetaMaskLoading: false,
+    isMetaMaskLoading,
     checkSessionStatus,
   };
 }
