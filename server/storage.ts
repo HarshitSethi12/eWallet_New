@@ -162,8 +162,7 @@ export class DatabaseStorage implements IStorage {
         ipAddress: sessionData.ipAddress,
         userAgent: sessionData.userAgent,
         sessionId: sessionData.sessionId,
-        loginTime: new Date(),
-        isActive: true
+        loginTime: new Date()
       }).returning();
 
       return session[0].id;
@@ -178,11 +177,10 @@ export class DatabaseStorage implements IStorage {
           ipAddress: sessionData.ipAddress,
           userAgent: sessionData.userAgent,
           sessionId: sessionData.sessionId,
-          loginTime: new Date(),
-          isActive: true
+          loginTime: new Date()
         }).returning();
 
-        return session[0].id;
+        return session.id;
       } catch (fallbackError) {
         console.error('Fallback session creation failed:', fallbackError);
         throw fallbackError;

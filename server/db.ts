@@ -32,6 +32,6 @@ export const sessions = pgTable("sessions", {
   ipAddress: text("ip_address").notNull(),
   userAgent: text("user_agent").notNull(),
   sessionId: text("session_id").notNull(),
-  loginTime: timestamp("login_time").defaultNow().notNull(),
-  logoutTime: timestamp("logout_time"),
+  loginTime: timestamp("login_time").defaultNow(),
+  logoutTime: timestamp("logout_time")
 });
