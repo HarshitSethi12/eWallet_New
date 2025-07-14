@@ -19,7 +19,7 @@ localPort = 5001
 externalPort = 3000
 
 [workflows]
-runButton = "Start Dev Server"
+runButton = "Clean Dev Server"
 
 [[workflows.workflow]]
 name = "Project"
