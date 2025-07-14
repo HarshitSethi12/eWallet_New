@@ -204,66 +204,76 @@ process.on('unhandledRejection', (reason, promise) => {
       await setupVite(app, server);
     } else {
       // In production, look for the built client files
-      const buildPath = path.resolve(__dirname, "..", "dist");
+      const possiblePaths = [
+        path.resolve(__dirname, "..", "dist"),
+        path.resolve(__dirname, "dist"),
+        path.resolve(process.cwd(), "dist"),
+        path.resolve(__dirname, "..", "client", "dist")
+      ];
 
-      log(`🔍 Looking for build directory at: ${buildPath}`);
-
-      if (!fs.existsSync(buildPath)) {
-        log(`❌ Build directory not found at ${buildPath}`);
-        log(`📁 Current directory contents: ${fs.readdirSync(__dirname).join(', ')}`);
-        log(`📁 Parent directory contents: ${fs.readdirSync(path.resolve(__dirname, "..")).join(', ')}`);
-
-        // Try alternative paths
-        const altPaths = [
-          path.resolve(__dirname, "public"),
-          path.resolve(process.cwd(), "dist"),
-          path.resolve(process.cwd(), "public")
-        ];
-
-        let foundPath = null;
-        for (const altPath of altPaths) {
-          if (fs.existsSync(altPath)) {
-            foundPath = altPath;
-            break;
-          }
+      let buildPath = null;
+      for (const possiblePath of possiblePaths) {
+        if (fs.existsSync(possiblePath)) {
+          buildPath = possiblePath;
+          break;
         }
+      }
 
-        if (foundPath) {
-          log(`✅ Found build directory at: ${foundPath}`);
-          app.use(express.static(foundPath));
-          app.get('*', (req, res) => {
-            if (!req.path.startsWith('/api/')) {
-              res.sendFile(path.join(foundPath, 'index.html'));
-            }
-          });
-        } else {
-          log(`❌ No build directory found. Serving basic response.`);
-          app.get('*', (req, res) => {
-            if (!req.path.startsWith('/api/')) {
-              res.send(`
-                <html>
-                  <head><title>BitWallet</title></head>
-                  <body>
-                    <h1>BitWallet Server Running</h1>
-                    <p>Build files not found. Please run build process.</p>
-                    <p>Available API endpoints:</p>
-                    <ul>
-                      <li><a href="/api/crypto-prices">/api/crypto-prices</a></li>
-                      <li><a href="/health">/health</a></li>
-                      <li><a href="/ping">/ping</a></li>
-                    </ul>
-                  </body>
-                </html>
-              `);
-            }
-          });
-        }
-      } else {
-        log(`✅ Build directory found at: ${buildPath}`);
-        app.use(express.static(buildPath));
+      if (buildPath) {
+        log(`✅ Found build directory at: ${buildPath}`);
+        
+        // Serve static files with proper headers
+        app.use(express.static(buildPath, {
+          maxAge: '1y',
+          etag: false,
+          lastModified: false
+        }));
+
+        // Serve index.html for all non-API routes
         app.get('*', (req, res) => {
           if (!req.path.startsWith('/api/')) {
-            res.sendFile(path.join(buildPath, 'index.html'));
+            const indexPath = path.join(buildPath, 'index.html');
+            if (fs.existsSync(indexPath)) {
+              res.sendFile(indexPath);
+            } else {
+              res.status(404).send('Build files corrupted - index.html not found');
+            }
+          }
+        });
+      } else {
+        log(`❌ No build directory found in any of these locations:`);
+        possiblePaths.forEach(p => log(`   - ${p}`));
+        
+        // Serve a basic fallback
+        app.get('*', (req, res) => {
+          if (!req.path.startsWith('/api/')) {
+            res.send(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <title>BitWallet - Build Required</title>
+                  <style>
+                    body { font-family: Arial, sans-serif; padding: 40px; text-align: center; }
+                    .container { max-width: 600px; margin: 0 auto; }
+                    .error { color: #e74c3c; }
+                    .info { color: #3498db; margin: 20px 0; }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <h1 class="error">Build Files Not Found</h1>
+                    <p class="info">The application needs to be built before deployment.</p>
+                    <p>Please run the build process and redeploy.</p>
+                    <div style="margin-top: 30px;">
+                      <h3>Available API endpoints:</h3>
+                      <a href="/health">Health Check</a> | 
+                      <a href="/ping">Ping</a> | 
+                      <a href="/api/crypto-prices">Crypto Prices</a>
+                    </div>
+                  </div>
+                </body>
+              </html>
+            `);
           }
         });
       }
