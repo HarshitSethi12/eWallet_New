@@ -7,7 +7,6 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import session from 'express-session';
 
 // Create __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -203,7 +202,7 @@ process.on('unhandledRejection', (reason, promise) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    const buildPath = path.resolve(__dirname, "../public");
+    const buildPath = path.resolve(__dirname, "public");
 
     if (!fs.existsSync(buildPath)) {
       throw new Error(`Could not find the build directory: ${buildPath}, make sure to build the client first`);
@@ -292,17 +291,7 @@ process.on('unhandledRejection', (reason, promise) => {
 }
 })();
 
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'fallback-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false, // Set to true in production with HTTPS
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24 // 24 hours
-  }
-}));
+// Session configuration is handled in setupAuth
 
 // Error handling middleware for API routes
 app.use('/api', (err: any, req: any, res: any, next: any) => {
