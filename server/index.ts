@@ -1,11 +1,4 @@
-` tags.
 
-```text
-The identified issue is a missing closing brace or extra parenthesis in the fs.readdirSync calls, specifically at line 213. This commit aims to resolve that syntax error to ensure proper code execution.
-```
-
-```
-<replit_final_file>
 import express, { type Request, Response, NextFunction } from "express";
 import { Server } from "http";
 import path from "path";
@@ -126,231 +119,229 @@ process.on('unhandledRejection', (reason, promise) => {
     log('✅ Environment validation completed');
 
     // Add admin routes for session management FIRST
-  app.get("/api/admin/sessions", async (req, res) => {
-    // Basic admin check
-    const adminKey = req.headers['x-admin-key'];
-    if (adminKey !== process.env.ADMIN_KEY && adminKey !== 'admin123') {
-      return res.status(401).json({ message: "Unauthorized - Admin access required" });
-    }
+    app.get("/api/admin/sessions", async (req, res) => {
+      // Basic admin check
+      const adminKey = req.headers['x-admin-key'];
+      if (adminKey !== process.env.ADMIN_KEY && adminKey !== 'admin123') {
+        return res.status(401).json({ message: "Unauthorized - Admin access required" });
+      }
 
-    try {
-      const sessions = await storage.getAllUserSessions();
-      return res.json(sessions);
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-      return res.status(500).json({ message: "Error fetching sessions" });
-    }
-  });
-
-  app.get("/api/admin/sessions/:email", async (req, res) => {
-    // Basic admin check
-    const adminKey = req.headers['x-admin-key'];
-    if (adminKey !== process.env.ADMIN_KEY && adminKey !== 'admin123') {
-      return res.status(401).json({ message: "Unauthorized - Admin access required" });
-    }
-
-    try {
-      const sessions = await storage.getUserSessionsByEmail(req.params.email);
-      return res.json(sessions);
-    } catch (error) {
-      console.error('Error fetching user sessions:', error);
-      return res.status(500).json({ message: "Error fetching user sessions" });
-    }
-  });
-
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // Add health check route
-  app.get("/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
-  });
-
-  // Add test endpoint
-  app.get("/test", (req, res) => {
-    res.send(`
-      <html>
-        <body>
-          <h1>Server is running!</h1>
-          <p>Time: ${new Date().toISOString()}</p>
-          <p>Environment: ${app.get("env")}</p>
-          <p>Host: ${req.get('host')}</p>
-          <p>Port: 5000</p>
-          <p>Process: ${process.pid}</p>
-        </body>
-      </html>
-    `);
-  });
-
-  // Add ping endpoint
-  app.get("/ping", (req, res) => {
-    res.json({ 
-      status: "pong", 
-      timestamp: new Date().toISOString(),
-      host: req.get('host'),
-      ip: req.ip
+      try {
+        const sessions = await storage.getAllUserSessions();
+        return res.json(sessions);
+      } catch (error) {
+        console.error('Error fetching sessions:', error);
+        return res.status(500).json({ message: "Error fetching sessions" });
+      }
     });
-  });
 
-  // Add a catch-all API route for debugging
-  app.get("/api/*", (req, res) => {
-    res.status(404).json({ message: `API route not found: ${req.path}` });
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    // In production, look for the built client files
-    const buildPath = path.resolve(__dirname, "..", "dist");
-
-    log(`🔍 Looking for build directory at: ${buildPath}`);
-
-    if (!fs.existsSync(buildPath)) {
-      log(`❌ Build directory not found at ${buildPath}`);
-      log(`📁 Current directory contents: ${fs.readdirSync(__dirname).join(', ')}`);
-      log(`📁 Parent directory contents: ${fs.readdirSync(path.resolve(__dirname, "..")).join(', ')}`);
-
-      // Try alternative paths
-      const altPaths = [
-        path.resolve(__dirname, "public"),
-        path.resolve(process.cwd(), "dist"),
-        path.resolve(process.cwd(), "public")
-      ];
-
-      let foundPath = null;
-      for (const altPath of altPaths) {
-        if (fs.existsSync(altPath)) {
-          foundPath = altPath;
-          break;
-        }
+    app.get("/api/admin/sessions/:email", async (req, res) => {
+      // Basic admin check
+      const adminKey = req.headers['x-admin-key'];
+      if (adminKey !== process.env.ADMIN_KEY && adminKey !== 'admin123') {
+        return res.status(401).json({ message: "Unauthorized - Admin access required" });
       }
 
-      if (foundPath) {
-        log(`✅ Found build directory at: ${foundPath}`);
-        app.use(express.static(foundPath));
-        app.get('*', (req, res) => {
-          if (!req.path.startsWith('/api/')) {
-            res.sendFile(path.join(foundPath, 'index.html'));
-          }
-        });
-      } else {
-        log(`❌ No build directory found. Serving basic response.`);
-        app.get('*', (req, res) => {
-          if (!req.path.startsWith('/api/')) {
-            res.send(`
-              <html>
-                <head><title>BitWallet</title></head>
-                <body>
-                  <h1>BitWallet Server Running</h1>
-                  <p>Build files not found. Please run build process.</p>
-                  <p>Available API endpoints:</p>
-                  <ul>
-                    <li><a href="/api/crypto-prices">/api/crypto-prices</a></li>
-                    <li><a href="/health">/health</a></li>
-                    <li><a href="/ping">/ping</a></li>
-                  </ul>
-                </body>
-              </html>
-            `);
-          }
-        });
+      try {
+        const sessions = await storage.getUserSessionsByEmail(req.params.email);
+        return res.json(sessions);
+      } catch (error) {
+        console.error('Error fetching user sessions:', error);
+        return res.status(500).json({ message: "Error fetching user sessions" });
       }
-    } else {
-      log(`✅ Build directory found at: ${buildPath}`);
-      app.use(express.static(buildPath));
-      app.get('*', (req, res) => {
-        if (!req.path.startsWith('/api/')) {
-          res.sendFile(path.join(buildPath, 'index.html'));
-        }
+    });
+
+    const server = await registerRoutes(app);
+
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+
+      res.status(status).json({ message });
+      throw err;
+    });
+
+    // Add health check route
+    app.get("/health", (req, res) => {
+      res.json({ status: "ok", timestamp: new Date().toISOString() });
+    });
+
+    // Add test endpoint
+    app.get("/test", (req, res) => {
+      res.send(`
+        <html>
+          <body>
+            <h1>Server is running!</h1>
+            <p>Time: ${new Date().toISOString()}</p>
+            <p>Environment: ${app.get("env")}</p>
+            <p>Host: ${req.get('host')}</p>
+            <p>Port: 5000</p>
+            <p>Process: ${process.pid}</p>
+          </body>
+        </html>
+      `);
+    });
+
+    // Add ping endpoint
+    app.get("/ping", (req, res) => {
+      res.json({ 
+        status: "pong", 
+        timestamp: new Date().toISOString(),
+        host: req.get('host'),
+        ip: req.ip
       });
-    }
-  }
-
-  // Configure port for different environments
-  const port = parseInt(process.env.PORT || "5000", 10);
-  const host = "0.0.0.0"; // Always bind to 0.0.0.0 for Cloud Run compatibility
-
-  // Add error handling for server startup
-  server.on('error', (error: any) => {
-    if (error.code === 'EADDRINUSE') {
-      log(`❌ Port ${port} is already in use`);
-      process.exit(1);
-    } else if (error.code === 'EACCES') {
-      log(`❌ Permission denied to bind to port ${port}`);
-      process.exit(1);
-    } else {
-      log(`❌ Server error: ${error.message}`);
-      process.exit(1);
-    }
-  });
-
-  // Graceful shutdown handling
-  const gracefulShutdown = () => {
-    log('🔄 Received shutdown signal, closing server gracefully...');
-    server.close(() => {
-      log('✅ Server closed successfully');
-      process.exit(0);
     });
 
-    // Force close after 10 seconds
-    setTimeout(() => {
-      log('❌ Forcing server shutdown');
-      process.exit(1);
-    }, 10000);
-  };
+    // Add a catch-all API route for debugging
+    app.get("/api/*", (req, res) => {
+      res.status(404).json({ message: `API route not found: ${req.path}` });
+    });
 
-  process.on('SIGTERM', gracefulShutdown);
-  process.on('SIGINT', gracefulShutdown);
-
-  // Start server with proper error handling and host binding
-  server.listen({
-    port: port,
-    host: "0.0.0.0"
-  }, () => {
-    log(`🚀 Server started successfully!`);
-    log(`📍 Listening on ${host}:${port}`);
-    log(`⚙️  Environment: ${app.get("env")}`);
-
-    // Environment-specific logging
-    if (isProduction) {
-      log(`🌐 Production deployment ready`);
-      log(`🔒 Trust proxy enabled for Cloud Run`);
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
     } else {
-      log(`🌐 Development server at http://localhost:${port}`);
-      if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
-        log(`🌐 Replit URL: https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
+      // In production, look for the built client files
+      const buildPath = path.resolve(__dirname, "..", "dist");
+
+      log(`🔍 Looking for build directory at: ${buildPath}`);
+
+      if (!fs.existsSync(buildPath)) {
+        log(`❌ Build directory not found at ${buildPath}`);
+        log(`📁 Current directory contents: ${fs.readdirSync(__dirname).join(', ')}`);
+        log(`📁 Parent directory contents: ${fs.readdirSync(path.resolve(__dirname, "..")).join(', ')}`);
+
+        // Try alternative paths
+        const altPaths = [
+          path.resolve(__dirname, "public"),
+          path.resolve(process.cwd(), "dist"),
+          path.resolve(process.cwd(), "public")
+        ];
+
+        let foundPath = null;
+        for (const altPath of altPaths) {
+          if (fs.existsSync(altPath)) {
+            foundPath = altPath;
+            break;
+          }
+        }
+
+        if (foundPath) {
+          log(`✅ Found build directory at: ${foundPath}`);
+          app.use(express.static(foundPath));
+          app.get('*', (req, res) => {
+            if (!req.path.startsWith('/api/')) {
+              res.sendFile(path.join(foundPath, 'index.html'));
+            }
+          });
+        } else {
+          log(`❌ No build directory found. Serving basic response.`);
+          app.get('*', (req, res) => {
+            if (!req.path.startsWith('/api/')) {
+              res.send(`
+                <html>
+                  <head><title>BitWallet</title></head>
+                  <body>
+                    <h1>BitWallet Server Running</h1>
+                    <p>Build files not found. Please run build process.</p>
+                    <p>Available API endpoints:</p>
+                    <ul>
+                      <li><a href="/api/crypto-prices">/api/crypto-prices</a></li>
+                      <li><a href="/health">/health</a></li>
+                      <li><a href="/ping">/ping</a></li>
+                    </ul>
+                  </body>
+                </html>
+              `);
+            }
+          });
+        }
+      } else {
+        log(`✅ Build directory found at: ${buildPath}`);
+        app.use(express.static(buildPath));
+        app.get('*', (req, res) => {
+          if (!req.path.startsWith('/api/')) {
+            res.sendFile(path.join(buildPath, 'index.html'));
+          }
+        });
       }
     }
 
-    // Log essential environment variables for debugging
-    const requiredEnvVars = ['DATABASE_URL', 'NODE_ENV'];
-    const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+    // Configure port for different environments
+    const port = parseInt(process.env.PORT || "5000", 10);
+    const host = "0.0.0.0"; // Always bind to 0.0.0.0 for Cloud Run compatibility
 
-    if (missingEnvVars.length > 0) {
-      log(`⚠️  Missing environment variables: ${missingEnvVars.join(', ')}`);
-    } else {
-      log(`✅ All required environment variables are set`);
-    }
-  });
+    // Add error handling for server startup
+    server.on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        log(`❌ Port ${port} is already in use`);
+        process.exit(1);
+      } else if (error.code === 'EACCES') {
+        log(`❌ Permission denied to bind to port ${port}`);
+        process.exit(1);
+      } else {
+        log(`❌ Server error: ${error.message}`);
+        process.exit(1);
+      }
+    });
 
-} catch (error) {
-  log(`❌ Server startup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  console.error(error);
-  process.exit(1);
-}
+    // Graceful shutdown handling
+    const gracefulShutdown = () => {
+      log('🔄 Received shutdown signal, closing server gracefully...');
+      server.close(() => {
+        log('✅ Server closed successfully');
+        process.exit(0);
+      });
+
+      // Force close after 10 seconds
+      setTimeout(() => {
+        log('❌ Forcing server shutdown');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', gracefulShutdown);
+    process.on('SIGINT', gracefulShutdown);
+
+    // Start server with proper error handling and host binding
+    server.listen({
+      port: port,
+      host: "0.0.0.0"
+    }, () => {
+      log(`🚀 Server started successfully!`);
+      log(`📍 Listening on ${host}:${port}`);
+      log(`⚙️  Environment: ${app.get("env")}`);
+
+      // Environment-specific logging
+      if (isProduction) {
+        log(`🌐 Production deployment ready`);
+        log(`🔒 Trust proxy enabled for Cloud Run`);
+      } else {
+        log(`🌐 Development server at http://localhost:${port}`);
+        if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+          log(`🌐 Replit URL: https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
+        }
+      }
+
+      // Log essential environment variables for debugging
+      const requiredEnvVars = ['DATABASE_URL', 'NODE_ENV'];
+      const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+      if (missingEnvVars.length > 0) {
+        log(`⚠️  Missing environment variables: ${missingEnvVars.join(', ')}`);
+      } else {
+        log(`✅ All required environment variables are set`);
+      }
+    });
+
+  } catch (error) {
+    log(`❌ Server startup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error(error);
+    process.exit(1);
+  }
 })();
-
-// Session configuration is handled in setupAuth
 
 // Error handling middleware for API routes
 app.use('/api', (err: any, req: any, res: any, next: any) => {
