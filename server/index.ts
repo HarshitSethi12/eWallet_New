@@ -205,10 +205,12 @@ process.on('unhandledRejection', (reason, promise) => {
     } else {
       // In production, look for the built client files
       const possiblePaths = [
+        path.resolve(__dirname, "..", "dist", "public"),
+        path.resolve(__dirname, "dist", "public"),
+        path.resolve(process.cwd(), "dist", "public"),
         path.resolve(__dirname, "..", "dist"),
         path.resolve(__dirname, "dist"),
-        path.resolve(process.cwd(), "dist"),
-        path.resolve(__dirname, "..", "client", "dist")
+        path.resolve(process.cwd(), "dist")
       ];
 
       let buildPath = null;
