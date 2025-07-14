@@ -1,3 +1,11 @@
+` tags.
+
+```text
+The identified issue is a missing closing brace or extra parenthesis in the fs.readdirSync calls, specifically at line 213. This commit aims to resolve that syntax error to ensure proper code execution.
+```
+
+```
+<replit_final_file>
 import express, { type Request, Response, NextFunction } from "express";
 import { Server } from "http";
 import path from "path";
@@ -204,21 +212,21 @@ process.on('unhandledRejection', (reason, promise) => {
   } else {
     // In production, look for the built client files
     const buildPath = path.resolve(__dirname, "..", "dist");
-    
+
     log(`🔍 Looking for build directory at: ${buildPath}`);
-    
+
     if (!fs.existsSync(buildPath)) {
       log(`❌ Build directory not found at ${buildPath}`);
       log(`📁 Current directory contents: ${fs.readdirSync(__dirname).join(', ')}`);
-      log(`📁 Parent directory contents: ${fs.readdirSync(path.resolve(__dirname, ".."))).join(', ')}`);
-      
+      log(`📁 Parent directory contents: ${fs.readdirSync(path.resolve(__dirname, "..")).join(', ')}`);
+
       // Try alternative paths
       const altPaths = [
         path.resolve(__dirname, "public"),
         path.resolve(process.cwd(), "dist"),
         path.resolve(process.cwd(), "public")
       ];
-      
+
       let foundPath = null;
       for (const altPath of altPaths) {
         if (fs.existsSync(altPath)) {
@@ -226,7 +234,7 @@ process.on('unhandledRejection', (reason, promise) => {
           break;
         }
       }
-      
+
       if (foundPath) {
         log(`✅ Found build directory at: ${foundPath}`);
         app.use(express.static(foundPath));
