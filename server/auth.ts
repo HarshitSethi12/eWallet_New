@@ -165,9 +165,14 @@ export function setupAuth(app: express.Express) {
       };
 
       console.log('Creating session with data:', sessionData);
-      const sessionDbId = await storage.createUserSession(sessionData);
-      console.log('Session created with ID:', sessionDbId);
-      req.session.sessionDbId = sessionDbId;
+      try {
+        const sessionDbId = await storage.createUserSession(sessionData);
+        console.log('Session created with ID:', sessionDbId);
+        req.session.sessionDbId = sessionDbId;
+      } catch (dbError) {
+        console.warn('Warning: Could not create database session:', dbError);
+        // Continue without database session tracking
+      }
 
       console.log('Redirecting to dashboard...');
       res.redirect('/dashboard');
@@ -270,8 +275,13 @@ export function setupAuth(app: express.Express) {
         sessionId: req.sessionID,
       };
 
-      const sessionDbId = await storage.createUserSession(sessionData);
-      req.session.sessionDbId = sessionDbId;
+      try {
+        const sessionDbId = await storage.createUserSession(sessionData);
+        req.session.sessionDbId = sessionDbId;
+      } catch (dbError) {
+        console.warn('Warning: Could not create database session:', dbError);
+        // Continue without database session tracking
+      }
 
       res.redirect('/?authenticated=true&provider=apple');
     } catch (error) {
@@ -395,8 +405,13 @@ export function setupAuth(app: express.Express) {
         sessionId: req.sessionID,
       };
 
-      const sessionDbId = await storage.createUserSession(sessionData);
-      req.session.sessionDbId = sessionDbId;
+      try {
+        const sessionDbId = await storage.createUserSession(sessionData);
+        req.session.sessionDbId = sessionDbId;
+      } catch (dbError) {
+        console.warn('Warning: Could not create database session:', dbError);
+        // Continue without database session tracking
+      }
 
       res.json({ 
         success: true, 

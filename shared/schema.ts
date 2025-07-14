@@ -45,10 +45,12 @@ export const userSessions = pgTable("user_sessions", {
   ipAddress: text("ip_address").notNull(),
   userAgent: text("user_agent").notNull(),
   sessionId: text("session_id").notNull(),
-  loginTime: timestamp("login_time").defaultNow(),
-  logoutTime: timestamp("logout_time"),
-  duration: integer("duration"), // duration in minutes
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  duration: integer("duration"),
   isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const metamaskUsers = pgTable("metamask_users", {

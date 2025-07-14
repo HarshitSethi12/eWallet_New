@@ -146,25 +146,48 @@ export class DatabaseStorage implements IStorage {
     userId: number | null;
     email: string | null;
     name: string;
-    walletAddress?: string;
     phone?: string;
+    walletAddress?: string;
     ipAddress: string;
     userAgent: string;
     sessionId: string;
   }): Promise<number> {
-    const [session] = await db.insert(sessions).values({
+    try {
+      const [session] = await db.insert(sessions).values({
         userId: sessionData.userId,
         email: sessionData.email,
         name: sessionData.name,
         walletAddress: sessionData.walletAddress || null,
-        phone: sessionData.phone,
+        phone: sessionData.phone || null,
         ipAddress: sessionData.ipAddress,
         userAgent: sessionData.userAgent,
         sessionId: sessionData.sessionId,
         loginTime: new Date(),
         isActive: true
       }).returning();
-    return session[0].id;
+
+      return session[0].id;
+    } catch (error) {
+      console.error('Error creating user session:', error);
+      // Fallback: create a minimal session record
+      try {
+        const [session] = await db.insert(sessions).values({
+          userId: sessionData.userId,
+          email: sessionData.email,
+          name: sessionData.name,
+          ipAddress: sessionData.ipAddress,
+          userAgent: sessionData.userAgent,
+          sessionId: sessionData.sessionId,
+          loginTime: new Date(),
+          isActive: true
+        }).returning();
+
+        return session[0].id;
+      } catch (fallbackError) {
+        console.error('Fallback session creation failed:', fallbackError);
+        throw fallbackError;
+      }
+    }
   }
 
   async endUserSession(sessionId: number): Promise<void> {

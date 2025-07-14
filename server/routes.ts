@@ -6,7 +6,6 @@ import { ethers } from "ethers";
 
 export async function registerRoutes(app: Express) {
   // MetaMask Authentication
-  // MetaMask authentication endpoint
   app.post('/api/auth/metamask', async (req, res) => {
     console.log('🔵 MetaMask auth endpoint hit');
 
@@ -21,8 +20,12 @@ export async function registerRoutes(app: Express) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      // In a real app, you would verify the signature here
-      // For now, we'll trust the signature and create/find the user
+      // Basic signature verification (in production, you'd want proper signature verification)
+      if (!signature.startsWith('0x') || signature.length !== 132) {
+        console.log('❌ Invalid signature format');
+        return res.status(400).json({ error: 'Invalid signature format' });
+      }
+
       console.log('🔵 Processing MetaMask auth for address:', address);
 
       // Ensure session exists
@@ -32,21 +35,23 @@ export async function registerRoutes(app: Express) {
       }
 
       // Store user in session
-      req.session.user = {
+      const userData = {
         id: `metamask_${address}`,
         walletAddress: address,
+        address: address, // Add both for compatibility
         provider: 'metamask',
         name: `${address.slice(0, 6)}...${address.slice(-4)}`,
         picture: null
       };
 
+      req.session.user = userData;
       req.session.isAuthenticated = true;
 
-      // Track login session in database (same as Gmail auth)
+      // Track login session in database
       const sessionData = {
         userId: null,
         email: null,
-        name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+        name: userData.name,
         walletAddress: address,
         ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
         userAgent: req.get('User-Agent') || 'unknown',
@@ -54,26 +59,26 @@ export async function registerRoutes(app: Express) {
       };
 
       console.log('Creating MetaMask session with data:', sessionData);
-      const sessionDbId = await storage.createUserSession(sessionData);
-      console.log('MetaMask session created with ID:', sessionDbId);
-      req.session.sessionDbId = sessionDbId;
+      
+      try {
+        const sessionDbId = await storage.createUserSession(sessionData);
+        console.log('MetaMask session created with ID:', sessionDbId);
+        req.session.sessionDbId = sessionDbId;
+      } catch (dbError) {
+        console.warn('Warning: Could not create database session:', dbError);
+        // Continue without database session tracking
+      }
 
       console.log('✅ MetaMask session created for:', address);
       console.log('🔵 Session after auth:', req.session);
 
       // Ensure we're sending JSON response
       res.setHeader('Content-Type', 'application/json');
-      res.json({
-        id: `metamask_${address}`,
-        walletAddress: address,
-        provider: 'metamask',
-        name: `${address.slice(0, 6)}...${address.slice(-4)}`,
-        picture: null
-      });
+      res.json(userData);
     } catch (error) {
       console.error('❌ MetaMask auth error:', error);
       res.setHeader('Content-Type', 'application/json');
-      res.status(500).json({ error: 'Authentication failed' });
+      res.status(500).json({ error: 'Authentication failed', details: error.message });
     }
   });
 
