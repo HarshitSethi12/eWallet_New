@@ -202,19 +202,70 @@ process.on('unhandledRejection', (reason, promise) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    const buildPath = path.resolve(__dirname, "public");
-
+    // In production, look for the built client files
+    const buildPath = path.resolve(__dirname, "..", "dist");
+    
+    log(`🔍 Looking for build directory at: ${buildPath}`);
+    
     if (!fs.existsSync(buildPath)) {
-      throw new Error(`Could not find the build directory: ${buildPath}, make sure to build the client first`);
-    }
-    app.use(express.static(buildPath));
-
-    // Serve index.html for all non-API routes
-    app.get('*', (req, res) => {
-      if (!req.path.startsWith('/api/')) {
-        res.sendFile(path.join(buildPath, 'index.html'));
+      log(`❌ Build directory not found at ${buildPath}`);
+      log(`📁 Current directory contents: ${fs.readdirSync(__dirname).join(', ')}`);
+      log(`📁 Parent directory contents: ${fs.readdirSync(path.resolve(__dirname, ".."))).join(', ')}`);
+      
+      // Try alternative paths
+      const altPaths = [
+        path.resolve(__dirname, "public"),
+        path.resolve(process.cwd(), "dist"),
+        path.resolve(process.cwd(), "public")
+      ];
+      
+      let foundPath = null;
+      for (const altPath of altPaths) {
+        if (fs.existsSync(altPath)) {
+          foundPath = altPath;
+          break;
+        }
       }
-    });
+      
+      if (foundPath) {
+        log(`✅ Found build directory at: ${foundPath}`);
+        app.use(express.static(foundPath));
+        app.get('*', (req, res) => {
+          if (!req.path.startsWith('/api/')) {
+            res.sendFile(path.join(foundPath, 'index.html'));
+          }
+        });
+      } else {
+        log(`❌ No build directory found. Serving basic response.`);
+        app.get('*', (req, res) => {
+          if (!req.path.startsWith('/api/')) {
+            res.send(`
+              <html>
+                <head><title>BitWallet</title></head>
+                <body>
+                  <h1>BitWallet Server Running</h1>
+                  <p>Build files not found. Please run build process.</p>
+                  <p>Available API endpoints:</p>
+                  <ul>
+                    <li><a href="/api/crypto-prices">/api/crypto-prices</a></li>
+                    <li><a href="/health">/health</a></li>
+                    <li><a href="/ping">/ping</a></li>
+                  </ul>
+                </body>
+              </html>
+            `);
+          }
+        });
+      }
+    } else {
+      log(`✅ Build directory found at: ${buildPath}`);
+      app.use(express.static(buildPath));
+      app.get('*', (req, res) => {
+        if (!req.path.startsWith('/api/')) {
+          res.sendFile(path.join(buildPath, 'index.html'));
+        }
+      });
+    }
   }
 
   // Configure port for different environments
