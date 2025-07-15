@@ -203,35 +203,63 @@ process.on('unhandledRejection', (reason, promise) => {
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
-      // In production, look for the built client files in the correct location
+      // In production, serve static files from the build directory
       const buildPath = path.resolve(process.cwd(), "dist", "public");
       
       log(`🔍 Looking for build directory at: ${buildPath}`);
+      log(`📁 Current working directory: ${process.cwd()}`);
+      log(`📁 Server __dirname: ${__dirname}`);
       
       if (fs.existsSync(buildPath)) {
         log(`✅ Found build directory at: ${buildPath}`);
         
         // Log contents for debugging
-        const files = fs.readdirSync(buildPath);
-        log(`📁 Build directory contains: ${files.join(', ')}`);
+        try {
+          const files = fs.readdirSync(buildPath);
+          log(`📁 Build directory contains: ${files.join(', ')}`);
+          
+          // Check for index.html specifically
+          const indexPath = path.join(buildPath, 'index.html');
+          if (fs.existsSync(indexPath)) {
+            log(`✅ index.html found at: ${indexPath}`);
+          } else {
+            log(`❌ index.html NOT found at: ${indexPath}`);
+          }
+        } catch (error) {
+          log(`❌ Error reading build directory: ${error}`);
+        }
         
-        // Serve static files
-        app.use(express.static(buildPath, {
-          etag: true,
-          lastModified: true,
-          maxAge: process.env.NODE_ENV === 'production' ? '1d' : '0'
+        // Serve static files with proper configuration
+        app.use('/', express.static(buildPath, {
+          etag: false,
+          lastModified: false,
+          maxAge: 0,
+          index: ['index.html']
         }));
 
-        // Serve index.html for all non-API routes
-        app.get('*', (req, res) => {
-          if (!req.path.startsWith('/api/') && !req.path.startsWith('/health') && !req.path.startsWith('/ping')) {
-            const indexPath = path.join(buildPath, 'index.html');
-            if (fs.existsSync(indexPath)) {
-              res.sendFile(indexPath);
-            } else {
-              log(`❌ index.html not found at: ${indexPath}`);
-              res.status(404).send('Build files corrupted - index.html not found');
-            }
+        // Handle all non-API routes by serving index.html (SPA fallback)
+        app.get('*', (req, res, next) => {
+          // Skip API routes and utility endpoints
+          if (req.path.startsWith('/api/') || 
+              req.path.startsWith('/health') || 
+              req.path.startsWith('/ping') ||
+              req.path.startsWith('/test')) {
+            return next();
+          }
+          
+          const indexPath = path.join(buildPath, 'index.html');
+          
+          if (fs.existsSync(indexPath)) {
+            log(`📄 Serving index.html for route: ${req.path}`);
+            res.sendFile(indexPath, (err) => {
+              if (err) {
+                log(`❌ Error serving index.html: ${err.message}`);
+                res.status(500).send('Error serving application');
+              }
+            });
+          } else {
+            log(`❌ index.html not found at: ${indexPath}`);
+            res.status(404).send('Application not built properly - index.html missing');
           }
         });
       } else {
