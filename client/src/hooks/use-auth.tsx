@@ -180,11 +180,29 @@ export function useAuth() {
     }
   }, [user]);
 
+  // Add session clearing utility
+  const clearSession = async () => {
+    try {
+      await fetch('/auth/clear-session', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      // Clear local storage as well
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+      queryClient.clear();
+      window.location.reload();
+    } catch (error) {
+      console.error('Error clearing session:', error);
+    }
+  };
+
   return {
     user: user || null,
     isAuthenticated: !!user,
     login: loginMutation.mutate,
     loginWithApple: appleLoginMutation.mutate,
+    clearSession,
     loginWithMetaMask: async ({ message, signature, address }: { message: string; signature: string; address: string }) => {
       setIsMetaMaskLoading(true);
       try {

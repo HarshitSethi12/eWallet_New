@@ -26,12 +26,26 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
   : null;
 
 export function setupAuth(app: express.Express) {
+  // Debug middleware to log session state
+  app.use((req, res, next) => {
+    console.log('🔍 Session Debug:', {
+      sessionID: req.sessionID,
+      hasUser: !!req.session.user,
+      userProvider: req.session.user?.provider,
+      cookieSecure: req.session.cookie?.secure,
+      userAgent: req.get('User-Agent')?.substring(0, 50)
+    });
+    next();
+  });
+
   app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
     cookie: {
       secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   }));
@@ -422,6 +436,18 @@ export function setupAuth(app: express.Express) {
       console.error('Verify OTP error:', error);
       res.status(500).json({ error: 'Failed to verify OTP' });
     }
+  });
+
+  // Clear session endpoint for debugging
+  app.post('/auth/clear-session', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('Error clearing session:', err);
+        return res.status(500).json({ error: 'Failed to clear session' });
+      }
+      res.clearCookie('connect.sid'); // Clear the session cookie
+      res.json({ success: true, message: 'Session cleared' });
+    });
   });
 
   // Debug endpoint to check OAuth configuration
