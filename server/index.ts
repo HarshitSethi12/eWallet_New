@@ -18,7 +18,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const isDevelopment = process.env.NODE_ENV === "development";
 
 // If neither is explicitly set, default to development
-if (!isProduction && !isDevelopment) {
+if (!process.env.NODE_ENV) {
   process.env.NODE_ENV = "development";
 }
 
