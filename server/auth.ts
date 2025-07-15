@@ -26,29 +26,50 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
   : null;
 
 export function setupAuth(app: express.Express) {
-  // Debug middleware to log session state
-  app.use((req, res, next) => {
-    console.log('🔍 Session Debug:', {
-      sessionID: req.sessionID,
-      hasUser: !!req.session.user,
-      userProvider: req.session.user?.provider,
-      cookieSecure: req.session.cookie?.secure,
-      userAgent: req.get('User-Agent')?.substring(0, 50)
-    });
-    next();
-  });
-
+  // Setup session middleware FIRST
   app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    secret: process.env.SESSION_SECRET || 'fallback-secret-key-for-dev',
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true, // Changed to true for better compatibility
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+    },
+    name: 'sessionId' // Add explicit session name
   }));
+
+  // Session initialization middleware
+  app.use((req, res, next) => {
+    try {
+      // Initialize session if it doesn't exist
+      if (!req.session) {
+        req.session = {} as any;
+      }
+      
+      // Ensure user property exists
+      if (req.session.user === undefined) {
+        req.session.user = null;
+      }
+      
+      // Debug middleware to log session state
+      console.log('🔍 Session Debug:', {
+        sessionID: req.sessionID || 'no-session-id',
+        hasUser: !!req.session.user,
+        userProvider: req.session.user?.provider || 'none',
+        cookieSecure: req.session.cookie?.secure || false,
+        userAgent: req.get('User-Agent')?.substring(0, 50) || 'no-user-agent'
+      });
+      
+      next();
+    } catch (error) {
+      console.error('Session initialization error:', error);
+      // Continue with empty session
+      req.session = { user: null } as any;
+      next();
+    }
+  });
 
   app.get('/auth/google', async (req, res) => {
     try {
@@ -197,20 +218,36 @@ export function setupAuth(app: express.Express) {
   });
 
   app.post('/auth/logout', async (req, res) => {
-    const sessionDbId = req.session.sessionDbId;
-
-    // Update session end time if we have a tracked session
-    if (sessionDbId) {
-      await storage.endUserSession(sessionDbId);
-    }
-
-    req.session.destroy((err) => {
-      if (err) {
-        console.error('Logout error:', err);
-        return res.status(500).json({ error: 'Logout failed' });
+    try {
+      // Check if session exists
+      if (!req.session) {
+        return res.json({ success: true, message: 'No session to destroy' });
       }
-      res.json({ success: true });
-    });
+
+      const sessionDbId = req.session.sessionDbId;
+
+      // Update session end time if we have a tracked session
+      if (sessionDbId) {
+        try {
+          await storage.endUserSession(sessionDbId);
+        } catch (dbError) {
+          console.warn('Database session cleanup failed:', dbError);
+          // Continue with session destruction
+        }
+      }
+
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Logout error:', err);
+          return res.status(500).json({ error: 'Logout failed' });
+        }
+        res.clearCookie('sessionId');
+        res.json({ success: true });
+      });
+    } catch (error) {
+      console.error('Logout endpoint error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
   });
 
   // Apple Sign In routes
@@ -305,10 +342,21 @@ export function setupAuth(app: express.Express) {
   });
 
   app.get('/auth/user', (req, res) => {
-    if (req.session.user) {
-      res.json(req.session.user);
-    } else {
-      res.status(401).json({ error: 'Not authenticated' });
+    try {
+      // Check if session exists
+      if (!req.session) {
+        return res.status(401).json({ error: 'No session found' });
+      }
+      
+      // Check if user exists in session
+      if (req.session.user) {
+        res.json(req.session.user);
+      } else {
+        res.status(401).json({ error: 'Not authenticated' });
+      }
+    } catch (error) {
+      console.error('Auth user endpoint error:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
 

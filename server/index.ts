@@ -1,4 +1,3 @@
-
 import express, { type Request, Response, NextFunction } from "express";
 import { Server } from "http";
 import path from "path";
@@ -50,7 +49,24 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   next();
 });
+
+// Setup authentication FIRST (this includes session middleware)
 setupAuth(app);
+
+// Add middleware to safely initialize user session object
+app.use((req, res, next) => {
+  // Initialize session if it doesn't exist
+  if (!req.session) {
+    req.session = {} as any;
+  }
+
+  // Ensure user property exists
+  if (!req.session.user) {
+    req.session.user = null;
+  }
+
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -205,19 +221,19 @@ process.on('unhandledRejection', (reason, promise) => {
     } else {
       // In production, serve static files from the build directory
       const buildPath = path.resolve(process.cwd(), "dist", "public");
-      
+
       log(`🔍 Looking for build directory at: ${buildPath}`);
       log(`📁 Current working directory: ${process.cwd()}`);
       log(`📁 Server __dirname: ${__dirname}`);
-      
+
       if (fs.existsSync(buildPath)) {
         log(`✅ Found build directory at: ${buildPath}`);
-        
+
         // Log contents for debugging
         try {
           const files = fs.readdirSync(buildPath);
           log(`📁 Build directory contains: ${files.join(', ')}`);
-          
+
           // Check for index.html specifically
           const indexPath = path.join(buildPath, 'index.html');
           if (fs.existsSync(indexPath)) {
@@ -228,7 +244,7 @@ process.on('unhandledRejection', (reason, promise) => {
         } catch (error) {
           log(`❌ Error reading build directory: ${error}`);
         }
-        
+
         // Serve static files with proper configuration
         app.use('/', express.static(buildPath, {
           etag: false,
@@ -246,9 +262,9 @@ process.on('unhandledRejection', (reason, promise) => {
               req.path.startsWith('/test')) {
             return next();
           }
-          
+
           const indexPath = path.join(buildPath, 'index.html');
-          
+
           if (fs.existsSync(indexPath)) {
             log(`📄 Serving index.html for route: ${req.path}`);
             res.sendFile(indexPath, (err) => {
@@ -266,7 +282,7 @@ process.on('unhandledRejection', (reason, promise) => {
         log(`❌ Build directory not found at: ${buildPath}`);
         log(`📁 Current working directory: ${process.cwd()}`);
         log(`📁 __dirname: ${__dirname}`);
-        
+
         // Check what actually exists
         const distPath = path.resolve(process.cwd(), "dist");
         if (fs.existsSync(distPath)) {
@@ -275,7 +291,7 @@ process.on('unhandledRejection', (reason, promise) => {
         } else {
           log(`❌ dist/ directory doesn't exist at all`);
         }
-        
+
         // Serve a basic fallback
         app.get('*', (req, res) => {
           if (!req.path.startsWith('/api/') && !req.path.startsWith('/health') && !req.path.startsWith('/ping')) {
