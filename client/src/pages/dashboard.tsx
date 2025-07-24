@@ -12,7 +12,7 @@ import type { Wallet } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
 import { useAuth } from "@/hooks/use-auth";
 import { useMetaMask } from "@/hooks/use-metamask";
-import { PriceTicker } from "@/components/price-ticker";
+import { WalletOverview } from "@/components/wallet-overview";
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
@@ -120,10 +120,10 @@ export default function Dashboard() {
                   <AiChat />
                 </div>
 
-                {/* Price Ticker Section - Right Side */}
+                {/* MetaMask Wallet Section - Right Side */}
                 <div className="flex flex-col h-full">
                   <div className="h-full">
-                    <PriceTicker />
+                    <WalletOverview />
                   </div>
                 </div>
               </div>
