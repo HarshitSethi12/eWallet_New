@@ -192,6 +192,10 @@ export function WalletOverview() {
     setTransactions(mockTransactions);
   };
 
+  // Check if user is authenticated with MetaMask
+  const isMetaMaskUser = user?.provider === 'metamask';
+  const walletAddress = user?.walletAddress;
+
   const refreshWalletData = async () => {
     setIsLoading(true);
     try {
@@ -228,10 +232,6 @@ export function WalletOverview() {
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp).toLocaleString();
   };
-
-  // Check if user is authenticated with MetaMask
-  const isMetaMaskUser = user?.provider === 'metamask';
-  const walletAddress = user?.walletAddress;
 
   // Show wallet if user is authenticated with MetaMask OR if MetaMask is connected
   if (!isMetaMaskUser && (!isConnected || !account)) {
