@@ -209,7 +209,7 @@ export function WalletOverview() {
     if ((isConnected && account) || (isMetaMaskUser && walletAddress)) {
       refreshWalletData();
     }
-  }, [isConnected, account, chainId, isMetaMaskUser, walletAddress]);
+  }, [isConnected, account, chainId, isMetaMaskUser, walletAddress, ethBalance]);
 
   const copyAddress = () => {
     if (displayAccount) {
@@ -233,6 +233,7 @@ export function WalletOverview() {
   const isMetaMaskUser = user?.provider === 'metamask';
   const walletAddress = user?.walletAddress;
 
+  // Show wallet if user is authenticated with MetaMask OR if MetaMask is connected
   if (!isMetaMaskUser && (!isConnected || !account)) {
     return (
       <Card className="border-none shadow-lg h-full">
@@ -254,6 +255,15 @@ export function WalletOverview() {
 
   // Use authenticated wallet address if available, otherwise use connected account
   const displayAccount = walletAddress || account;
+  
+  console.log('WalletOverview Debug:', {
+    isMetaMaskUser,
+    walletAddress,
+    isConnected,
+    account,
+    displayAccount,
+    user: user?.provider
+  });
 
   return (
     <Card className="border-none shadow-lg h-full">
