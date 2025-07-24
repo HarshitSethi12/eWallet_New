@@ -21,7 +21,7 @@ import {
   Activity,
   Settings,
   Globe,
-  Gas
+  Fuel
 } from "lucide-react";
 import { useMetaMask } from "@/hooks/use-metamask";
 import { useAuth } from "@/hooks/use-auth";
@@ -404,7 +404,7 @@ export function WalletOverview() {
         <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Gas className="h-4 w-4 text-yellow-600" />
+              <Fuel className="h-4 w-4 text-yellow-600" />
               <span className="text-sm font-medium text-yellow-800">Gas Tracker</span>
             </div>
             <div className="text-right">
