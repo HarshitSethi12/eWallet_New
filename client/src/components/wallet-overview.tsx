@@ -108,12 +108,12 @@ export function WalletOverview() {
 
   // Fetch ETH balance
   const fetchEthBalance = async () => {
-    if (!window.ethereum || !account) return;
+    if (!window.ethereum || !displayAccount) return;
     
     try {
       const balance = await window.ethereum.request({
         method: 'eth_getBalance',
-        params: [account, 'latest']
+        params: [displayAccount, 'latest']
       });
       
       // Convert from wei to ETH
@@ -126,7 +126,7 @@ export function WalletOverview() {
 
   // Fetch token balances (mock data for now)
   const fetchTokenBalances = async () => {
-    if (!account) return;
+    if (!displayAccount) return;
     
     // Mock token balances - in a real app, you'd call token contracts
     const mockBalances: TokenBalance[] = [
@@ -163,13 +163,13 @@ export function WalletOverview() {
 
   // Fetch recent transactions (mock data)
   const fetchTransactions = async () => {
-    if (!account) return;
+    if (!displayAccount) return;
     
     // Mock transaction data
     const mockTransactions: Transaction[] = [
       {
         hash: '0x1234...5678',
-        from: account,
+        from: displayAccount,
         to: '0x742d35Cc6134C1532A31b0C3Fd2F8AC4b9B0e53a',
         value: '0.5',
         timestamp: Date.now() - 3600000,
@@ -181,7 +181,7 @@ export function WalletOverview() {
       {
         hash: '0xabcd...efgh',
         from: '0x742d35Cc6134C1532A31b0C3Fd2F8AC4b9B0e53a',
-        to: account,
+        to: displayAccount,
         value: '1.2',
         timestamp: Date.now() - 7200000,
         status: 'confirmed',
@@ -206,14 +206,14 @@ export function WalletOverview() {
   };
 
   useEffect(() => {
-    if (isConnected && account) {
+    if ((isConnected && account) || (isMetaMaskUser && walletAddress)) {
       refreshWalletData();
     }
-  }, [isConnected, account, chainId]);
+  }, [isConnected, account, chainId, isMetaMaskUser, walletAddress]);
 
   const copyAddress = () => {
-    if (account) {
-      navigator.clipboard.writeText(account);
+    if (displayAccount) {
+      navigator.clipboard.writeText(displayAccount);
     }
   };
 
@@ -229,7 +229,11 @@ export function WalletOverview() {
     return new Date(timestamp).toLocaleString();
   };
 
-  if (!isConnected || !account) {
+  // Check if user is authenticated with MetaMask
+  const isMetaMaskUser = user?.provider === 'metamask';
+  const walletAddress = user?.walletAddress;
+
+  if (!isMetaMaskUser && (!isConnected || !account)) {
     return (
       <Card className="border-none shadow-lg h-full">
         <CardHeader>
@@ -247,6 +251,9 @@ export function WalletOverview() {
       </Card>
     );
   }
+
+  // Use authenticated wallet address if available, otherwise use connected account
+  const displayAccount = walletAddress || account;
 
   return (
     <Card className="border-none shadow-lg h-full">
@@ -289,7 +296,7 @@ export function WalletOverview() {
                   <Copy className="h-3 w-3" />
                 </Button>
               </div>
-              <p className="font-mono text-sm">{formatAddress(account)}</p>
+              <p className="font-mono text-sm">{formatAddress(displayAccount)}</p>
             </div>
 
             {/* Portfolio Value */}

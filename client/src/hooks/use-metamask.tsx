@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 interface MetaMaskState {
@@ -26,7 +25,7 @@ export function useMetaMask() {
 
   const connectWallet = async () => {
     console.log('🔵 connectWallet called');
-    
+
     if (!window.ethereum) {
       console.error('❌ MetaMask not found');
       throw new Error('MetaMask is not installed!');
@@ -42,9 +41,9 @@ export function useMetaMask() {
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts'
       });
-      
+
       console.log('🔵 Accounts received:', accounts);
-      
+
       // Ensure we have at least one account
       if (!accounts || accounts.length === 0) {
         throw new Error('No accounts returned from MetaMask');
@@ -68,7 +67,7 @@ export function useMetaMask() {
       return accounts[0];
     } catch (error) {
       console.error('❌ Failed to connect wallet:', error);
-      
+
       // Reset state completely on error
       setState({
         isConnected: false,
@@ -77,7 +76,7 @@ export function useMetaMask() {
         isLoading: false,
         isAuthenticated: false
       });
-      
+
       // Handle specific error codes and provide user-friendly messages
       if (error.code === 4001) {
         console.log('👤 User rejected the connection request');
@@ -89,7 +88,7 @@ export function useMetaMask() {
         console.log('⏰ Connection request timed out - likely pending state');
         throw new Error('Connection timed out. MetaMask may have a pending request. Please open MetaMask and complete or cancel any pending requests.');
       }
-      
+
       throw error; // Re-throw the original error if it's not one of the above
     }
   };
@@ -104,7 +103,7 @@ export function useMetaMask() {
     try {
       // Create a message to sign for authentication
       const message = `Sign this message to authenticate with BitWallet.\n\nAddress: ${state.account}\nTimestamp: ${Date.now()}`;
-      
+
       const signature = await window.ethereum.request({
         method: 'personal_sign',
         params: [message, state.account]
@@ -128,7 +127,7 @@ export function useMetaMask() {
       }
 
       const userData = await response.json();
-      
+
       setState(prev => ({ 
         ...prev, 
         isAuthenticated: true, 
@@ -145,7 +144,7 @@ export function useMetaMask() {
 
   const getUserInfo = (): MetaMaskUser | null => {
     if (!state.account) return null;
-    
+
     return {
       address: state.account,
       displayName: `${state.account.slice(0, 6)}...${state.account.slice(-4)}`
@@ -155,7 +154,7 @@ export function useMetaMask() {
   const disconnectWallet = () => {
     // Clear localStorage
     window.localStorage.removeItem('metamask-connected');
-    
+
     setState({
       isConnected: false,
       account: null,
@@ -187,50 +186,89 @@ export function useMetaMask() {
 
   const forceReconnect = async () => {
     console.log('🔵 Force reconnect initiated...');
-    
+
     // First check for pending requests
     const canProceed = await clearPendingRequests();
     if (!canProceed) {
       throw new Error('MetaMask has pending requests. Please open MetaMask and complete or cancel them first.');
     }
-    
+
     // Force disconnect first
     disconnectWallet();
-    
+
     // Small delay to ensure state is reset
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     // Try to connect again
     return connectWallet();
   };
 
   useEffect(() => {
-    if (!window.ethereum) return;
+    const checkConnection = async () => {
+      if (!window.ethereum) return;
 
-    const handleAccountsChanged = (accounts: string[]) => {
-      if (accounts.length === 0) {
-        disconnectWallet();
-      } else {
-        setState(prev => ({ ...prev, account: accounts[0] }));
+      try {
+        const accounts = await window.ethereum.request({
+          method: 'eth_accounts'
+        });
+
+        if (accounts.length > 0) {
+          const chainId = await window.ethereum.request({
+            method: 'eth_chainId'
+          });
+
+          setState(prev => ({
+            ...prev,
+            isConnected: true,
+            account: accounts[0],
+            chainId: chainId
+          }));
+        }
+      } catch (error) {
+        console.error('Error checking connection:', error);
       }
     };
 
-    const handleChainChanged = (chainId: string) => {
-      setState(prev => ({ ...prev, chainId }));
-    };
+    checkConnection();
 
-    window.ethereum.on('accountsChanged', handleAccountsChanged);
-    window.ethereum.on('chainChanged', handleChainChanged);
+    // Listen for account changes
+    if (window.ethereum) {
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts.length > 0) {
+          setState(prev => ({
+            ...prev,
+            isConnected: true,
+            account: accounts[0]
+          }));
+        } else {
+          setState(prev => ({
+            ...prev,
+            isConnected: false,
+            account: null
+          }));
+        }
+      };
 
-    return () => {
-      window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-      window.ethereum.removeListener('chainChanged', handleChainChanged);
-    };
+      const handleChainChanged = (chainId: string) => {
+        setState(prev => ({
+          ...prev,
+          chainId: chainId
+        }));
+      };
+
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('chainChanged', handleChainChanged);
+
+      return () => {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      };
+    }
   }, []);
 
   const signMessage = async (message: string) => {
     console.log('🔵 signMessage called with:', { message, account: state.account, isConnected: state.isConnected });
-    
+
     if (!state.isConnected || !state.account || !window.ethereum) {
       const error = new Error('No wallet connected');
       console.error('❌', error.message, { isConnected: state.isConnected, account: state.account });
