@@ -106,18 +106,24 @@ export function WalletOverview() {
 
   const currentNetwork = NETWORKS[chainId || '0x1'] || NETWORKS['0x1'];
 
+  // Use authenticated wallet address if available, otherwise use connected account
+  const displayAccount = walletAddress || account;
+
   // Fetch ETH balance
   const fetchEthBalance = async () => {
     if (!window.ethereum || !displayAccount) return;
     
     try {
+      console.log('🔵 Fetching ETH balance for:', displayAccount);
       const balance = await window.ethereum.request({
         method: 'eth_getBalance',
         params: [displayAccount, 'latest']
       });
       
+      console.log('🔵 Raw balance (hex):', balance);
       // Convert from wei to ETH
       const ethValue = parseInt(balance, 16) / Math.pow(10, 18);
+      console.log('🔵 ETH balance:', ethValue);
       setEthBalance(ethValue.toFixed(6));
     } catch (error) {
       console.error('Error fetching ETH balance:', error);
@@ -254,16 +260,15 @@ export function WalletOverview() {
     );
   }
 
-  // Use authenticated wallet address if available, otherwise use connected account
-  const displayAccount = walletAddress || account;
-  
   console.log('WalletOverview Debug:', {
     isMetaMaskUser,
     walletAddress,
     isConnected,
     account,
     displayAccount,
-    user: user?.provider
+    user: user?.provider,
+    ethBalance,
+    tokenBalances
   });
 
   return (
