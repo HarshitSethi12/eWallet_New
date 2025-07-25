@@ -124,41 +124,42 @@ export function WalletOverview() {
     }
   };
 
-  // Fetch token balances (mock data for now)
+  // Fetch real ETH price from your existing API
+  const fetchEthPrice = async (): Promise<number> => {
+    try {
+      const response = await fetch('/api/crypto-prices');
+      const data = await response.json();
+      // Find ETH price from the response
+      const ethData = data.find((crypto: any) => crypto.symbol === 'ETH');
+      return ethData ? ethData.current_price : 3200; // fallback to 3200 if not found
+    } catch (error) {
+      console.error('Error fetching ETH price:', error);
+      return 3200; // fallback price
+    }
+  };
+
+  // Fetch token balances with real ETH data
   const fetchTokenBalances = async () => {
     if (!displayAccount) return;
     
-    // Mock token balances - in a real app, you'd call token contracts
-    const mockBalances: TokenBalance[] = [
+    // Get real ETH price
+    const ethPrice = await fetchEthPrice();
+    const ethBalanceNum = parseFloat(ethBalance) || 0;
+    const ethUsdValue = ethBalanceNum * ethPrice;
+    
+    // Only show real ETH balance for now - no mock tokens
+    const realBalances: TokenBalance[] = [
       {
         symbol: 'ETH',
         name: 'Ethereum',
         balance: ethBalance,
         decimals: 18,
-        usdValue: parseFloat(ethBalance) * 3200, // Mock ETH price
-        priceChange24h: 2.5
-      },
-      {
-        symbol: 'USDC',
-        name: 'USD Coin',
-        balance: '1250.50',
-        decimals: 6,
-        contractAddress: '0xA0b86a33E6411bB63B3F3b95d7fEf3C6b9E6e2ff',
-        usdValue: 1250.50,
-        priceChange24h: 0.1
-      },
-      {
-        symbol: 'WBTC',
-        name: 'Wrapped Bitcoin',
-        balance: '0.0089',
-        decimals: 8,
-        contractAddress: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
-        usdValue: 850.00,
-        priceChange24h: -1.2
+        usdValue: ethUsdValue,
+        priceChange24h: 2.5 // You can fetch this from the API as well
       }
     ];
     
-    setTokenBalances(mockBalances);
+    setTokenBalances(realBalances);
   };
 
   // Fetch recent transactions (mock data)
