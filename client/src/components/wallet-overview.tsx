@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -106,20 +105,24 @@ export function WalletOverview() {
 
   const currentNetwork = NETWORKS[chainId || '0x1'] || NETWORKS['0x1'];
 
+  // Check if user is authenticated with MetaMask
+  const isMetaMaskUser = user?.provider === 'metamask';
+  const walletAddress = user?.walletAddress;
+
   // Use authenticated wallet address if available, otherwise use connected account
   const displayAccount = walletAddress || account;
 
   // Fetch ETH balance
   const fetchEthBalance = async () => {
     if (!window.ethereum || !displayAccount) return;
-    
+
     try {
       console.log('🔵 Fetching ETH balance for:', displayAccount);
       const balance = await window.ethereum.request({
         method: 'eth_getBalance',
         params: [displayAccount, 'latest']
       });
-      
+
       console.log('🔵 Raw balance (hex):', balance);
       // Convert from wei to ETH
       const ethValue = parseInt(balance, 16) / Math.pow(10, 18);
@@ -147,12 +150,12 @@ export function WalletOverview() {
   // Fetch token balances with real ETH data
   const fetchTokenBalances = async () => {
     if (!displayAccount) return;
-    
+
     // Get real ETH price
     const ethPrice = await fetchEthPrice();
     const ethBalanceNum = parseFloat(ethBalance) || 0;
     const ethUsdValue = ethBalanceNum * ethPrice;
-    
+
     // Only show real ETH balance for now - no mock tokens
     const realBalances: TokenBalance[] = [
       {
@@ -164,14 +167,14 @@ export function WalletOverview() {
         priceChange24h: 2.5 // You can fetch this from the API as well
       }
     ];
-    
+
     setTokenBalances(realBalances);
   };
 
   // Fetch recent transactions (mock data)
   const fetchTransactions = async () => {
     if (!displayAccount) return;
-    
+
     // Mock transaction data
     const mockTransactions: Transaction[] = [
       {
@@ -195,13 +198,10 @@ export function WalletOverview() {
         type: 'receive'
       }
     ];
-    
+
     setTransactions(mockTransactions);
   };
 
-  // Check if user is authenticated with MetaMask
-  const isMetaMaskUser = user?.provider === 'metamask';
-  const walletAddress = user?.walletAddress;
 
   const refreshWalletData = async () => {
     setIsLoading(true);
