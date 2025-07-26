@@ -53,28 +53,7 @@ export default function Dashboard() {
     );
   }
 
-  const handleDisconnect = async () => {
-    try {
-      // Disconnect MetaMask first
-      disconnectWallet();
-      
-      // Clear MetaMask connection state
-      window.localStorage.removeItem('metamask-connected');
-      window.sessionStorage.clear();
-      
-      // Call logout to clear session
-      logout();
-      
-      // Force navigation to homepage as backup
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
-    } catch (error) {
-      console.error('Error during disconnect:', error);
-      // Force navigation even if there's an error
-      window.location.href = '/';
-    }
-  };
+  
 
   return (
     <div className="flex flex-col h-screen">
@@ -98,12 +77,12 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             variant="outline"
-            onClick={handleDisconnect}
+            onClick={logout}
             disabled={isLoggingOut}
             className="flex items-center gap-2"
           >
             <LogOut className="h-4 w-4" />
-            {isLoggingOut ? "Disconnecting..." : "Disconnect Wallet"}
+            {isLoggingOut ? "Signing out..." : "Sign Out"}
           </Button>
         </div>
       </div>
