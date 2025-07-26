@@ -265,8 +265,8 @@ You can ask me:
   };
 
   return (
-    <Card className="h-[600px] flex flex-col">
-      <CardHeader className="flex-shrink-0">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex-shrink-0 pb-3">
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5" />
           AI Assistant
@@ -274,7 +274,7 @@ You can ask me:
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col flex-1 p-0 min-h-0">
-        <ScrollArea className="flex-1 p-4 min-h-0 max-h-[450px]" ref={scrollRef}>
+        <ScrollArea className="flex-1 p-4 min-h-0" ref={scrollRef}>
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -318,7 +318,7 @@ You can ask me:
             )}
           </div>
         </ScrollArea>
-        <div className="flex-shrink-0 p-4 border-t">
+        <div className="flex-shrink-0 p-3 border-t">
           <div className="flex gap-2">
             <Input
               value={input}
