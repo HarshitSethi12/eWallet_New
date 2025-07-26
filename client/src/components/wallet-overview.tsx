@@ -272,7 +272,7 @@ export function WalletOverview() {
   });
 
   return (
-    <Card className="border-none shadow-lg h-full">
+    <Card className="border-2 border-green-500 shadow-lg h-full">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2" style={{ color: 'var(--color-heading)' }}>
