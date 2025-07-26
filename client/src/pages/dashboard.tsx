@@ -13,6 +13,7 @@ import { RiExchangeFundsFill } from "react-icons/ri";
 import { useAuth } from "@/hooks/use-auth";
 import { useMetaMask } from "@/hooks/use-metamask";
 import { WalletOverview } from "@/components/wallet-overview";
+import { DexSwap } from "@/components/dex-swap";
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowDownUp, Wallet } from "lucide-react";
 import { useMetaMask } from "@/hooks/use-metamask";
+import { useAuth } from "@/hooks/use-auth";
 
 interface SwapQuote {
   inputAmount: string;
@@ -33,6 +34,11 @@ const SUPPORTED_TOKENS = [
 
 export function DexSwap() {
   const { isConnected, account, connectWallet } = useMetaMask();
+  const { user, isAuthenticated } = useAuth();
+  
+  // Use wallet address from authentication if available
+  const walletAddress = account || user?.walletAddress || user?.address;
+  const isWalletConnected = isConnected || (isAuthenticated && user?.provider === 'metamask');
   const [fromToken, setFromToken] = useState(SUPPORTED_TOKENS[0]);
   const [toToken, setToToken] = useState(SUPPORTED_TOKENS[1]);
   const [fromAmount, setFromAmount] = useState('');
@@ -66,7 +72,7 @@ export function DexSwap() {
               fromToken: fromToken.address,
               toToken: toToken.address,
               amount: inputAmount,
-              userAddress: account,
+              userAddress: walletAddress,
               aggregator: aggregator.name.toLowerCase()
             })
           });
@@ -110,7 +116,7 @@ export function DexSwap() {
   };
 
   const executeSwap = async () => {
-    if (!selectedQuote || !isConnected) return;
+    if (!selectedQuote || !isWalletConnected) return;
 
     setIsLoading(true);
     try {
@@ -156,9 +162,9 @@ export function DexSwap() {
       }, 500);
       return () => clearTimeout(debounceTimer);
     }
-  }, [fromAmount, fromToken, toToken, account]);
+  }, [fromAmount, fromToken, toToken, walletAddress]);
 
-  if (!isConnected) {
+  if (!isWalletConnected) {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardContent className="p-6">
@@ -180,7 +186,7 @@ export function DexSwap() {
       <CardHeader>
         <CardTitle>Swap Tokens</CardTitle>
         <p className="text-sm text-gray-600">
-          Connected: {account?.slice(0, 6)}...{account?.slice(-4)}
+          Connected: {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
