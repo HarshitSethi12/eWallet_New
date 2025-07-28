@@ -295,15 +295,15 @@ export function WalletOverview() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 flex-1 flex flex-col">
-        <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-          <TabsList className="grid w-full grid-cols-3">
+      <CardContent className="space-y-4 flex-1 flex flex-col min-h-0">
+        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="flex flex-col flex-1 min-h-0">
+          <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="tokens">Tokens</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
+          <TabsContent value="overview" className="space-y-4 flex-1 flex flex-col">
             {/* Account Info */}
             <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
               <div className="flex items-center justify-between mb-2">
@@ -345,7 +345,7 @@ export function WalletOverview() {
             </div>
           </TabsContent>
 
-          <TabsContent value="tokens" className="space-y-3">
+          <TabsContent value="tokens" className="space-y-3 flex-1 flex flex-col">
             {tokenBalances.map((token, index) => (
               <div key={index} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50">
                 <div className="flex items-center gap-3">
@@ -378,7 +378,7 @@ export function WalletOverview() {
             ))}
           </TabsContent>
 
-          <TabsContent value="activity" className="space-y-3">
+          <TabsContent value="activity" className="space-y-3 flex-1 flex flex-col">
             {transactions.length === 0 ? (
               <div className="text-center py-8">
                 <Activity className="h-12 w-12 text-gray-400 mx-auto mb-2" />

@@ -56,15 +56,15 @@ export default function Dashboard() {
   
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* Main content container that takes full space */}
-      <div className="flex-1 w-full px-3 py-3 max-w-none">
+    <div className="flex flex-col min-h-screen">
+      {/* Main content container that takes full available space */}
+      <div className="flex-1 w-full px-3 py-3 max-w-none min-h-0">
         <div className="h-full max-w-none mx-auto">
           {/* Wallet Section */}
           {wallet ? (
-            <div className="h-full">
-              {/* Two column layout for AI assistant and price ticker - Reduced spacing */}
-              <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 h-full">
+            <div className="h-full flex flex-col">
+              {/* Two column layout for AI assistant and price ticker - Full height */}
+              <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 flex-1 min-h-0">
                 {/* AI Assistant Section - Left Side */}
                 <div className="flex flex-col h-full min-h-0">
                   <AiChat />
@@ -72,9 +72,7 @@ export default function Dashboard() {
 
                 {/* MetaMask Wallet Section - Right Side */}
                 <div className="flex flex-col h-full min-h-0">
-                  <div className="h-full">
-                    <WalletOverview />
-                  </div>
+                  <WalletOverview />
                 </div>
               </div>
             </div>
