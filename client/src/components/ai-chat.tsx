@@ -265,7 +265,7 @@ You can ask me:
   };
 
   return (
-    <Card className="h-full flex flex-col border-2 border-green-500 shadow-lg">
+    <Card className="h-full flex flex-col border-2 border-green-500 shadow-lg overflow-hidden">
       <CardHeader className="flex-shrink-0 pb-3">
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5" />
