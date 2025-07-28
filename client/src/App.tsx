@@ -140,7 +140,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--color-secondary)', margin: 0, padding: 0 }}>
         <Navigation />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-hidden">
           <Router />
         </main>
         <Footer />

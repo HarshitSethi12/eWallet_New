@@ -56,7 +56,7 @@ export default function Dashboard() {
   
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="h-full flex flex-col">
       {/* Main content container that takes full available space */}
       <div className="flex-1 w-full px-3 py-3 max-w-none overflow-hidden">
         <div className="h-full max-w-none mx-auto">
