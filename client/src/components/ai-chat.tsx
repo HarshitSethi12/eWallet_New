@@ -180,6 +180,34 @@ ${isPositive ? 'Price is up!' : 'Price is down.'} Data updates every 30 seconds.
     // Fetch current app data for personalized responses
     const appData = await fetchUserAppData();
 
+    // Use Gemini API for intelligent responses
+    try {
+      const response = await fetch('/api/ai/gemini-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          context: {
+            user: appData.user,
+            wallet: appData.wallet,
+            transactions: appData.transactions?.slice(0, 5), // Last 5 transactions
+            cryptoPrices: appData.cryptoPrices?.slice(0, 10), // Top 10 prices
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.response;
+      }
+    } catch (error) {
+      console.error('Gemini API error:', error);
+    }
+
+    // Fallback to local responses if Gemini fails
+
     // Personal account queries (only for authenticated users)
     if (isAuthenticated && appData.wallet) {
       // Balance queries

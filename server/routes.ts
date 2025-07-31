@@ -202,3 +202,48 @@ export async function registerRoutes(app: Express) {
 
   return createServer(app);
 }
+  // Gemini AI Chat endpoint
+  app.post('/api/ai/gemini-chat', async (req, res) => {
+    try {
+      const { message, context } = req.body;
+
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(500).json({ error: 'Gemini API key not configured' });
+      }
+
+      // Build context prompt for Gemini
+      const systemPrompt = `You are BitWallet AI Assistant. Here's the user's current data:
+${context.wallet ? `Wallet: ${context.wallet.address} with balance ${context.wallet.lastBalance}` : 'No wallet data'}
+${context.transactions ? `Recent transactions: ${context.transactions.length} transactions` : 'No transactions'}
+Current crypto prices: ${context.cryptoPrices?.map(c => `${c.symbol}: $${c.price}`).join(', ') || 'No price data'}
+
+Provide helpful, personalized responses about their BitWallet account and crypto.`;
+
+      // Call Gemini API
+      const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `${systemPrompt}\n\nUser: ${message}`
+            }]
+          }]
+        })
+      });
+
+      if (!geminiResponse.ok) {
+        throw new Error(`Gemini API error: ${geminiResponse.status}`);
+      }
+
+      const geminiData = await geminiResponse.json();
+      const aiResponse = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not process your request.';
+
+      res.json({ response: aiResponse });
+    } catch (error) {
+      console.error('Gemini API error:', error);
+      res.status(500).json({ error: 'AI service temporarily unavailable' });
+    }
+  });
