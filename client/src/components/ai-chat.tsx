@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Bot, User, TrendingUp, TrendingDown } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Message {
   id: string;
@@ -19,11 +21,22 @@ interface CryptoPrice {
   change: number;
 }
 
+interface UserAppData {
+  wallet?: any;
+  transactions?: any[];
+  contacts?: any[];
+  cryptoPrices?: CryptoPrice[];
+  user?: any;
+}
+
 export function AiChat() {
+  const { user, isAuthenticated } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Hello! I\'m your AI assistant. I can help you with crypto wallet questions and provide current cryptocurrency prices. Try asking "What\'s the price of Bitcoin?" or "Show me Ethereum price".',
+      content: isAuthenticated ? 
+        `Hello ${user?.name || 'there'}! I'm your personalized BitWallet AI assistant. I can help you with your account, transactions, crypto prices, and wallet management. Try asking "What's my balance?" or "Show me my recent transactions"` :
+        'Hello! I\'m your AI assistant. I can help you with crypto wallet questions and provide current cryptocurrency prices. Try asking "What\'s the price of Bitcoin?" or "Show me Ethereum price".',
       isUser: false,
       timestamp: new Date(),
     },
@@ -41,6 +54,43 @@ export function AiChat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const fetchUserAppData = async (): Promise<UserAppData> => {
+    const appData: UserAppData = { user };
+
+    try {
+      // Fetch user's wallet data
+      if (isAuthenticated) {
+        try {
+          appData.wallet = await apiRequest('/api/wallet/primary');
+        } catch (error) {
+          console.log('No wallet data available');
+        }
+
+        // Fetch user's transactions
+        try {
+          appData.transactions = await apiRequest('/api/transactions');
+        } catch (error) {
+          console.log('No transaction data available');
+        }
+
+        // Fetch user's contacts
+        try {
+          appData.contacts = await apiRequest('/api/contacts');
+        } catch (error) {
+          console.log('No contacts available');
+        }
+      }
+
+      // Always fetch crypto prices
+      appData.cryptoPrices = await fetchCryptoPrices();
+
+      return appData;
+    } catch (error) {
+      console.error('Error fetching app data:', error);
+      return { user, cryptoPrices: [] };
+    }
+  };
 
   const fetchCryptoPrices = async (): Promise<CryptoPrice[]> => {
     try {
@@ -127,6 +177,77 @@ ${isPositive ? 'Price is up!' : 'Price is down.'} Data updates every 30 seconds.
   const generateResponse = async (userMessage: string): Promise<string> => {
     const lowerMessage = userMessage.toLowerCase();
 
+    // Fetch current app data for personalized responses
+    const appData = await fetchUserAppData();
+
+    // Personal account queries (only for authenticated users)
+    if (isAuthenticated && appData.wallet) {
+      // Balance queries
+      if (lowerMessage.includes('balance') || lowerMessage.includes('my wallet')) {
+        const balance = appData.wallet.lastBalance || '0';
+        const formattedBalance = (parseInt(balance) / 100000000).toFixed(8); // Convert satoshis to BTC
+        return `💰 Your Current Wallet Balance:
+        
+${appData.wallet.chain}: ${formattedBalance} ${appData.wallet.chain}
+Address: ${appData.wallet.address}
+
+Your wallet is active and ready for transactions! 🚀`;
+      }
+
+      // Transaction history queries
+      if (lowerMessage.includes('transaction') || lowerMessage.includes('history') || lowerMessage.includes('recent')) {
+        if (appData.transactions && appData.transactions.length > 0) {
+          const recentTxs = appData.transactions.slice(0, 3);
+          let response = `📊 Your Recent Transactions:\n\n`;
+          
+          recentTxs.forEach((tx, index) => {
+            const date = new Date(tx.timestamp).toLocaleDateString();
+            const amount = (tx.amount / 100000000).toFixed(8);
+            response += `${index + 1}. ${tx.confirmed ? '✅' : '⏳'} ${amount} BTC\n`;
+            response += `   To: ${tx.toAddress.slice(0, 8)}...${tx.toAddress.slice(-6)}\n`;
+            response += `   Date: ${date}\n\n`;
+          });
+          
+          response += `Total transactions: ${appData.transactions.length}`;
+          return response;
+        } else {
+          return `📝 No transactions found yet. Ready to make your first transaction? Use the Send button on your dashboard!`;
+        }
+      }
+
+      // Contact queries
+      if (lowerMessage.includes('contact') || lowerMessage.includes('address book')) {
+        if (appData.contacts && appData.contacts.length > 0) {
+          let response = `📇 Your Saved Contacts:\n\n`;
+          appData.contacts.forEach((contact, index) => {
+            response += `${index + 1}. ${contact.name}\n`;
+            response += `   ${contact.address.slice(0, 8)}...${contact.address.slice(-6)}\n\n`;
+          });
+          return response;
+        } else {
+          return `📇 No saved contacts yet. You can add contacts when sending transactions to save them for future use!`;
+        }
+      }
+
+      // Account summary
+      if (lowerMessage.includes('account') || lowerMessage.includes('summary') || lowerMessage.includes('overview')) {
+        const balance = appData.wallet.lastBalance || '0';
+        const formattedBalance = (parseInt(balance) / 100000000).toFixed(8);
+        const txCount = appData.transactions?.length || 0;
+        const contactCount = appData.contacts?.length || 0;
+        
+        return `🏦 Your BitWallet Account Summary:
+
+👤 ${user?.provider === 'metamask' ? 'MetaMask User' : user?.name}
+💰 Balance: ${formattedBalance} ${appData.wallet.chain}
+📊 Transactions: ${txCount}
+📇 Contacts: ${contactCount}
+🔗 Address: ${appData.wallet.address.slice(0, 8)}...${appData.wallet.address.slice(-6)}
+
+Everything looks good! 🌟`;
+      }
+    }
+
     // Check if user is asking for crypto prices
     const priceKeywords = ['price', 'cost', 'value', 'worth', 'how much', 'current'];
     const isPriceQuery = priceKeywords.some(keyword => lowerMessage.includes(keyword)) &&
@@ -142,7 +263,7 @@ ${isPositive ? 'Price is up!' : 'Price is down.'} Data updates every 30 seconds.
 
     if (isPriceQuery) {
       try {
-        const cryptoList = await fetchCryptoPrices();
+        const cryptoList = appData.cryptoPrices || [];
         const matchedCrypto = findCryptoPriceByQuery(userMessage, cryptoList);
 
         if (matchedCrypto) {
@@ -160,7 +281,7 @@ Try asking: "What's the price of Bitcoin?" or "Show me Ethereum price"`;
     // List prices query
     if (lowerMessage.includes('list') && (lowerMessage.includes('price') || lowerMessage.includes('crypto'))) {
       try {
-        const cryptoList = await fetchCryptoPrices();
+        const cryptoList = appData.cryptoPrices || [];
         const topCryptos = cryptoList.slice(0, 5);
 
         let response = '📊 Current Top Cryptocurrency Prices:\n\n';
@@ -183,11 +304,22 @@ Try asking: "What's the price of Bitcoin?" or "Show me Ethereum price"`;
     }
 
     if (lowerMessage.includes('help')) {
-      return `I can help you with:
+      const helpMessage = `I can help you with:
 • 💰 Current cryptocurrency prices (Bitcoin, Ethereum, Cardano, etc.)
 • 📊 24-hour price changes
-• 💼 Wallet functions and transactions
-• ❓ General crypto questions
+• 💼 General crypto questions and wallet functions`;
+
+      if (isAuthenticated) {
+        return helpMessage + `
+• 🏦 Your personal account information
+• 💳 Your wallet balance and transactions
+• 📇 Your saved contacts
+• 📊 Your transaction history
+
+Try asking: "What's my balance?" or "Show me my recent transactions"`;
+      }
+
+      return helpMessage + `
 
 Try asking: "What's the price of Bitcoin?" or "List crypto prices"`;
     }
@@ -208,13 +340,27 @@ Try asking: "What's the price of Bitcoin?" or "List crypto prices"`;
       return 'You can view your transaction history on the dashboard. Each transaction shows the amount, date, and status.';
     }
 
-    return `I'm here to help with your crypto wallet needs and provide current cryptocurrency prices! 
+    const fallbackMessage = `I'm here to help with your crypto wallet needs and provide current cryptocurrency prices!`;
+
+    if (isAuthenticated) {
+      return fallbackMessage + `
+
+You can ask me:
+• "What's my balance?" or "Show me my wallet"
+• "Show me my recent transactions"
+• "What's my account summary?"
+• "What's the price of Bitcoin?"
+• "List crypto prices"
+• Questions about your contacts and transactions`;
+    }
+
+    return fallbackMessage + `
 
 You can ask me:
 • "What's the price of Bitcoin?"
 • "Show me Ethereum price"
 • "List crypto prices"
-• Questions about sending, receiving, balances, or transactions`;
+• Questions about crypto and wallet functions`;
   };
 
   const handleSend = async () => {
