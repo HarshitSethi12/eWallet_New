@@ -200,8 +200,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  return createServer(app);
-}
   // Gemini AI Chat endpoint
   app.post('/api/ai/gemini-chat', async (req, res) => {
     try {
@@ -247,3 +245,6 @@ Provide helpful, personalized responses about their BitWallet account and crypto
       res.status(500).json({ error: 'AI service temporarily unavailable' });
     }
   });
+
+  return createServer(app);
+}
