@@ -455,7 +455,6 @@ You can ask me:
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5" />
           AI Assistant
-          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Live Prices</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col flex-1 p-0 min-h-0">
