@@ -182,6 +182,7 @@ ${isPositive ? 'Price is up!' : 'Price is down.'} Data updates every 30 seconds.
 
     // Use Gemini API for intelligent responses
     try {
+      console.log('🤖 Calling Gemini API...');
       const response = await fetch('/api/ai/gemini-chat', {
         method: 'POST',
         headers: {
@@ -198,14 +199,22 @@ ${isPositive ? 'Price is up!' : 'Price is down.'} Data updates every 30 seconds.
         })
       });
 
+      console.log('🤖 Gemini API response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
-        return data.response;
+        console.log('🤖 Gemini API successful, using AI response');
+        return data.response || 'I received your message but had trouble generating a response. Please try again.';
+      } else {
+        console.warn('🤖 Gemini API failed with status:', response.status);
+        const errorData = await response.text();
+        console.warn('🤖 Error details:', errorData);
       }
     } catch (error) {
-      console.error('Gemini API error:', error);
+      console.error('🤖 Gemini API error:', error);
     }
 
+    console.log('🤖 Falling back to local responses');
     // Fallback to local responses if Gemini fails
 
     // Personal account queries (only for authenticated users)
@@ -493,16 +502,26 @@ You can ask me:
           </div>
         </ScrollArea>
         <div className="flex-shrink-0 p-3 border-t">
-          <div className="flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask me about crypto prices or wallet functions..."
-              disabled={isLoading}
-            />
-            <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
-              <Send className="h-4 w-4" />
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask me about crypto prices or wallet functions..."
+                disabled={isLoading}
+              />
+              <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => window.open('/api/ai/gemini-health', '_blank')}
+              className="text-xs"
+            >
+              Test Gemini API
             </Button>
           </div>
         </div>
