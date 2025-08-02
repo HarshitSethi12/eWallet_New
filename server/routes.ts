@@ -59,7 +59,7 @@ export async function registerRoutes(app: Express) {
       };
 
       console.log('Creating MetaMask session with data:', sessionData);
-      
+
       try {
         const sessionDbId = await storage.createUserSession(sessionData);
         console.log('MetaMask session created with ID:', sessionDbId);
@@ -243,6 +243,53 @@ Provide helpful, personalized responses about their BitWallet account and crypto
     } catch (error) {
       console.error('Gemini API error:', error);
       res.status(500).json({ error: 'AI service temporarily unavailable' });
+    }
+  });
+
+  // Gemini health check endpoint
+  app.get('/api/ai/gemini-health', async (req, res) => {
+    try {
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(500).json({ 
+          status: 'error',
+          message: 'Gemini API key not configured' 
+        });
+      }
+
+      // Test Gemini API with a simple request
+      const testResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: "Say 'Hello from BitWallet!' in one sentence."
+            }]
+          }]
+        })
+      });
+
+      if (testResponse.ok) {
+        const data = await testResponse.json();
+        res.json({ 
+          status: 'healthy',
+          message: 'Gemini API is working',
+          response: data.candidates?.[0]?.content?.parts?.[0]?.text || 'Test successful'
+        });
+      } else {
+        res.status(500).json({ 
+          status: 'error',
+          message: `Gemini API returned status ${testResponse.status}` 
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ 
+        status: 'error',
+        message: 'Failed to connect to Gemini API',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
