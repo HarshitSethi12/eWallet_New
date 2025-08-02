@@ -218,7 +218,7 @@ Current crypto prices: ${context.cryptoPrices?.map(c => `${c.symbol}: $${c.price
 Provide helpful, personalized responses about their BitWallet account and crypto.`;
 
       // Call Gemini API
-      const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -257,7 +257,7 @@ Provide helpful, personalized responses about their BitWallet account and crypto
       }
 
       // Test Gemini API with a simple request
-      const testResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      const testResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
