@@ -203,8 +203,10 @@ ${isPositive ? 'Price is up!' : 'Price is down.'} Data updates every 30 seconds.
 
       if (response.ok) {
         const data = await response.json();
-        console.log('🤖 Gemini API successful, using AI response');
-        return data.response || 'I received your message but had trouble generating a response. Please try again.';
+        console.log('🤖 Gemini API successful, response received:', data.response ? 'Yes' : 'No');
+        if (data.response && data.response.trim()) {
+          return data.response;
+        }
       } else {
         console.warn('🤖 Gemini API failed with status:', response.status);
         const errorData = await response.text();
