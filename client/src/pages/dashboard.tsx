@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMetaMask } from "@/hooks/use-metamask";
 import { WalletOverview } from "@/components/wallet-overview";
 import { DexSwap } from "@/components/dex-swap";
+import { NotesPanel } from "@/components/notes-panel";
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
@@ -53,7 +53,7 @@ export default function Dashboard() {
     );
   }
 
-  
+
 
   return (
     <div className="h-full flex flex-col">
@@ -63,16 +63,16 @@ export default function Dashboard() {
           {/* Wallet Section */}
           {wallet ? (
             <div className="h-full flex flex-col">
-              {/* Two column layout for AI assistant and price ticker - Full height */}
+              {/* Two column layout for AI assistant and notes panel - Full height */}
               <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 h-full">
                 {/* AI Assistant Section - Left Side */}
                 <div className="flex flex-col h-full min-h-0">
                   <AiChat />
                 </div>
 
-                {/* MetaMask Wallet Section - Right Side */}
+                {/* Notes Panel Section - Right Side */}
                 <div className="flex flex-col h-full min-h-0">
-                  <WalletOverview />
+                  <NotesPanel />
                 </div>
               </div>
             </div>
