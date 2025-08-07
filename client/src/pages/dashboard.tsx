@@ -117,6 +117,21 @@ export default function Dashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col min-h-0 space-y-4">
+                    {/* Overview Section */}
+                    <div className="flex-shrink-0">
+                      <h3 className="text-lg font-bold mb-4 text-gray-900">Overview</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm text-gray-600">Total Balance</p>
+                          <p className="text-xl font-bold text-gray-900">$0.00</p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm text-gray-600">Available</p>
+                          <p className="text-xl font-bold text-gray-900">$0.00</p>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Tokens Section */}
                     <div className="flex-1 min-h-0">
                       <h3 className="text-lg font-bold mb-4 text-gray-900">Tokens</h3>
