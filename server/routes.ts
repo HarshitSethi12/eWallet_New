@@ -105,6 +105,51 @@ export function registerRoutes(app: Application) {
     }
   });
 
+  // Get primary wallet for authenticated user
+  router.get('/api/wallet/primary', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.session?.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      const user = req.session.user;
+      
+      // For MetaMask users, create a wallet based on their connected address
+      if (user.provider === 'metamask' && user.walletAddress) {
+        const mockWallet = {
+          id: `wallet_${user.walletAddress}`,
+          address: user.walletAddress,
+          name: `MetaMask Wallet`,
+          balance: '2.5',
+          balanceUSD: 6250.00,
+          privateKey: null, // Never expose private keys
+          createdAt: new Date().toISOString(),
+          userId: user.id
+        };
+        
+        return res.json(mockWallet);
+      }
+      
+      // For other users, create a mock wallet
+      const mockWallet = {
+        id: `wallet_${user.id}`,
+        address: '0x742d35Cc6634C0532925a3b8D1b9E7c0896B79dC',
+        name: 'Primary Wallet',
+        balance: '1.5',
+        balanceUSD: 3750.00,
+        privateKey: null,
+        createdAt: new Date().toISOString(),
+        userId: user.id
+      };
+      
+      res.json(mockWallet);
+    } catch (error) {
+      console.error('Error fetching primary wallet:', error);
+      res.status(500).json({ error: 'Failed to fetch primary wallet' });
+    }
+  });
+
   // Get user token balances
   router.get('/api/wallet/tokens/:address', async (req, res) => {
     try {

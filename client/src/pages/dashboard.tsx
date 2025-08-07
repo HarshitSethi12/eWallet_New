@@ -52,48 +52,27 @@ export default function Dashboard() {
     );
   }
 
+  // Show the dashboard layout regardless of wallet loading state
+  // The wallet overview component will handle its own loading states
   return (
     <div className="h-full flex flex-col">
       {/* Main content container that takes full available space */}
       <div className="flex-1 w-full px-3 py-3 max-w-none overflow-hidden">
         <div className="h-full max-w-none mx-auto">
-          {/* Wallet Section */}
-          {wallet ? (
-            <div className="h-full flex flex-col">
-              {/* Two column layout for AI assistant and wallet - Full height */}
-              <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 h-full">
-                {/* AI Assistant Section - Left Side */}
-                <div className="flex flex-col h-full min-h-0">
-                  <AiChat />
-                </div>
+          <div className="h-full flex flex-col">
+            {/* Two column layout for AI assistant and wallet - Full height */}
+            <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 h-full">
+              {/* AI Assistant Section - Left Side */}
+              <div className="flex flex-col h-full min-h-0">
+                <AiChat />
+              </div>
 
-                {/* Wallet Section - Right Side */}
-                <div className="flex flex-col h-full min-h-0 space-y-2">
-                  <WalletOverview />
-                </div>
+              {/* Wallet Section - Right Side */}
+              <div className="flex flex-col h-full min-h-0 space-y-2">
+                <WalletOverview />
               </div>
             </div>
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <Card className="w-full max-w-md">
-                <CardHeader>
-                  <CardTitle>Create Your Wallet</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p>No wallet found. Create one to get started with cryptocurrency management.</p>
-                  <Button 
-                    className="btn-primary w-full" 
-                    onClick={() => {
-                      // Mock wallet creation for now
-                      console.log("Creating wallet...");
-                    }}
-                  >
-                    Create Wallet
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
