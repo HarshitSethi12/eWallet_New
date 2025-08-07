@@ -117,12 +117,6 @@ export default function Dashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col min-h-0 space-y-4">
-                    {/* Live Market Prices */}
-                    <div className="w-full">
-                      <h3 className="text-lg font-bold mb-4 text-gray-900">Live Market Prices</h3>
-                      <HorizontalPriceTicker />
-                    </div>
-
                     {/* Tokens Section */}
                     <div className="flex-1 min-h-0">
                       <h3 className="text-lg font-bold mb-4 text-gray-900">Tokens</h3>
