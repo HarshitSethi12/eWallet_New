@@ -139,6 +139,47 @@ export function registerRoutes(app: Application) {
     }
   });
 
+  // MetaMask authentication endpoint
+  router.post('/api/auth/metamask', async (req, res) => {
+    try {
+      const { message, signature, address } = req.body;
+      
+      // Validate required fields
+      if (!message || !signature || !address) {
+        return res.status(400).json({ error: 'Missing required fields: message, signature, and address' });
+      }
+
+      // Validate address format (basic Ethereum address validation)
+      if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+        return res.status(400).json({ error: 'Invalid Ethereum address format' });
+      }
+
+      // In a real implementation, you would verify the signature here
+      // For now, we'll create a mock user session
+      const metamaskUser = {
+        id: `metamask_${address}`,
+        walletAddress: address,
+        name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+        provider: 'metamask',
+        picture: null
+      };
+
+      // Store user in session (assuming you have session middleware)
+      if (req.session) {
+        req.session.user = metamaskUser;
+      }
+
+      res.json({
+        success: true,
+        user: metamaskUser,
+        message: 'MetaMask authentication successful'
+      });
+    } catch (error) {
+      console.error('MetaMask authentication error:', error);
+      res.status(500).json({ error: 'MetaMask authentication failed' });
+    }
+  });
+
   app.use(router);
   
   // Create and return the HTTP server
