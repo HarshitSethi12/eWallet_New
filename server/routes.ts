@@ -1,6 +1,7 @@
 
 import { Router } from "express";
 import type { Application } from "express";
+import { createServer } from "http";
 
 export function registerRoutes(app: Application) {
   const router = Router();
@@ -139,4 +140,8 @@ export function registerRoutes(app: Application) {
   });
 
   app.use(router);
+  
+  // Create and return the HTTP server
+  const server = createServer(app);
+  return server;
 }
