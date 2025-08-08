@@ -84,36 +84,6 @@ export default function Dashboard() {
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2 sm:gap-3">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="flex items-center gap-2"
-                          onClick={() => window.location.href = "/send"}
-                        >
-                          <Send className="h-4 w-4" />
-                          Send
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="flex items-center gap-2"
-                          onClick={() => window.location.href = "/receive"}
-                        >
-                          <ArrowDownLeft className="h-4 w-4" />
-                          Receive
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={logout}
-                          disabled={isLoggingOut}
-                          className="flex items-center gap-2"
-                        >
-                          <LogOut className="h-4 w-4" />
-                          {isLoggingOut ? "Signing out..." : "Sign Out"}
-                        </Button>
-                      </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col min-h-0 space-y-4">
