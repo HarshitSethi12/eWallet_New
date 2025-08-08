@@ -117,47 +117,98 @@ export default function Dashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col min-h-0 space-y-4">
-                    {/* Overview Section */}
-                    <div className="flex-shrink-0">
-                      <h3 className="text-lg font-bold mb-4 text-gray-900">Overview</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-600">Total Balance</p>
-                          <p className="text-xl font-bold text-gray-900">$0.00</p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-600">Available</p>
-                          <p className="text-xl font-bold text-gray-900">$0.00</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tokens Section */}
-                    <div className="flex-1 min-h-0">
-                      <h3 className="text-lg font-bold mb-4 text-gray-900">Tokens</h3>
-                      <div className="h-full overflow-y-auto">
-                        {wallets?.length === 0 ? (
-                          <div className="text-center py-8 sm:py-12">
-                            <WalletIcon className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-500 text-sm sm:text-base">No tokens found</p>
-                            <p className="text-xs text-gray-400 mt-1">Connect your wallet to see your tokens</p>
+                    {/* Three Horizontal Sections Layout */}
+                    <div className="flex-1 flex flex-col gap-6 min-h-0">
+                      
+                      {/* 1. Portfolio Section */}
+                      <div className="flex-shrink-0 bg-white border rounded-lg p-4">
+                        <h3 className="text-lg font-bold mb-4 text-gray-900">Portfolio</h3>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <p className="text-sm text-gray-600">Total Balance</p>
+                            <p className="text-xl font-bold text-gray-900">$0.00</p>
                           </div>
-                        ) : (
-                          <div className="grid gap-4 sm:gap-6">
-                            {wallets?.map((wallet: Wallet) => (
-                              <AddressCard key={wallet.id} wallet={wallet} />
-                            ))}
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <p className="text-sm text-gray-600">Available</p>
+                            <p className="text-xl font-bold text-gray-900">$0.00</p>
                           </div>
-                        )}
+                        </div>
+                        {/* User's owned tokens */}
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-500 font-medium">Your Tokens:</p>
+                          <div className="max-h-32 overflow-y-auto">
+                            {wallets?.length === 0 ? (
+                              <div className="text-center py-4">
+                                <WalletIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                <p className="text-gray-500 text-sm">No tokens owned</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {wallets?.map((wallet: Wallet) => (
+                                  <div key={wallet.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                    <span className="text-sm font-medium">BTC</span>
+                                    <span className="text-sm text-gray-600">0.00 BTC</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Recent Transactions */}
-                    <div className="flex-shrink-0">
-                      <h3 className="text-lg font-bold mb-4 text-gray-900">Recent Transactions</h3>
-                      <div className="max-h-48 overflow-y-auto">
-                        <TransactionList transactions={transactions || []} />
+                      {/* 2. All Tokens Section (1inch Integration) */}
+                      <div className="flex-1 min-h-0 bg-white border rounded-lg p-4">
+                        <h3 className="text-lg font-bold mb-4 text-gray-900">Tokens</h3>
+                        <div className="h-full overflow-y-auto">
+                          <div className="space-y-2">
+                            <p className="text-sm text-gray-500 mb-3">Available tokens from 1inch:</p>
+                            {/* Placeholder for 1inch token list */}
+                            <div className="space-y-2">
+                              {/* Mock 1inch token data */}
+                              {[
+                                { symbol: 'ETH', name: 'Ethereum', price: '$3,200.00' },
+                                { symbol: 'USDC', name: 'USD Coin', price: '$1.00' },
+                                { symbol: 'USDT', name: 'Tether', price: '$1.00' },
+                                { symbol: '1INCH', name: '1inch', price: '$0.45' },
+                                { symbol: 'DAI', name: 'Dai', price: '$1.00' },
+                                { symbol: 'WBTC', name: 'Wrapped Bitcoin', price: '$67,000.00' },
+                              ].map((token, index) => (
+                                <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                      <span className="text-xs font-semibold text-gray-600">
+                                        {token.symbol.slice(0, 2)}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold text-sm">{token.symbol}</p>
+                                      <p className="text-xs text-gray-500">{token.name}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-semibold text-sm">{token.price}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       </div>
+
+                      {/* 3. Recent Transactions Section */}
+                      <div className="flex-shrink-0 bg-white border rounded-lg p-4">
+                        <h3 className="text-lg font-bold mb-4 text-gray-900">Recent Transactions</h3>
+                        <div className="max-h-48 overflow-y-auto">
+                          {transactions?.length === 0 ? (
+                            <div className="text-center py-4">
+                              <div className="text-gray-500 text-sm">No recent transactions</div>
+                            </div>
+                          ) : (
+                            <TransactionList transactions={transactions || []} />
+                          )}
+                        </div>
+                      </div>
+
                     </div>
                   </CardContent>
                 </Card>
