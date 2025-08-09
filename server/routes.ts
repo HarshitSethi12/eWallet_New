@@ -13,7 +13,7 @@ export function registerRoutes(app: Application) {
       const chainId = 1; // Ethereum mainnet
       const tokensResponse = await fetch(`https://api.1inch.dev/token/v1.2/${chainId}/search/trending?limit=20`, {
         headers: {
-          'Authorization': 'Bearer YOUR_1INCH_API_KEY', // You'll need to add this to secrets
+          'Authorization': `Bearer ${process.env.ONEINCH_API_KEY}`,
           'Accept': 'application/json'
         }
       });
