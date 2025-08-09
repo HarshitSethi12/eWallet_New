@@ -33,7 +33,11 @@ const mockTransactions = [
 ];
 
 function WalletTabs() {
-  const totalPortfolioValue = mockTokens.reduce((sum, token) => sum + token.balanceUSD, 0);
+  // Placeholder for actual token data fetched from 1inch API
+  // In a real implementation, this would be replaced by useQuery hook
+  const portfolioTokens = mockTokens; 
+
+  const totalPortfolioValue = portfolioTokens.reduce((sum, token) => sum + token.balanceUSD, 0);
   const initialInvestment = 8500; // Mock initial investment
   const portfolioChange = ((totalPortfolioValue - initialInvestment) / initialInvestment) * 100;
 
@@ -100,7 +104,7 @@ function WalletTabs() {
                 <CardContent className="p-3">
                   <div className="space-y-1">
                     <p className="text-xs text-gray-500">Total Tokens</p>
-                    <p className="text-lg font-semibold">{mockTokens.length}</p>
+                    <p className="text-lg font-semibold">{portfolioTokens.length}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -112,7 +116,7 @@ function WalletTabs() {
                 <CardTitle className="text-sm font-semibold text-amber-700">Top Holdings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {mockTokens.slice(0, 3).map((token, index) => (
+                {portfolioTokens.slice(0, 3).map((token, index) => (
                   <div key={token.symbol} className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-2">
                       <img src={token.logoURI} alt={token.name} className="w-6 h-6 rounded-full" />
@@ -138,7 +142,7 @@ function WalletTabs() {
               <CardTitle className="text-sm font-semibold text-amber-700">Your Token Portfolio</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {mockTokens.map((token) => (
+              {portfolioTokens.map((token) => (
                 <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />
@@ -175,7 +179,7 @@ function WalletTabs() {
               <CardTitle className="text-sm font-semibold text-amber-700">Token Prices</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {mockTokens.map((token) => (
+              {portfolioTokens.map((token) => (
                 <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />

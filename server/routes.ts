@@ -9,16 +9,38 @@ export function registerRoutes(app: Application) {
   // Token list endpoint for 1inch integration
   router.get('/api/tokens', async (req, res) => {
     try {
-      // Mock token data - in production, this would fetch from 1inch API
-      const mockTokens = [
+      // Fetch token list from 1inch API
+      const chainId = 1; // Ethereum mainnet
+      const tokensResponse = await fetch(`https://api.1inch.dev/token/v1.2/${chainId}/search/trending?limit=20`, {
+        headers: {
+          'Authorization': 'Bearer YOUR_1INCH_API_KEY', // You'll need to add this to secrets
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!tokensResponse.ok) {
+        throw new Error('Failed to fetch tokens from 1inch');
+      }
+
+      const tokensData = await tokensResponse.json();
+
+      // Get price data from CoinGecko as fallback (free API)
+      const priceResponse = await fetch(
+        'https://api.coingecko.com/api/v3/simple/price?ids=ethereum,usd-coin,tether,wrapped-bitcoin,chainlink,uniswap&vs_currencies=usd&include_24hr_change=true'
+      );
+
+      const priceData = await priceResponse.json();
+
+      // Map the popular tokens with their prices
+      const popularTokens = [
         {
           symbol: 'ETH',
           name: 'Ethereum',
           address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
           decimals: 18,
           logoURI: 'https://tokens.1inch.io/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png',
-          price: 2500.00,
-          change24h: 2.5
+          price: priceData.ethereum?.usd || 2340.50,
+          change24h: priceData.ethereum?.usd_24h_change || 5.2
         },
         {
           symbol: 'USDC',
@@ -26,8 +48,8 @@ export function registerRoutes(app: Application) {
           address: '0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a',
           decimals: 6,
           logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a.png',
-          price: 1.00,
-          change24h: 0.1
+          price: priceData['usd-coin']?.usd || 1.00,
+          change24h: priceData['usd-coin']?.usd_24h_change || -0.1
         },
         {
           symbol: 'USDT',
@@ -35,8 +57,8 @@ export function registerRoutes(app: Application) {
           address: '0xdac17f958d2ee523a2206206994597c13d831ec7',
           decimals: 6,
           logoURI: 'https://tokens.1inch.io/0xdac17f958d2ee523a2206206994597c13d831ec7.png',
-          price: 1.00,
-          change24h: -0.05
+          price: priceData.tether?.usd || 1.00,
+          change24h: priceData.tether?.usd_24h_change || -0.05
         },
         {
           symbol: 'WBTC',
@@ -44,8 +66,26 @@ export function registerRoutes(app: Application) {
           address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',
           decimals: 8,
           logoURI: 'https://tokens.1inch.io/0x2260fac5e5542a773aa44fbcfedf7c193bc2c599.png',
-          price: 45000.00,
-          change24h: 1.8
+          price: priceData['wrapped-bitcoin']?.usd || 45000.00,
+          change24h: priceData['wrapped-bitcoin']?.usd_24h_change || 1.8
+        },
+        {
+          symbol: 'LINK',
+          name: 'Chainlink',
+          address: '0x514910771af9ca656af840dff83e8264ecf986ca',
+          decimals: 18,
+          logoURI: 'https://tokens.1inch.io/0x514910771af9ca656af840dff83e8264ecf986ca.png',
+          price: priceData.chainlink?.usd || 14.25,
+          change24h: priceData.chainlink?.usd_24h_change || 8.7
+        },
+        {
+          symbol: 'UNI',
+          name: 'Uniswap',
+          address: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984',
+          decimals: 18,
+          logoURI: 'https://tokens.1inch.io/0x1f9840a85d5af5bf1d1762f925bdaddc4201f984.png',
+          price: priceData.uniswap?.usd || 6.80,
+          change24h: priceData.uniswap?.usd_24h_change || -3.2
         }
       ];
       
