@@ -40,26 +40,28 @@ function WalletTabs() {
 
   return (
     <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0 h-full">
-      <TabsList className="grid w-full grid-cols-4 mx-3 mt-3 mb-2 flex-shrink-0">
-        <TabsTrigger value="overview" className="flex items-center gap-1 text-xs px-2 py-1.5">
-          <Eye className="h-3 w-3" />
-          Overview
-        </TabsTrigger>
-        <TabsTrigger value="portfolio" className="flex items-center gap-1 text-xs px-2 py-1.5">
-          <BarChart3 className="h-3 w-3" />
-          Portfolio
-        </TabsTrigger>
-        <TabsTrigger value="tokens" className="flex items-center gap-1 text-xs px-2 py-1.5">
-          <Coins className="h-3 w-3" />
-          Tokens
-        </TabsTrigger>
-        <TabsTrigger value="transactions" className="flex items-center gap-1 text-xs px-2 py-1.5">
-          <Clock className="h-3 w-3" />
-          Transactions
-        </TabsTrigger>
-      </TabsList>
+      <div className="px-3 pt-3 pb-2 flex-shrink-0">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview" className="flex items-center gap-1 text-xs px-2 py-1.5">
+            <Eye className="h-3 w-3" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="portfolio" className="flex items-center gap-1 text-xs px-2 py-1.5">
+            <BarChart3 className="h-3 w-3" />
+            Portfolio
+          </TabsTrigger>
+          <TabsTrigger value="tokens" className="flex items-center gap-1 text-xs px-2 py-1.5">
+            <Coins className="h-3 w-3" />
+            Tokens
+          </TabsTrigger>
+          <TabsTrigger value="transactions" className="flex items-center gap-1 text-xs px-2 py-1.5">
+            <Clock className="h-3 w-3" />
+            Transactions
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
-      <div className="flex-1 min-h-0 px-3 pb-3 overflow-hidden">
+      <div className="flex-1 min-h-0 px-3 pb-3 overflow-hidden"></div>
         <TabsContent value="overview" className="h-full m-0 overflow-y-auto">
           <div className="space-y-3">
             {/* Portfolio Summary */}
