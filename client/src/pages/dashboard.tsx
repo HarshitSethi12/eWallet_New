@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -61,7 +60,7 @@ function WalletTabs() {
         </TabsList>
       </div>
 
-      <div className="flex-1 min-h-0 px-3 pb-3 overflow-hidden"></div>
+      <div className="flex-1 min-h-0 px-3 pb-3 overflow-hidden">
         <TabsContent value="overview" className="h-full m-0 overflow-y-auto">
           <div className="space-y-3">
             {/* Portfolio Summary */}
@@ -149,7 +148,7 @@ function WalletTabs() {
                       <p className="text-xs text-gray-400">{token.balance} {token.symbol}</p>
                     </div>
                   </div>
-                  
+
                   <div className="text-right">
                     <p className="text-sm font-semibold">${token.balanceUSD.toFixed(2)}</p>
                     <p className="text-xs text-gray-500">${token.price.toFixed(2)} per {token.symbol}</p>
@@ -185,7 +184,7 @@ function WalletTabs() {
                       <p className="text-xs text-gray-500">{token.name}</p>
                     </div>
                   </div>
-                  
+
                   <div className="text-right">
                     <p className="text-sm font-semibold">${token.price.toFixed(2)}</p>
                     <Badge variant={token.change24h >= 0 ? "default" : "destructive"} className="text-xs">
@@ -233,7 +232,7 @@ function WalletTabs() {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="text-right">
                     <p className={`text-sm font-semibold ${
                       tx.type === 'receive' ? 'text-green-600' : 
