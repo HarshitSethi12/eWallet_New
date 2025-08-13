@@ -131,8 +131,8 @@ function WalletTabs() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold">${token.balanceUSD.toFixed(2)}</p>
-                      <p className="text-xs text-gray-500">{((token.balanceUSD / totalPortfolioValue) * 100).toFixed(1)}%</p>
+                      <p className="text-sm font-semibold">${(token.balanceUSD || 0).toFixed(2)}</p>
+                      <p className="text-xs text-gray-500">{(((token.balanceUSD || 0) / totalPortfolioValue) * 100).toFixed(1)}%</p>
                     </div>
                   </div>
                 ))}
@@ -179,16 +179,16 @@ function WalletTabs() {
                   </div>
 
                   <div className="text-right">
-                    <p className="text-sm font-semibold">${token.balanceUSD.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">${token.price.toFixed(2)} per {token.symbol}</p>
+                    <p className="text-sm font-semibold">${(token.balanceUSD || 0).toFixed(2)}</p>
+                    <p className="text-xs text-gray-500">${(token.price || 0).toFixed(2)} per {token.symbol}</p>
                     <div className="flex items-center gap-1 justify-end">
-                      {token.change24h >= 0 ? (
+                      {(token.change24h || 0) >= 0 ? (
                         <TrendingUp className="h-2 w-2 text-green-600" />
                       ) : (
                         <TrendingDown className="h-2 w-2 text-red-600" />
                       )}
-                      <span className={`text-xs ${token.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {token.change24h >= 0 ? '+' : ''}{token.change24h.toFixed(2)}%
+                      <span className={`text-xs ${(token.change24h || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {(token.change24h || 0) >= 0 ? '+' : ''}{(token.change24h || 0).toFixed(2)}%
                       </span>
                     </div>
                   </div>
@@ -240,14 +240,14 @@ function WalletTabs() {
                   </div>
 
                   <div className="text-right">
-                    <p className="text-sm font-semibold">${token.price.toFixed(2)}</p>
-                    <Badge variant={token.change24h >= 0 ? "default" : "destructive"} className="text-xs">
-                      {token.change24h >= 0 ? (
+                    <p className="text-sm font-semibold">${(token.price || 0).toFixed(2)}</p>
+                    <Badge variant={(token.change24h || 0) >= 0 ? "default" : "destructive"} className="text-xs">
+                      {(token.change24h || 0) >= 0 ? (
                         <TrendingUp className="h-2 w-2 mr-1" />
                       ) : (
                         <TrendingDown className="h-2 w-2 mr-1" />
                       )}
-                      {Math.abs(token.change24h).toFixed(2)}%
+                      {Math.abs(token.change24h || 0).toFixed(2)}%
                     </Badge>
                   </div>
                 </div>
