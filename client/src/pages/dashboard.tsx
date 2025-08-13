@@ -33,9 +33,14 @@ const mockTransactions = [
 ];
 
 function WalletTabs() {
-  // Placeholder for actual token data fetched from 1inch API
-  // In a real implementation, this would be replaced by useQuery hook
-  const portfolioTokens = mockTokens; 
+  // Fetch real token data from API (uses 1inch API if available, falls back to CoinGecko)
+  const { data: tokenData, isLoading: tokensLoading, error: tokensError } = useQuery({
+    queryKey: ["/api/tokens"],
+    queryFn: () => apiRequest("/api/tokens"),
+  });
+
+  // Use real data when available, fallback to mock data during loading
+  const portfolioTokens = tokenData?.tokens || mockTokens; 
 
   const totalPortfolioValue = portfolioTokens.reduce((sum, token) => sum + token.balanceUSD, 0);
   const initialInvestment = 8500; // Mock initial investment
@@ -142,7 +147,27 @@ function WalletTabs() {
               <CardTitle className="text-sm font-semibold text-amber-700">Your Token Portfolio</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {portfolioTokens.map((token) => (
+              {tokensLoading ? (
+                <div className="space-y-3">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg animate-pulse">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                        <div className="space-y-1">
+                          <div className="w-12 h-3 bg-gray-200 rounded"></div>
+                          <div className="w-20 h-3 bg-gray-200 rounded"></div>
+                          <div className="w-16 h-2 bg-gray-200 rounded"></div>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="w-20 h-3 bg-gray-200 rounded"></div>
+                        <div className="w-16 h-3 bg-gray-200 rounded"></div>
+                        <div className="w-12 h-2 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : portfolioTokens.map((token) => (
                 <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />
@@ -176,10 +201,35 @@ function WalletTabs() {
         <TabsContent value="tokens" className="h-full m-0 overflow-y-auto">
           <Card className="border-gray-200">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-amber-700">Token Prices</CardTitle>
+              <CardTitle className="text-sm font-semibold text-amber-700 flex items-center justify-between">
+                Token Prices
+                {tokenData?.source && (
+                  <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    {tokenData.source === '1inch' ? '1inch API' : 'CoinGecko'}
+                  </span>
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {portfolioTokens.map((token) => (
+              {tokensLoading ? (
+                <div className="space-y-2">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg animate-pulse">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                        <div className="space-y-1">
+                          <div className="w-12 h-3 bg-gray-200 rounded"></div>
+                          <div className="w-20 h-2 bg-gray-200 rounded"></div>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="w-16 h-3 bg-gray-200 rounded"></div>
+                        <div className="w-12 h-2 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : portfolioTokens.map((token) => (
                 <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />
