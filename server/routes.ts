@@ -13,7 +13,7 @@ export function registerRoutes(app: Application) {
       // Define tokens we want to fetch prices for with correct mainnet addresses
       const tokens = [
         { symbol: 'ETH', name: 'Ethereum', address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', balance: '2.5', logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' },
-        { symbol: 'USDC', name: 'USD Coin', address: '0xa0b86a33e6441e8e42f7b6781ed5c7b33b5ae077', balance: '1000', logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png' },
+        { symbol: 'USDC', name: 'USD Coin', address: '0xa0b86a33e6441e8c18d94ec8e42a99f0ba44683a', balance: '1000', logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png' },
         { symbol: 'USDT', name: 'Tether USD', address: '0xdac17f958d2ee523a2206206994597c13d831ec7', balance: '500', logoURI: 'https://assets.coingecko.com/coins/images/325/small/Tether.png' },
         { symbol: 'WBTC', name: 'Wrapped Bitcoin', address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', balance: '0.1', logoURI: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png' },
         { symbol: 'LINK', name: 'Chainlink', address: '0x514910771af9ca656af840dff83e8264ecf986ca', balance: '150', logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png' }
@@ -22,101 +22,103 @@ export function registerRoutes(app: Application) {
       let priceData = {};
       let dataSource = 'fallback';
 
-      // Always start with CoinGecko as it's more reliable for price data
+      // Try 1inch API first as priority
       try {
-        console.log('🔄 Fetching from CoinGecko...');
-        const coinIds = 'ethereum,usd-coin,tether,wrapped-bitcoin,chainlink';
-        const cgUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds}&vs_currencies=usd&include_24hr_change=true`;
+        console.log('🔄 Trying 1inch API as primary source...');
+        const apiKey = process.env.ONEINCH_API_KEY;
 
-        const response = await fetch(cgUrl, {
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'BitWallet/1.0'
-          }
-        });
+        if (apiKey) {
+          const tokenAddresses = tokens.map(t => t.address).join(',');
+          const oneInchUrl = `https://api.1inch.dev/price/v1.1/1/${tokenAddresses}`;
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('✅ CoinGecko API data received');
+          console.log('📡 1inch API URL:', oneInchUrl);
 
-          // Map CoinGecko IDs to our token symbols
-          const coinGeckoMap = {
-            'ethereum': 'eth',
-            'usd-coin': 'usdc',
-            'tether': 'usdt',
-            'wrapped-bitcoin': 'wbtc',
-            'chainlink': 'link'
-          };
-
-          priceData = {};
-          for (const [coinId, tokenData] of Object.entries(data)) {
-            const symbol = coinGeckoMap[coinId];
-            if (symbol && tokenData && typeof tokenData.usd === 'number') {
-              priceData[symbol] = {
-                usd: tokenData.usd,
-                usd_24h_change: tokenData.usd_24h_change || 0
-              };
+          const response = await fetch(oneInchUrl, {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Accept': 'application/json'
             }
-          }
-          dataSource = 'coingecko';
-          console.log('✅ Using CoinGecko data');
-        } else {
-          console.log('❌ CoinGecko failed with status:', response.status);
-        }
-      } catch (error) {
-        console.error('❌ CoinGecko error:', error.message);
-      }
+          });
 
-      // Try 1inch API as backup/supplement
-      if (Object.keys(priceData).length < tokens.length) {
-        try {
-          console.log('🔄 Trying 1inch API as supplement...');
-          const apiKey = process.env.ONEINCH_API_KEY;
+          console.log('📊 1inch Response status:', response.status);
 
-          if (apiKey) {
-            const tokenAddresses = tokens.map(t => t.address).join(',');
-            const oneInchUrl = `https://api.1inch.dev/price/v1.1/1/${tokenAddresses}`;
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ 1inch API data received:', Object.keys(data).length, 'tokens');
+            console.log('📋 Raw 1inch data:', data);
 
-            console.log('📡 1inch API URL:', oneInchUrl);
-
-            const response = await fetch(oneInchUrl, {
-              headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Accept': 'application/json'
+            // Process 1inch data
+            priceData = {};
+            for (const [address, price] of Object.entries(data)) {
+              const token = tokens.find(t => t.address.toLowerCase() === address.toLowerCase());
+              if (token && typeof price === 'number') {
+                priceData[token.symbol.toLowerCase()] = {
+                  usd: price,
+                  usd_24h_change: 0 // 1inch doesn't provide 24h change
+                };
+                console.log(`📈 Added ${token.symbol} price from 1inch: $${price}`);
               }
-            });
-
-            console.log('📊 1inch Response status:', response.status);
-
-            if (response.ok) {
-              const data = await response.json();
-              console.log('✅ 1inch API data received:', Object.keys(data).length, 'tokens');
-
-              // Fill in missing prices from 1inch
-              for (const [address, price] of Object.entries(data)) {
-                const token = tokens.find(t => t.address.toLowerCase() === address.toLowerCase());
-                if (token && typeof price === 'number' && !priceData[token.symbol.toLowerCase()]) {
-                  priceData[token.symbol.toLowerCase()] = {
-                    usd: price,
-                    usd_24h_change: 0
-                  };
-                  console.log(`📈 Added ${token.symbol} price from 1inch: $${price}`);
-                }
-              }
-
-              if (dataSource === 'coingecko') {
-                dataSource = 'coingecko+1inch';
-              } else {
-                dataSource = '1inch';
-              }
-            } else {
-              console.log('❌ 1inch API failed with status:', response.status);
+            }
+            
+            if (Object.keys(priceData).length > 0) {
+              dataSource = '1inch';
+              console.log('✅ Using 1inch as primary data source');
             }
           } else {
-            console.log('⚠️ No 1inch API key found');
+            const errorText = await response.text();
+            console.log('❌ 1inch API failed with status:', response.status, 'Error:', errorText);
+          }
+        } else {
+          console.log('⚠️ No 1inch API key found in environment variables');
+        }
+      } catch (error) {
+        console.error('❌ 1inch API error:', error.message);
+      }
+
+      // Use CoinGecko as fallback only if 1inch failed
+      if (Object.keys(priceData).length === 0) {
+        try {
+          console.log('🔄 Falling back to CoinGecko...');
+          const coinIds = 'ethereum,usd-coin,tether,wrapped-bitcoin,chainlink';
+          const cgUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds}&vs_currencies=usd&include_24hr_change=true`;
+
+          const response = await fetch(cgUrl, {
+            headers: {
+              'Accept': 'application/json',
+              'User-Agent': 'BitWallet/1.0'
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ CoinGecko API data received (fallback)');
+
+            // Map CoinGecko IDs to our token symbols
+            const coinGeckoMap = {
+              'ethereum': 'eth',
+              'usd-coin': 'usdc',
+              'tether': 'usdt',
+              'wrapped-bitcoin': 'wbtc',
+              'chainlink': 'link'
+            };
+
+            priceData = {};
+            for (const [coinId, tokenData] of Object.entries(data)) {
+              const symbol = coinGeckoMap[coinId];
+              if (symbol && tokenData && typeof tokenData.usd === 'number') {
+                priceData[symbol] = {
+                  usd: tokenData.usd,
+                  usd_24h_change: tokenData.usd_24h_change || 0
+                };
+              }
+            }
+            dataSource = 'coingecko';
+            console.log('✅ Using CoinGecko as fallback');
+          } else {
+            console.log('❌ CoinGecko fallback failed with status:', response.status);
           }
         } catch (error) {
-          console.error('❌ 1inch API error:', error.message);
+          console.error('❌ CoinGecko fallback error:', error.message);
         }
       }
 
