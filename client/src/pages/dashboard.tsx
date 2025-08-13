@@ -37,6 +37,12 @@ function WalletTabs() {
   const { data: tokenData, isLoading: tokensLoading, error: tokensError } = useQuery({
     queryKey: ["/api/tokens"],
     queryFn: () => apiRequest("/api/tokens"),
+    refetchInterval: 30000,
+    onSuccess: (data) => {
+      console.log('🎯 Token data received:', data);
+      console.log('🎯 Data source:', data?.source);
+      console.log('🎯 Sample token:', data?.tokens?.[0]);
+    }
   });
 
   // Use real data when available, fallback to mock data during loading
