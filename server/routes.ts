@@ -9,87 +9,124 @@ export function registerRoutes(app: Application) {
   // Token list endpoint for 1inch integration
   router.get('/api/tokens', async (req, res) => {
     try {
-      // Fetch token list from 1inch API
-      const chainId = 1; // Ethereum mainnet
-      const tokensResponse = await fetch(`https://api.1inch.dev/token/v1.2/${chainId}/search/trending?limit=20`, {
-        headers: {
-          'Authorization': `Bearer ${process.env.ONEINCH_API_KEY}`,
-          'Accept': 'application/json'
-        }
-      });
+      // First try to get token data from 1inch API if API key is available
+      let tokenPrices = {};
+      
+      if (process.env.ONEINCH_API_KEY) {
+        try {
+          const chainId = 1; // Ethereum mainnet
+          const oneInchResponse = await fetch(`https://api.1inch.dev/price/v1.1/${chainId}`, {
+            headers: {
+              'Authorization': `Bearer ${process.env.ONEINCH_API_KEY}`,
+              'Accept': 'application/json'
+            }
+          });
 
-      if (!tokensResponse.ok) {
-        throw new Error('Failed to fetch tokens from 1inch');
+          if (oneInchResponse.ok) {
+            tokenPrices = await oneInchResponse.json();
+            console.log('✅ Using 1inch API for token prices');
+          }
+        } catch (error) {
+          console.warn('⚠️ 1inch API failed, falling back to CoinGecko:', error.message);
+        }
       }
 
-      const tokensData = await tokensResponse.json();
+      // Fallback to CoinGecko for price data
+      let priceData = {};
+      if (Object.keys(tokenPrices).length === 0) {
+        try {
+          const priceResponse = await fetch(
+            'https://api.coingecko.com/api/v3/simple/price?ids=ethereum,usd-coin,tether,wrapped-bitcoin,chainlink,uniswap,bitcoin&vs_currencies=usd&include_24hr_change=true'
+          );
+          priceData = await priceResponse.json();
+          console.log('✅ Using CoinGecko API for token prices');
+        } catch (error) {
+          console.error('❌ Both APIs failed:', error);
+        }
+      }
 
-      // Get price data from CoinGecko as fallback (free API)
-      const priceResponse = await fetch(
-        'https://api.coingecko.com/api/v3/simple/price?ids=ethereum,usd-coin,tether,wrapped-bitcoin,chainlink,uniswap&vs_currencies=usd&include_24hr_change=true'
-      );
+      // Token addresses for 1inch price lookup
+      const ETH_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      const USDC_ADDRESS = '0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a';
+      const USDT_ADDRESS = '0xdac17f958d2ee523a2206206994597c13d831ec7';
+      const WBTC_ADDRESS = '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599';
+      const LINK_ADDRESS = '0x514910771af9ca656af840dff83e8264ecf986ca';
+      const UNI_ADDRESS = '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984';
 
-      const priceData = await priceResponse.json();
+      // Helper function to get price from 1inch or fallback to CoinGecko
+      const getTokenPrice = (address, coinGeckoId, fallbackPrice) => {
+        if (tokenPrices[address]) {
+          return parseFloat(tokenPrices[address]) / Math.pow(10, 18); // Convert from wei if needed
+        }
+        return priceData[coinGeckoId]?.usd || fallbackPrice;
+      };
+
+      const getTokenChange = (coinGeckoId, fallbackChange) => {
+        return priceData[coinGeckoId]?.usd_24h_change || fallbackChange;
+      };
 
       // Map the popular tokens with their prices
       const popularTokens = [
         {
           symbol: 'ETH',
           name: 'Ethereum',
-          address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+          address: ETH_ADDRESS,
           decimals: 18,
           logoURI: 'https://tokens.1inch.io/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png',
-          price: priceData.ethereum?.usd || 2340.50,
-          change24h: priceData.ethereum?.usd_24h_change || 5.2
+          price: getTokenPrice(ETH_ADDRESS, 'ethereum', 2340.50),
+          change24h: getTokenChange('ethereum', 5.2)
         },
         {
           symbol: 'USDC',
           name: 'USD Coin',
-          address: '0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a',
+          address: USDC_ADDRESS,
           decimals: 6,
           logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a.png',
-          price: priceData['usd-coin']?.usd || 1.00,
-          change24h: priceData['usd-coin']?.usd_24h_change || -0.1
+          price: getTokenPrice(USDC_ADDRESS, 'usd-coin', 1.00),
+          change24h: getTokenChange('usd-coin', -0.1)
         },
         {
           symbol: 'USDT',
           name: 'Tether USD',
-          address: '0xdac17f958d2ee523a2206206994597c13d831ec7',
+          address: USDT_ADDRESS,
           decimals: 6,
           logoURI: 'https://tokens.1inch.io/0xdac17f958d2ee523a2206206994597c13d831ec7.png',
-          price: priceData.tether?.usd || 1.00,
-          change24h: priceData.tether?.usd_24h_change || -0.05
+          price: getTokenPrice(USDT_ADDRESS, 'tether', 1.00),
+          change24h: getTokenChange('tether', -0.05)
         },
         {
           symbol: 'WBTC',
           name: 'Wrapped Bitcoin',
-          address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',
+          address: WBTC_ADDRESS,
           decimals: 8,
           logoURI: 'https://tokens.1inch.io/0x2260fac5e5542a773aa44fbcfedf7c193bc2c599.png',
-          price: priceData['wrapped-bitcoin']?.usd || 45000.00,
-          change24h: priceData['wrapped-bitcoin']?.usd_24h_change || 1.8
+          price: getTokenPrice(WBTC_ADDRESS, 'wrapped-bitcoin', 45000.00),
+          change24h: getTokenChange('wrapped-bitcoin', 1.8)
         },
         {
           symbol: 'LINK',
           name: 'Chainlink',
-          address: '0x514910771af9ca656af840dff83e8264ecf986ca',
+          address: LINK_ADDRESS,
           decimals: 18,
           logoURI: 'https://tokens.1inch.io/0x514910771af9ca656af840dff83e8264ecf986ca.png',
-          price: priceData.chainlink?.usd || 14.25,
-          change24h: priceData.chainlink?.usd_24h_change || 8.7
+          price: getTokenPrice(LINK_ADDRESS, 'chainlink', 14.25),
+          change24h: getTokenChange('chainlink', 8.7)
         },
         {
           symbol: 'UNI',
           name: 'Uniswap',
-          address: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984',
+          address: UNI_ADDRESS,
           decimals: 18,
           logoURI: 'https://tokens.1inch.io/0x1f9840a85d5af5bf1d1762f925bdaddc4201f984.png',
-          price: priceData.uniswap?.usd || 6.80,
-          change24h: priceData.uniswap?.usd_24h_change || -3.2
+          price: getTokenPrice(UNI_ADDRESS, 'uniswap', 6.80),
+          change24h: getTokenChange('uniswap', -3.2)
         }
       ];
       
-      res.json({ tokens: mockTokens });
+      res.json({ 
+        tokens: popularTokens,
+        source: Object.keys(tokenPrices).length > 0 ? '1inch' : 'coingecko'
+      });
     } catch (error) {
       console.error('Error fetching tokens:', error);
       res.status(500).json({ error: 'Failed to fetch tokens' });
