@@ -30,71 +30,57 @@ export function registerRoutes(app: Application) {
         console.log('🔑 API Key length:', apiKey ? apiKey.length : 0);
 
         if (apiKey) {
-          // Use the correct 1inch API endpoint for token prices
-          const oneInchUrl = `https://api.1inch.dev/price/v1.1/1`;
+          // Create token address list for 1inch API
+          const tokenAddresses = tokens.map(token => token.address).join(',');
+          const oneInchUrl = `https://api.1inch.dev/price/v1.1/1/${tokenAddresses}`;
           
           console.log('📡 1inch API URL:', oneInchUrl);
+          console.log('📡 Token addresses:', tokenAddresses);
 
           const response = await fetch(oneInchUrl, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${apiKey}`,
-              'Accept': 'application/json',
-              'Content-Type': 'application/json'
+              'Accept': 'application/json'
             }
           });
 
           console.log('📊 1inch Response status:', response.status);
-          console.log('📊 1inch Response headers:', Object.fromEntries(response.headers.entries()));
 
           if (response.ok) {
             const data = await response.json();
-            console.log('✅ 1inch API raw response keys:', Object.keys(data));
-            console.log('✅ 1inch API sample data:', JSON.stringify(data).substring(0, 500));
+            console.log('✅ 1inch API response received');
+            console.log('✅ 1inch API data keys:', Object.keys(data));
 
-            // Check if we have the expected data structure
             if (data && typeof data === 'object') {
-              // Process 1inch data - different possible structures
               priceData = {};
               
-              // Try to map token addresses to prices
-              const tokenMap = {};
+              // Create mapping from address to symbol
+              const addressToSymbol = {};
               tokens.forEach(token => {
-                tokenMap[token.address.toLowerCase()] = token.symbol.toLowerCase();
+                addressToSymbol[token.address.toLowerCase()] = token.symbol.toLowerCase();
               });
 
-              // Check different possible data structures
-              if (data.prices) {
-                // If prices are nested under a 'prices' key
-                for (const [address, priceInfo] of Object.entries(data.prices)) {
-                  const symbol = tokenMap[address.toLowerCase()];
-                  if (symbol && typeof priceInfo === 'number') {
-                    priceData[symbol] = {
-                      usd: priceInfo,
-                      usd_24h_change: 0
-                    };
-                  }
-                }
-              } else {
-                // If prices are at the root level
-                for (const [address, price] of Object.entries(data)) {
-                  const symbol = tokenMap[address.toLowerCase()];
-                  if (symbol && typeof price === 'number') {
-                    priceData[symbol] = {
-                      usd: price,
-                      usd_24h_change: 0
-                    };
-                  }
+              // Process 1inch price data
+              for (const [address, priceUsd] of Object.entries(data)) {
+                const symbol = addressToSymbol[address.toLowerCase()];
+                if (symbol && typeof priceUsd === 'number') {
+                  priceData[symbol] = {
+                    usd: priceUsd,
+                    usd_24h_change: 0 // 1inch doesn't provide 24h change in this endpoint
+                  };
                 }
               }
               
-              console.log('📈 Processed 1inch prices:', Object.keys(priceData));
+              console.log('📈 Processed 1inch prices for symbols:', Object.keys(priceData));
               
               if (Object.keys(priceData).length > 0) {
                 dataSource = '1inch';
-                console.log('✅ Using 1inch as primary data source with', Object.keys(priceData).length, 'tokens');
+                console.log('✅ Successfully using 1inch API with', Object.keys(priceData).length, 'tokens');
               } else {
-                console.log('⚠️ 1inch returned data but no matching token prices found');
+                console.log('⚠️ 1inch API returned data but no matching token prices found');
+                console.log('⚠️ Available addresses in response:', Object.keys(data));
+                console.log('⚠️ Expected addresses:', Object.keys(addressToSymbol));
               }
             }
           } else {
