@@ -13,7 +13,7 @@ export function registerRoutes(app: Application) {
       // Define tokens we want to fetch prices for with correct mainnet addresses
       const tokens = [
         { symbol: 'ETH', name: 'Ethereum', address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', balance: '2.5', logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' },
-        { symbol: 'USDC', name: 'USD Coin', address: '0xa0b86a33e6441e8c18d94ec8e42a99f0ba44683a', balance: '1000', logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png' },
+        { symbol: 'USDC', name: 'USD Coin', address: '0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a', balance: '1000', logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png' },
         { symbol: 'USDT', name: 'Tether USD', address: '0xdac17f958d2ee523a2206206994597c13d831ec7', balance: '500', logoURI: 'https://assets.coingecko.com/coins/images/325/small/Tether.png' },
         { symbol: 'WBTC', name: 'Wrapped Bitcoin', address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', balance: '0.1', logoURI: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png' },
         { symbol: 'LINK', name: 'Chainlink', address: '0x514910771af9ca656af840dff83e8264ecf986ca', balance: '150', logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png' }
@@ -30,14 +30,13 @@ export function registerRoutes(app: Application) {
         console.log('🔑 API Key length:', apiKey ? apiKey.length : 0);
 
         if (apiKey) {
-          // Create token address list for 1inch API
-          const tokenAddresses = tokens.map(token => token.address).join(',');
-          const oneInchUrl = `https://api.1inch.dev/price/v1.1/1/${tokenAddresses}`;
+          // Try individual token address lookups since bulk might not work
+          const oneInchUrl = `https://api.1inch.dev/price/v1.1/1`;
           
-          console.log('📡 1inch API URL:', oneInchUrl);
-          console.log('📡 Token addresses:', tokenAddresses);
+          console.log('📡 1inch API base URL:', oneInchUrl);
 
-          const response = await fetch(oneInchUrl, {
+          // Test with ETH first
+          const ethResponse = await fetch(`${oneInchUrl}/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${apiKey}`,
@@ -45,47 +44,62 @@ export function registerRoutes(app: Application) {
             }
           });
 
-          console.log('📊 1inch Response status:', response.status);
+          console.log('📊 1inch ETH Response status:', ethResponse.status);
 
-          if (response.ok) {
-            const data = await response.json();
-            console.log('✅ 1inch API response received');
-            console.log('✅ 1inch API data keys:', Object.keys(data));
+          if (ethResponse.ok) {
+            const ethData = await ethResponse.json();
+            console.log('✅ 1inch ETH response:', ethData);
+            
+            // If ETH works, try all tokens individually
+            priceData = {};
+            
+            for (const token of tokens) {
+              try {
+                const tokenResponse = await fetch(`${oneInchUrl}/${token.address}`, {
+                  method: 'GET',
+                  headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Accept': 'application/json'
+                  }
+                });
 
-            if (data && typeof data === 'object') {
-              priceData = {};
-              
-              // Create mapping from address to symbol
-              const addressToSymbol = {};
-              tokens.forEach(token => {
-                addressToSymbol[token.address.toLowerCase()] = token.symbol.toLowerCase();
-              });
+                if (tokenResponse.ok) {
+                  const tokenData = await tokenResponse.json();
+                  console.log(`✅ Got ${token.symbol} price:`, tokenData);
+                  
+                  // Check different possible response formats
+                  let price = null;
+                  if (typeof tokenData === 'number') {
+                    price = tokenData;
+                  } else if (tokenData[token.address.toLowerCase()]) {
+                    price = tokenData[token.address.toLowerCase()];
+                  } else if (tokenData.price) {
+                    price = tokenData.price;
+                  } else if (Object.keys(tokenData).length === 1) {
+                    price = Object.values(tokenData)[0];
+                  }
 
-              // Process 1inch price data
-              for (const [address, priceUsd] of Object.entries(data)) {
-                const symbol = addressToSymbol[address.toLowerCase()];
-                if (symbol && typeof priceUsd === 'number') {
-                  priceData[symbol] = {
-                    usd: priceUsd,
-                    usd_24h_change: 0 // 1inch doesn't provide 24h change in this endpoint
-                  };
+                  if (price && typeof price === 'number') {
+                    priceData[token.symbol.toLowerCase()] = {
+                      usd: price,
+                      usd_24h_change: 0
+                    };
+                  }
+                } else {
+                  console.log(`❌ Failed to get ${token.symbol} price:`, tokenResponse.status);
                 }
-              }
-              
-              console.log('📈 Processed 1inch prices for symbols:', Object.keys(priceData));
-              
-              if (Object.keys(priceData).length > 0) {
-                dataSource = '1inch';
-                console.log('✅ Successfully using 1inch API with', Object.keys(priceData).length, 'tokens');
-              } else {
-                console.log('⚠️ 1inch API returned data but no matching token prices found');
-                console.log('⚠️ Available addresses in response:', Object.keys(data));
-                console.log('⚠️ Expected addresses:', Object.keys(addressToSymbol));
+              } catch (err) {
+                console.log(`❌ Error fetching ${token.symbol}:`, err.message);
               }
             }
+
+            if (Object.keys(priceData).length > 0) {
+              dataSource = '1inch';
+              console.log('✅ Successfully using 1inch API with', Object.keys(priceData).length, 'tokens');
+            }
           } else {
-            const errorText = await response.text();
-            console.log('❌ 1inch API failed with status:', response.status);
+            const errorText = await ethResponse.text();
+            console.log('❌ 1inch API failed with status:', ethResponse.status);
             console.log('❌ 1inch API error response:', errorText);
           }
         } else {
