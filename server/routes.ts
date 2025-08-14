@@ -27,70 +27,121 @@ export function registerRoutes(app: Application) {
         console.log('🔄 Trying 1inch API as primary source...');
         const apiKey = process.env.ONEINCH_API_KEY;
         console.log('🔑 API Key exists:', apiKey ? 'YES' : 'NO');
-        console.log('🔑 API Key length:', apiKey ? apiKey.length : 0);
+        console.log('🔑 API Key preview:', apiKey ? `${apiKey.substring(0, 8)}...` : 'N/A');
 
-        if (apiKey) {
+        if (apiKey && apiKey.trim().length > 0) {
           const oneInchUrl = `https://api.1inch.dev/price/v1.1/1`;
           console.log('📡 1inch API base URL:', oneInchUrl);
 
-          // Fetch prices for all tokens individually using the same logic as crypto-prices endpoint
-          priceData = {};
-          
-          for (const token of tokens) {
-            try {
-              const response = await fetch(`${oneInchUrl}/${token.address}`, {
-                method: 'GET',
-                headers: {
-                  'Authorization': `Bearer ${apiKey}`,
-                  'Accept': 'application/json'
-                }
-              });
+          // Try bulk price fetch first
+          const tokenAddresses = tokens.map(t => t.address).join(',');
+          console.log('📡 Fetching bulk prices for addresses:', tokenAddresses);
 
-              if (response.ok) {
-                const data = await response.json();
-                console.log(`✅ Got ${token.symbol} price response:`, data);
-                
-                let price = null;
-                
-                if (typeof data === 'number') {
-                  price = data;
-                } else if (data[token.address.toLowerCase()]) {
-                  price = data[token.address.toLowerCase()];
-                } else if (data.price) {
-                  price = data.price;
-                } else if (Object.keys(data).length === 1) {
-                  price = Object.values(data)[0];
-                }
-
-                if (price && typeof price === 'number') {
-                  priceData[token.symbol.toLowerCase()] = {
-                    usd: price,
-                    usd_24h_change: 0 // 1inch doesn't provide 24h change in this endpoint
-                  };
-                  console.log(`✅ Added ${token.symbol} price: $${price}`);
-                } else {
-                  console.log(`⚠️ Could not parse price for ${token.symbol}:`, data);
-                }
-              } else {
-                const errorText = await response.text();
-                console.log(`❌ Failed to get ${token.symbol} price. Status: ${response.status}, Error: ${errorText}`);
+          try {
+            const bulkResponse = await fetch(`${oneInchUrl}/${tokenAddresses}`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${apiKey.trim()}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
               }
-            } catch (err) {
-              console.log(`❌ Error fetching ${token.symbol}:`, err.message);
+            });
+
+            console.log('📡 Bulk response status:', bulkResponse.status);
+            console.log('📡 Bulk response headers:', Object.fromEntries(bulkResponse.headers.entries()));
+
+            if (bulkResponse.ok) {
+              const bulkData = await bulkResponse.json();
+              console.log('✅ Bulk 1inch API response:', bulkData);
+
+              priceData = {};
+              for (const token of tokens) {
+                const addressKey = token.address.toLowerCase();
+                if (bulkData[addressKey] && typeof bulkData[addressKey] === 'number') {
+                  priceData[token.symbol.toLowerCase()] = {
+                    usd: bulkData[addressKey],
+                    usd_24h_change: 0
+                  };
+                  console.log(`✅ Added ${token.symbol} price from bulk: $${bulkData[addressKey]}`);
+                }
+              }
+
+              if (Object.keys(priceData).length > 0) {
+                dataSource = '1inch';
+                console.log('✅ Successfully using 1inch API bulk fetch');
+              }
+            } else {
+              const errorText = await bulkResponse.text();
+              console.log(`❌ Bulk fetch failed. Status: ${bulkResponse.status}, Error: ${errorText}`);
+              
+              // Try individual fetches as fallback
+              console.log('🔄 Trying individual token fetches...');
+              priceData = {};
+              
+              for (const token of tokens) {
+                try {
+                  console.log(`📡 Fetching individual price for ${token.symbol} at ${token.address}`);
+                  const response = await fetch(`${oneInchUrl}/${token.address}`, {
+                    method: 'GET',
+                    headers: {
+                      'Authorization': `Bearer ${apiKey.trim()}`,
+                      'Accept': 'application/json'
+                    }
+                  });
+
+                  console.log(`📡 ${token.symbol} response status:`, response.status);
+
+                  if (response.ok) {
+                    const data = await response.json();
+                    console.log(`✅ Got ${token.symbol} individual response:`, data);
+                    
+                    let price = null;
+                    
+                    if (typeof data === 'number') {
+                      price = data;
+                    } else if (data[token.address.toLowerCase()]) {
+                      price = data[token.address.toLowerCase()];
+                    } else if (data.price) {
+                      price = data.price;
+                    } else if (Object.keys(data).length === 1) {
+                      price = Object.values(data)[0];
+                    }
+
+                    if (price && typeof price === 'number') {
+                      priceData[token.symbol.toLowerCase()] = {
+                        usd: price,
+                        usd_24h_change: 0
+                      };
+                      console.log(`✅ Added ${token.symbol} price: $${price}`);
+                    }
+                  } else {
+                    const errorText = await response.text();
+                    console.log(`❌ Failed to get ${token.symbol} price. Status: ${response.status}, Error: ${errorText}`);
+                  }
+                } catch (err) {
+                  console.log(`❌ Error fetching ${token.symbol}:`, err.message);
+                }
+              }
+
+              if (Object.keys(priceData).length > 0) {
+                dataSource = '1inch';
+                console.log('✅ Successfully using 1inch API individual fetches');
+              }
             }
+          } catch (bulkError) {
+            console.error('❌ 1inch bulk fetch error:', bulkError.message);
           }
 
           if (Object.keys(priceData).length > 0) {
-            dataSource = '1inch';
-            console.log('✅ Successfully using 1inch API with', Object.keys(priceData).length, 'tokens');
+            console.log('✅ Final 1inch success with', Object.keys(priceData).length, 'tokens');
             console.log('✅ Token prices obtained:', Object.keys(priceData).map(symbol => 
               `${symbol.toUpperCase()}: $${priceData[symbol].usd}`
             ).join(', '));
           } else {
-            console.log('⚠️ 1inch API returned no valid prices');
+            console.log('⚠️ 1inch API returned no valid prices after all attempts');
           }
         } else {
-          console.log('⚠️ No 1inch API key found - check ONEINCH_API_KEY environment variable');
+          console.log('⚠️ No valid 1inch API key found - check ONEINCH_API_KEY environment variable');
         }
       } catch (error) {
         console.error('❌ 1inch API error:', error.message);
