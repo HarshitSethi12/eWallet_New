@@ -91,23 +91,70 @@ export function registerRoutes(app: Application) {
 
             if (bulkResponse.ok) {
               const bulkData = await bulkResponse.json();
-              console.log('✅ Bulk 1inch API response:', bulkData);
+              console.log('✅ Bulk 1inch API response (raw wei values):', bulkData);
+
+              // The 1inch API returns values in wei (1e18) relative to ETH
+              // We need to convert these to USD prices
+              // First, let's get ETH price to convert wei values to USD
+              let ethPriceUSD = 3420.50; // fallback ETH price
+              
+              try {
+                // Try to get current ETH price from CoinGecko for conversion
+                const ethResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd', {
+                  headers: { 'Accept': 'application/json', 'User-Agent': 'BitWallet/1.0' }
+                });
+                
+                if (ethResponse.ok) {
+                  const ethData = await ethResponse.json();
+                  if (ethData?.ethereum?.usd) {
+                    ethPriceUSD = ethData.ethereum.usd;
+                    console.log('✅ Got current ETH price for conversion:', ethPriceUSD);
+                  }
+                }
+              } catch (ethError) {
+                console.log('⚠️ Using fallback ETH price for conversion');
+              }
 
               priceData = {};
               for (const token of tokens) {
                 const addressKey = token.address.toLowerCase();
-                if (bulkData[addressKey] && typeof bulkData[addressKey] === 'number') {
-                  priceData[token.symbol.toLowerCase()] = {
-                    usd: bulkData[addressKey],
-                    usd_24h_change: 0
-                  };
-                  console.log(`✅ Added ${token.symbol} price from bulk: $${bulkData[addressKey]}`);
+                const rawValue = bulkData[addressKey];
+                
+                if (rawValue) {
+                  let priceInUSD = 0;
+                  
+                  if (token.symbol === 'ETH') {
+                    // For ETH, use the direct USD price we fetched
+                    priceInUSD = ethPriceUSD;
+                  } else {
+                    // For other tokens, the 1inch API returns the amount of that token
+                    // that equals 1 ETH in wei units
+                    // Convert wei to token amount, then calculate USD price
+                    const weiValue = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
+                    
+                    if (weiValue > 0) {
+                      // Convert from wei to token units (divide by 1e18)
+                      const tokenAmount = weiValue / 1e18;
+                      // Price per token = ETH price / token amount
+                      priceInUSD = ethPriceUSD / tokenAmount;
+                    }
+                  }
+                  
+                  if (priceInUSD > 0 && priceInUSD < 1000000) { // Sanity check for reasonable prices
+                    priceData[token.symbol.toLowerCase()] = {
+                      usd: priceInUSD,
+                      usd_24h_change: 0
+                    };
+                    console.log(`✅ Added ${token.symbol} price from bulk (converted): $${priceInUSD.toFixed(4)} (raw wei: ${rawValue})`);
+                  } else {
+                    console.log(`⚠️ Rejected unreasonable price for ${token.symbol}: $${priceInUSD}`);
+                  }
                 }
               }
 
               if (Object.keys(priceData).length > 0) {
                 dataSource = '1inch';
-                console.log('✅ Successfully using 1inch API bulk fetch');
+                console.log('✅ Successfully using 1inch API bulk fetch with USD conversion');
               }
             } else {
               const errorText = await bulkResponse.text();
@@ -132,26 +179,57 @@ export function registerRoutes(app: Application) {
 
                   if (response.ok) {
                     const data = await response.json();
-                    console.log(`✅ Got ${token.symbol} individual response:`, data);
+                    console.log(`✅ Got ${token.symbol} individual response (raw wei):`, data);
                     
-                    let price = null;
+                    let rawPrice = null;
                     
                     if (typeof data === 'number') {
-                      price = data;
+                      rawPrice = data;
                     } else if (data[token.address.toLowerCase()]) {
-                      price = data[token.address.toLowerCase()];
+                      rawPrice = data[token.address.toLowerCase()];
                     } else if (data.price) {
-                      price = data.price;
+                      rawPrice = data.price;
                     } else if (Object.keys(data).length === 1) {
-                      price = Object.values(data)[0];
+                      rawPrice = Object.values(data)[0];
                     }
 
-                    if (price && typeof price === 'number') {
-                      priceData[token.symbol.toLowerCase()] = {
-                        usd: price,
-                        usd_24h_change: 0
-                      };
-                      console.log(`✅ Added ${token.symbol} price: $${price}`);
+                    if (rawPrice && typeof rawPrice === 'number') {
+                      let priceInUSD = 0;
+                      
+                      // Get current ETH price for conversion
+                      let ethPriceUSD = 3420.50;
+                      try {
+                        const ethResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd', {
+                          headers: { 'Accept': 'application/json', 'User-Agent': 'BitWallet/1.0' }
+                        });
+                        if (ethResponse.ok) {
+                          const ethData = await ethResponse.json();
+                          if (ethData?.ethereum?.usd) {
+                            ethPriceUSD = ethData.ethereum.usd;
+                          }
+                        }
+                      } catch (e) {
+                        console.log('Using fallback ETH price for individual conversion');
+                      }
+                      
+                      if (token.symbol === 'ETH') {
+                        priceInUSD = ethPriceUSD;
+                      } else {
+                        // Convert wei value to USD
+                        const weiValue = typeof rawPrice === 'string' ? parseFloat(rawPrice) : rawPrice;
+                        if (weiValue > 0) {
+                          const tokenAmount = weiValue / 1e18;
+                          priceInUSD = ethPriceUSD / tokenAmount;
+                        }
+                      }
+                      
+                      if (priceInUSD > 0 && priceInUSD < 1000000) {
+                        priceData[token.symbol.toLowerCase()] = {
+                          usd: priceInUSD,
+                          usd_24h_change: 0
+                        };
+                        console.log(`✅ Added ${token.symbol} price (converted): $${priceInUSD.toFixed(4)} (raw wei: ${rawPrice})`);
+                      }
                     }
                   } else {
                     const errorText = await response.text();
