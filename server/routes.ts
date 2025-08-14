@@ -126,35 +126,36 @@ export function registerRoutes(app: Application) {
                     // For ETH, use the direct USD price we fetched
                     priceInUSD = ethPriceUSD;
                   } else if (weiValue > 0) {
-                    // 1inch API returns wei amount of token that equals 1 ETH
-                    // For most ERC-20 tokens with 18 decimals:
-                    // Price in USD = ETH_price_USD / (wei_value / 10^18)
+                    // 1inch API returns amount in wei that equals 1 ETH
+                    // To get USD price: ETH_price_USD / (token_amount_for_1_ETH)
                     
-                    // Special handling for stablecoins and tokens with different decimals
                     if (token.symbol === 'USDC' || token.symbol === 'USDT') {
-                      // USDC and USDT have 6 decimals, not 18
-                      const tokenAmount = weiValue / 1e6;
-                      priceInUSD = ethPriceUSD / tokenAmount;
+                      // USDC and USDT have 6 decimals
+                      // Convert wei to actual token amount
+                      const tokenAmountFor1ETH = weiValue / 1e6;
+                      priceInUSD = ethPriceUSD / tokenAmountFor1ETH;
                     } else if (token.symbol === 'WBTC') {
                       // WBTC has 8 decimals
-                      const tokenAmount = weiValue / 1e8;
-                      priceInUSD = ethPriceUSD / tokenAmount;
+                      const tokenAmountFor1ETH = weiValue / 1e8;
+                      priceInUSD = ethPriceUSD / tokenAmountFor1ETH;
                     } else {
-                      // Standard ERC-20 tokens with 18 decimals
-                      const tokenAmount = weiValue / 1e18;
-                      priceInUSD = ethPriceUSD / tokenAmount;
+                      // Standard ERC-20 tokens with 18 decimals (LINK, etc.)
+                      const tokenAmountFor1ETH = weiValue / 1e18;
+                      priceInUSD = ethPriceUSD / tokenAmountFor1ETH;
                     }
+                    
+                    console.log(`📊 ${token.symbol} calculation: weiValue=${weiValue}, ethPriceUSD=${ethPriceUSD}, calculatedPrice=${priceInUSD}`);
                   }
                   
                   // Additional sanity checks for reasonable price ranges
                   let isReasonablePrice = false;
                   if (token.symbol === 'ETH' && priceInUSD > 1000 && priceInUSD < 10000) {
                     isReasonablePrice = true;
-                  } else if ((token.symbol === 'USDC' || token.symbol === 'USDT') && priceInUSD > 0.90 && priceInUSD < 1.10) {
+                  } else if ((token.symbol === 'USDC' || token.symbol === 'USDT') && priceInUSD > 0.80 && priceInUSD < 1.20) {
                     isReasonablePrice = true;
-                  } else if (token.symbol === 'WBTC' && priceInUSD > 30000 && priceInUSD < 100000) {
+                  } else if (token.symbol === 'WBTC' && priceInUSD > 30000 && priceInUSD < 120000) {
                     isReasonablePrice = true;
-                  } else if (token.symbol === 'LINK' && priceInUSD > 1 && priceInUSD < 100) {
+                  } else if (token.symbol === 'LINK' && priceInUSD > 0.5 && priceInUSD < 200) {
                     isReasonablePrice = true;
                   }
                   
@@ -239,17 +240,19 @@ export function registerRoutes(app: Application) {
                         if (weiValue > 0) {
                           if (token.symbol === 'USDC' || token.symbol === 'USDT') {
                             // USDC and USDT have 6 decimals
-                            const tokenAmount = weiValue / 1e6;
-                            priceInUSD = ethPriceUSD / tokenAmount;
+                            const tokenAmountFor1ETH = weiValue / 1e6;
+                            priceInUSD = ethPriceUSD / tokenAmountFor1ETH;
                           } else if (token.symbol === 'WBTC') {
                             // WBTC has 8 decimals
-                            const tokenAmount = weiValue / 1e8;
-                            priceInUSD = ethPriceUSD / tokenAmount;
+                            const tokenAmountFor1ETH = weiValue / 1e8;
+                            priceInUSD = ethPriceUSD / tokenAmountFor1ETH;
                           } else {
                             // Standard ERC-20 tokens with 18 decimals
-                            const tokenAmount = weiValue / 1e18;
-                            priceInUSD = ethPriceUSD / tokenAmount;
+                            const tokenAmountFor1ETH = weiValue / 1e18;
+                            priceInUSD = ethPriceUSD / tokenAmountFor1ETH;
                           }
+                          
+                          console.log(`📊 Individual ${token.symbol} calc: weiValue=${weiValue}, ethPriceUSD=${ethPriceUSD}, calculatedPrice=${priceInUSD}`);
                         }
                       }
                       
@@ -257,11 +260,11 @@ export function registerRoutes(app: Application) {
                       let isReasonablePrice = false;
                       if (token.symbol === 'ETH' && priceInUSD > 1000 && priceInUSD < 10000) {
                         isReasonablePrice = true;
-                      } else if ((token.symbol === 'USDC' || token.symbol === 'USDT') && priceInUSD > 0.90 && priceInUSD < 1.10) {
+                      } else if ((token.symbol === 'USDC' || token.symbol === 'USDT') && priceInUSD > 0.80 && priceInUSD < 1.20) {
                         isReasonablePrice = true;
-                      } else if (token.symbol === 'WBTC' && priceInUSD > 30000 && priceInUSD < 100000) {
+                      } else if (token.symbol === 'WBTC' && priceInUSD > 30000 && priceInUSD < 120000) {
                         isReasonablePrice = true;
-                      } else if (token.symbol === 'LINK' && priceInUSD > 1 && priceInUSD < 100) {
+                      } else if (token.symbol === 'LINK' && priceInUSD > 0.5 && priceInUSD < 200) {
                         isReasonablePrice = true;
                       }
                       
