@@ -9,6 +9,7 @@ export function registerRoutes(app: Application) {
   router.get("/api/tokens", async (req, res) => {
     try {
       console.log('🔍 Fetching token data...');
+      console.log('🔍 Environment check - All env vars:', Object.keys(process.env).filter(key => key.includes('INCH') || key.includes('API')));
 
       // Define tokens we want to fetch prices for with correct mainnet addresses
       const tokens = [
@@ -27,11 +28,49 @@ export function registerRoutes(app: Application) {
         console.log('🔄 Trying 1inch API as primary source...');
         const apiKey = process.env.ONEINCH_API_KEY;
         console.log('🔑 API Key exists:', apiKey ? 'YES' : 'NO');
-        console.log('🔑 API Key preview:', apiKey ? `${apiKey.substring(0, 8)}...` : 'N/A');
+        console.log('🔑 API Key length:', apiKey ? apiKey.length : 0);
+        console.log('🔑 API Key preview:', apiKey ? `${apiKey.substring(0, 12)}...${apiKey.substring(apiKey.length - 4)}` : 'N/A');
+        console.log('🔑 API Key type:', typeof apiKey);
+        
+        // Check for common API key issues
+        if (apiKey) {
+          console.log('🔑 API Key validation:');
+          console.log('  - Has spaces:', apiKey.includes(' '));
+          console.log('  - Has newlines:', apiKey.includes('\n') || apiKey.includes('\r'));
+          console.log('  - Trimmed length:', apiKey.trim().length);
+        }
 
         if (apiKey && apiKey.trim().length > 0) {
+          const cleanApiKey = apiKey.trim();
           const oneInchUrl = `https://api.1inch.dev/price/v1.1/1`;
           console.log('📡 1inch API base URL:', oneInchUrl);
+          
+          // Test API key first with a simple request
+          console.log('🧪 Testing API key with a simple ETH price request...');
+          try {
+            const testResponse = await fetch(`${oneInchUrl}/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${cleanApiKey}`,
+                'Accept': 'application/json'
+              }
+            });
+            
+            console.log('🧪 API key test response status:', testResponse.status);
+            console.log('🧪 API key test response headers:', Object.fromEntries(testResponse.headers.entries()));
+            
+            if (!testResponse.ok) {
+              const errorText = await testResponse.text();
+              console.log('🧪 API key test failed. Error response:', errorText);
+              throw new Error(`API key test failed: ${testResponse.status} - ${errorText}`);
+            } else {
+              const testData = await testResponse.json();
+              console.log('🧪 API key test successful! ETH price response:', testData);
+            }
+          } catch (testError) {
+            console.error('🧪 API key test error:', testError.message);
+            throw testError;
+          }
 
           // Try bulk price fetch first
           const tokenAddresses = tokens.map(t => t.address).join(',');
@@ -41,7 +80,7 @@ export function registerRoutes(app: Application) {
             const bulkResponse = await fetch(`${oneInchUrl}/${tokenAddresses}`, {
               method: 'GET',
               headers: {
-                'Authorization': `Bearer ${apiKey.trim()}`,
+                'Authorization': `Bearer ${cleanApiKey}`,
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
               }
@@ -84,7 +123,7 @@ export function registerRoutes(app: Application) {
                   const response = await fetch(`${oneInchUrl}/${token.address}`, {
                     method: 'GET',
                     headers: {
-                      'Authorization': `Bearer ${apiKey.trim()}`,
+                      'Authorization': `Bearer ${cleanApiKey}`,
                       'Accept': 'application/json'
                     }
                   });
