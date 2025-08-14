@@ -30,77 +30,64 @@ export function registerRoutes(app: Application) {
         console.log('🔑 API Key length:', apiKey ? apiKey.length : 0);
 
         if (apiKey) {
-          // Try individual token address lookups since bulk might not work
           const oneInchUrl = `https://api.1inch.dev/price/v1.1/1`;
-          
           console.log('📡 1inch API base URL:', oneInchUrl);
 
-          // Test with ETH first
-          const ethResponse = await fetch(`${oneInchUrl}/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Accept': 'application/json'
-            }
-          });
-
-          console.log('📊 1inch ETH Response status:', ethResponse.status);
-
-          if (ethResponse.ok) {
-            const ethData = await ethResponse.json();
-            console.log('✅ 1inch ETH response:', ethData);
-            
-            // If ETH works, try all tokens individually
-            priceData = {};
-            
-            for (const token of tokens) {
-              try {
-                const tokenResponse = await fetch(`${oneInchUrl}/${token.address}`, {
-                  method: 'GET',
-                  headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Accept': 'application/json'
-                  }
-                });
-
-                if (tokenResponse.ok) {
-                  const tokenData = await tokenResponse.json();
-                  console.log(`✅ Got ${token.symbol} price:`, tokenData);
-                  
-                  // Check different possible response formats
-                  let price = null;
-                  if (typeof tokenData === 'number') {
-                    price = tokenData;
-                  } else if (tokenData[token.address.toLowerCase()]) {
-                    price = tokenData[token.address.toLowerCase()];
-                  } else if (tokenData.price) {
-                    price = tokenData.price;
-                  } else if (Object.keys(tokenData).length === 1) {
-                    price = Object.values(tokenData)[0];
-                  }
-
-                  if (price && typeof price === 'number') {
-                    priceData[token.symbol.toLowerCase()] = {
-                      usd: price,
-                      usd_24h_change: 0
-                    };
-                  }
-                } else {
-                  console.log(`❌ Failed to get ${token.symbol} price:`, tokenResponse.status);
+          // Fetch prices for all tokens individually using the same logic as crypto-prices endpoint
+          priceData = {};
+          
+          for (const token of tokens) {
+            try {
+              const response = await fetch(`${oneInchUrl}/${token.address}`, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${apiKey}`,
+                  'Accept': 'application/json'
                 }
-              } catch (err) {
-                console.log(`❌ Error fetching ${token.symbol}:`, err.message);
-              }
-            }
+              });
 
-            if (Object.keys(priceData).length > 0) {
-              dataSource = '1inch';
-              console.log('✅ Successfully using 1inch API with', Object.keys(priceData).length, 'tokens');
+              if (response.ok) {
+                const data = await response.json();
+                console.log(`✅ Got ${token.symbol} price response:`, data);
+                
+                let price = null;
+                
+                if (typeof data === 'number') {
+                  price = data;
+                } else if (data[token.address.toLowerCase()]) {
+                  price = data[token.address.toLowerCase()];
+                } else if (data.price) {
+                  price = data.price;
+                } else if (Object.keys(data).length === 1) {
+                  price = Object.values(data)[0];
+                }
+
+                if (price && typeof price === 'number') {
+                  priceData[token.symbol.toLowerCase()] = {
+                    usd: price,
+                    usd_24h_change: 0 // 1inch doesn't provide 24h change in this endpoint
+                  };
+                  console.log(`✅ Added ${token.symbol} price: $${price}`);
+                } else {
+                  console.log(`⚠️ Could not parse price for ${token.symbol}:`, data);
+                }
+              } else {
+                const errorText = await response.text();
+                console.log(`❌ Failed to get ${token.symbol} price. Status: ${response.status}, Error: ${errorText}`);
+              }
+            } catch (err) {
+              console.log(`❌ Error fetching ${token.symbol}:`, err.message);
             }
+          }
+
+          if (Object.keys(priceData).length > 0) {
+            dataSource = '1inch';
+            console.log('✅ Successfully using 1inch API with', Object.keys(priceData).length, 'tokens');
+            console.log('✅ Token prices obtained:', Object.keys(priceData).map(symbol => 
+              `${symbol.toUpperCase()}: $${priceData[symbol].usd}`
+            ).join(', '));
           } else {
-            const errorText = await ethResponse.text();
-            console.log('❌ 1inch API failed with status:', ethResponse.status);
-            console.log('❌ 1inch API error response:', errorText);
+            console.log('⚠️ 1inch API returned no valid prices');
           }
         } else {
           console.log('⚠️ No 1inch API key found - check ONEINCH_API_KEY environment variable');
@@ -190,7 +177,8 @@ export function registerRoutes(app: Application) {
 
       console.log('📋 Final token data source:', dataSource);
       console.log('📋 Final token count:', enrichedTokens.length);
-      console.log('💰 Sample prices:', enrichedTokens.slice(0, 3).map(t => `${t.symbol}: $${t.price.toFixed(2)}`));
+      console.log('📋 Price data keys:', Object.keys(priceData));
+      console.log('💰 Final enriched tokens:', enrichedTokens.map(t => `${t.symbol}: $${t.price.toFixed(2)} (change: ${t.change24h.toFixed(2)}%)`));
 
       res.json({
         tokens: enrichedTokens,

@@ -41,7 +41,8 @@ function WalletTabs() {
     onSuccess: (data) => {
       console.log('🎯 Token data received:', data);
       console.log('🎯 Data source:', data?.source);
-      console.log('🎯 Sample token:', data?.tokens?.[0]);
+      console.log('🎯 Number of tokens:', data?.tokens?.length);
+      console.log('🎯 All token prices:', data?.tokens?.map(t => `${t.symbol}: $${t.price}`));
     }
   });
 
