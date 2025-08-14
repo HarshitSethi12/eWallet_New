@@ -93,9 +93,7 @@ export function registerRoutes(app: Application) {
               const bulkData = await bulkResponse.json();
               console.log('✅ Bulk 1inch API response (raw wei values):', bulkData);
 
-              // The 1inch API returns values in wei (1e18) relative to ETH
-              // We need to convert these to USD prices
-              // First, let's get ETH price to convert wei values to USD
+              // Get current ETH price for conversion reference
               let ethPriceUSD = 3420.50; // fallback ETH price
               
               try {
@@ -122,32 +120,52 @@ export function registerRoutes(app: Application) {
                 
                 if (rawValue) {
                   let priceInUSD = 0;
+                  const weiValue = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
                   
                   if (token.symbol === 'ETH') {
                     // For ETH, use the direct USD price we fetched
                     priceInUSD = ethPriceUSD;
-                  } else {
-                    // For other tokens, the 1inch API returns the amount of that token
-                    // that equals 1 ETH in wei units
-                    // Convert wei to token amount, then calculate USD price
-                    const weiValue = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
+                  } else if (weiValue > 0) {
+                    // 1inch API returns wei amount of token that equals 1 ETH
+                    // For most ERC-20 tokens with 18 decimals:
+                    // Price in USD = ETH_price_USD / (wei_value / 10^18)
                     
-                    if (weiValue > 0) {
-                      // Convert from wei to token units (divide by 1e18)
+                    // Special handling for stablecoins and tokens with different decimals
+                    if (token.symbol === 'USDC' || token.symbol === 'USDT') {
+                      // USDC and USDT have 6 decimals, not 18
+                      const tokenAmount = weiValue / 1e6;
+                      priceInUSD = ethPriceUSD / tokenAmount;
+                    } else if (token.symbol === 'WBTC') {
+                      // WBTC has 8 decimals
+                      const tokenAmount = weiValue / 1e8;
+                      priceInUSD = ethPriceUSD / tokenAmount;
+                    } else {
+                      // Standard ERC-20 tokens with 18 decimals
                       const tokenAmount = weiValue / 1e18;
-                      // Price per token = ETH price / token amount
                       priceInUSD = ethPriceUSD / tokenAmount;
                     }
                   }
                   
-                  if (priceInUSD > 0 && priceInUSD < 1000000) { // Sanity check for reasonable prices
+                  // Additional sanity checks for reasonable price ranges
+                  let isReasonablePrice = false;
+                  if (token.symbol === 'ETH' && priceInUSD > 1000 && priceInUSD < 10000) {
+                    isReasonablePrice = true;
+                  } else if ((token.symbol === 'USDC' || token.symbol === 'USDT') && priceInUSD > 0.90 && priceInUSD < 1.10) {
+                    isReasonablePrice = true;
+                  } else if (token.symbol === 'WBTC' && priceInUSD > 30000 && priceInUSD < 100000) {
+                    isReasonablePrice = true;
+                  } else if (token.symbol === 'LINK' && priceInUSD > 1 && priceInUSD < 100) {
+                    isReasonablePrice = true;
+                  }
+                  
+                  if (isReasonablePrice) {
                     priceData[token.symbol.toLowerCase()] = {
                       usd: priceInUSD,
                       usd_24h_change: 0
                     };
                     console.log(`✅ Added ${token.symbol} price from bulk (converted): $${priceInUSD.toFixed(4)} (raw wei: ${rawValue})`);
                   } else {
-                    console.log(`⚠️ Rejected unreasonable price for ${token.symbol}: $${priceInUSD}`);
+                    console.log(`⚠️ Rejected unreasonable price for ${token.symbol}: $${priceInUSD} (raw wei: ${rawValue})`);
                   }
                 }
               }
@@ -215,20 +233,46 @@ export function registerRoutes(app: Application) {
                       if (token.symbol === 'ETH') {
                         priceInUSD = ethPriceUSD;
                       } else {
-                        // Convert wei value to USD
+                        // Convert wei value to USD with proper decimal handling
                         const weiValue = typeof rawPrice === 'string' ? parseFloat(rawPrice) : rawPrice;
+                        
                         if (weiValue > 0) {
-                          const tokenAmount = weiValue / 1e18;
-                          priceInUSD = ethPriceUSD / tokenAmount;
+                          if (token.symbol === 'USDC' || token.symbol === 'USDT') {
+                            // USDC and USDT have 6 decimals
+                            const tokenAmount = weiValue / 1e6;
+                            priceInUSD = ethPriceUSD / tokenAmount;
+                          } else if (token.symbol === 'WBTC') {
+                            // WBTC has 8 decimals
+                            const tokenAmount = weiValue / 1e8;
+                            priceInUSD = ethPriceUSD / tokenAmount;
+                          } else {
+                            // Standard ERC-20 tokens with 18 decimals
+                            const tokenAmount = weiValue / 1e18;
+                            priceInUSD = ethPriceUSD / tokenAmount;
+                          }
                         }
                       }
                       
-                      if (priceInUSD > 0 && priceInUSD < 1000000) {
+                      // Sanity checks for reasonable price ranges
+                      let isReasonablePrice = false;
+                      if (token.symbol === 'ETH' && priceInUSD > 1000 && priceInUSD < 10000) {
+                        isReasonablePrice = true;
+                      } else if ((token.symbol === 'USDC' || token.symbol === 'USDT') && priceInUSD > 0.90 && priceInUSD < 1.10) {
+                        isReasonablePrice = true;
+                      } else if (token.symbol === 'WBTC' && priceInUSD > 30000 && priceInUSD < 100000) {
+                        isReasonablePrice = true;
+                      } else if (token.symbol === 'LINK' && priceInUSD > 1 && priceInUSD < 100) {
+                        isReasonablePrice = true;
+                      }
+                      
+                      if (isReasonablePrice) {
                         priceData[token.symbol.toLowerCase()] = {
                           usd: priceInUSD,
                           usd_24h_change: 0
                         };
                         console.log(`✅ Added ${token.symbol} price (converted): $${priceInUSD.toFixed(4)} (raw wei: ${rawPrice})`);
+                      } else {
+                        console.log(`⚠️ Rejected unreasonable ${token.symbol} price: $${priceInUSD} (raw wei: ${rawPrice})`);
                       }
                     }
                   } else {
