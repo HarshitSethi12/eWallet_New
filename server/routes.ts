@@ -13,11 +13,11 @@ export function registerRoutes(app: Application) {
 
       // Define top 10 tokens by market cap with correct mainnet addresses
       const tokens = [
-        { symbol: 'BTC', name: 'Bitcoin', address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', balance: '0.05', logoURI: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png' }, // Using WBTC address for 1inch
+        { symbol: 'BTC', name: 'Bitcoin', address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', balance: '0.05', logoURI: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png' }, // WBTC
         { symbol: 'ETH', name: 'Ethereum', address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', balance: '2.5', logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' },
         { symbol: 'USDT', name: 'Tether USD', address: '0xdac17f958d2ee523a2206206994597c13d831ec7', balance: '500', logoURI: 'https://assets.coingecko.com/coins/images/325/small/Tether.png' },
-        { symbol: 'SOL', name: 'Solana', address: '0xd31a59c85ae9d8ede8fbf8c4b7e05b89c9e96eb2', balance: '25', logoURI: 'https://assets.coingecko.com/coins/images/4128/small/solana.png' }, // SOL token address
-        { symbol: 'BNB', name: 'BNB', address: '0xB8c77482e45F1F44dE1745F52C74426C631bDD52', balance: '5', logoURI: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png' },
+        { symbol: 'SOL', name: 'Solana', address: '0xd31a59c85ae9d8ede8fbf8c4b7e05b89c9e96eb2', balance: '25', logoURI: 'https://assets.coingecko.com/coins/images/4128/small/solana.png' },
+        { symbol: 'BNB', name: 'BNB', address: '0xb8c77482e45f1f44de1745f52c74426c631bdd52', balance: '5', logoURI: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png' },
         { symbol: 'XRP', name: 'XRP', address: '0x1d2f0da169ceb9fc7b3144628db156f3f6c60dbe', balance: '2000', logoURI: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png' },
         { symbol: 'USDC', name: 'USD Coin', address: '0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a', balance: '1000', logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png' },
         { symbol: 'STETH', name: 'Lido Staked ETH', address: '0xae7ab96520de3a18e5e111b5eaab095312d7fe84', balance: '1.8', logoURI: 'https://assets.coingecko.com/coins/images/13442/small/steth_logo.png' },
@@ -96,7 +96,10 @@ export function registerRoutes(app: Application) {
 
             if (bulkResponse.ok) {
               const bulkData = await bulkResponse.json();
-              console.log('✅ Bulk 1inch API response (raw wei values):', bulkData);
+              console.log('✅ Bulk 1inch API response (sample):', Object.keys(bulkData).slice(0, 3).reduce((obj, key) => {
+                obj[key] = bulkData[key];
+                return obj;
+              }, {}));
 
               // Get current ETH price for conversion reference
               let ethPriceUSD = 3420.50; // fallback ETH price
@@ -137,35 +140,88 @@ export function registerRoutes(app: Application) {
                     // Price in USD = ETH_price_USD / (number_of_tokens_for_1_ETH / 10^decimals)
 
                     let decimals = 18; // Default for most ERC-20 tokens
-                    if (token.symbol === 'USDC' || token.symbol === 'USDT') {
-                      decimals = 6;
-                    } else if (token.symbol === 'WBTC') {
-                      decimals = 8;
+                    
+                    // Set correct decimals for each token
+                    switch (token.symbol) {
+                      case 'USDC':
+                      case 'USDT':
+                        decimals = 6;
+                        break;
+                      case 'BTC':
+                      case 'WBTC':
+                        decimals = 8;
+                        break;
+                      case 'SOL':
+                        decimals = 9; // Solana has 9 decimals
+                        break;
+                      case 'ADA':
+                        decimals = 6; // Cardano has 6 decimals
+                        break;
+                      case 'XRP':
+                        decimals = 6; // XRP has 6 decimals
+                        break;
+                      case 'DOGE':
+                        decimals = 8; // Dogecoin has 8 decimals
+                        break;
+                      case 'BNB':
+                      case 'STETH':
+                      case 'ETH':
+                      default:
+                        decimals = 18;
+                        break;
                     }
 
                     // Convert raw value to actual token amount
                     const tokenAmountFor1ETH = weiValue / Math.pow(10, decimals);
-                    priceInUSD = ethPriceUSD / tokenAmountFor1ETH;
+                    
+                    // Handle edge cases where the conversion might result in very small or very large numbers
+                    if (tokenAmountFor1ETH > 0 && tokenAmountFor1ETH < Number.MAX_SAFE_INTEGER) {
+                      priceInUSD = ethPriceUSD / tokenAmountFor1ETH;
+                    } else {
+                      console.log(`⚠️ Invalid token amount for ${token.symbol}: ${tokenAmountFor1ETH}`);
+                      priceInUSD = 0;
+                    }
 
-                    console.log(`📊 ${token.symbol} calc: decimals=${decimals}, tokenAmount=${tokenAmountFor1ETH}, price=${priceInUSD}`);
+                    console.log(`📊 ${token.symbol} calc: decimals=${decimals}, weiValue=${weiValue}, tokenAmount=${tokenAmountFor1ETH}, ethPrice=${ethPriceUSD}, finalPrice=${priceInUSD}`);
                   }
 
-                  // More lenient sanity checks - just check for positive reasonable values
+                  // Enhanced validation with more realistic ranges
                   let isValidPrice = false;
-                  if ((token.symbol === 'BTC' || token.symbol === 'WBTC') && priceInUSD > 10000 && priceInUSD < 200000) {
-                    isValidPrice = true;
-                  } else if (token.symbol === 'ETH' && priceInUSD > 100 && priceInUSD < 20000) {
-                    isValidPrice = true;
-                  } else if ((token.symbol === 'USDC' || token.symbol === 'USDT') && priceInUSD > 0.50 && priceInUSD < 2.00) {
-                    isValidPrice = true;
-                  } else if (token.symbol === 'SOL' && priceInUSD > 10 && priceInUSD < 5000) {
-                    isValidPrice = true;
-                  } else if (token.symbol === 'BNB' && priceInUSD > 50 && priceInUSD < 5000) {
-                    isValidPrice = true;
-                  } else if ((token.symbol === 'XRP' || token.symbol === 'ADA' || token.symbol === 'DOGE') && priceInUSD > 0.01 && priceInUSD < 100) {
-                    isValidPrice = true;
-                  } else if (token.symbol === 'STETH' && priceInUSD > 100 && priceInUSD < 20000) {
-                    isValidPrice = true;
+                  if (priceInUSD > 0) {
+                    switch (token.symbol) {
+                      case 'BTC':
+                      case 'WBTC':
+                        isValidPrice = priceInUSD >= 20000 && priceInUSD <= 150000;
+                        break;
+                      case 'ETH':
+                        isValidPrice = priceInUSD >= 1000 && priceInUSD <= 10000;
+                        break;
+                      case 'USDC':
+                      case 'USDT':
+                        isValidPrice = priceInUSD >= 0.95 && priceInUSD <= 1.05;
+                        break;
+                      case 'SOL':
+                        isValidPrice = priceInUSD >= 50 && priceInUSD <= 1000;
+                        break;
+                      case 'BNB':
+                        isValidPrice = priceInUSD >= 200 && priceInUSD <= 2000;
+                        break;
+                      case 'XRP':
+                        isValidPrice = priceInUSD >= 0.20 && priceInUSD <= 10;
+                        break;
+                      case 'ADA':
+                        isValidPrice = priceInUSD >= 0.10 && priceInUSD <= 10;
+                        break;
+                      case 'DOGE':
+                        isValidPrice = priceInUSD >= 0.05 && priceInUSD <= 5;
+                        break;
+                      case 'STETH':
+                        isValidPrice = priceInUSD >= 1000 && priceInUSD <= 10000;
+                        break;
+                      default:
+                        isValidPrice = priceInUSD > 0 && priceInUSD < 1000000;
+                        break;
+                    }
                   }
 
                   if (isValidPrice) {
@@ -176,18 +232,18 @@ export function registerRoutes(app: Application) {
                     console.log(`✅ Added ${token.symbol} price: $${priceInUSD.toFixed(4)} (raw: ${rawValue})`);
                   } else {
                     console.log(`⚠️ Invalid price for ${token.symbol}: $${priceInUSD} - using fallback`);
-                    // Use fallback prices for invalid calculations
+                    // Use current realistic fallback prices
                     const fallbackPrices = {
-                      'BTC': 67800.00,
-                      'ETH': 3420.50,
-                      'USDT': 1.00,
-                      'SOL': 185.50,
-                      'BNB': 620.30,
-                      'XRP': 0.52,
-                      'USDC': 1.00,
-                      'STETH': 3400.00,
-                      'ADA': 0.45,
-                      'DOGE': 0.08
+                      'BTC': 94500.00,   // Current BTC price
+                      'ETH': 3400.00,    // Current ETH price
+                      'USDT': 1.00,      // Stable
+                      'SOL': 220.00,     // Current SOL price
+                      'BNB': 690.00,     // Current BNB price
+                      'XRP': 2.30,       // Current XRP price
+                      'USDC': 1.00,      // Stable
+                      'STETH': 3380.00,  // Current stETH price
+                      'ADA': 1.05,       // Current ADA price
+                      'DOGE': 0.32       // Current DOGE price
                     };
                     if (fallbackPrices[token.symbol]) {
                       priceData[token.symbol.toLowerCase()] = {
