@@ -231,44 +231,10 @@ export function registerRoutes(app: Application) {
                     };
                     console.log(`✅ Added ${token.symbol} price: $${priceInUSD.toFixed(4)} (raw: ${rawValue})`);
                   } else {
-                    console.log(`⚠️ Invalid price for ${token.symbol}: $${priceInUSD} - using fallback`);
-                    // Use current realistic fallback prices
-                    const fallbackPrices = {
-                      'BTC': 94500.00,   // Current BTC price
-                      'ETH': 3400.00,    // Current ETH price
-                      'USDT': 1.00,      // Stable
-                      'SOL': 220.00,     // Current SOL price
-                      'BNB': 690.00,     // Current BNB price
-                      'XRP': 2.30,       // Current XRP price
-                      'USDC': 1.00,      // Stable
-                      'STETH': 3380.00,  // Current stETH price
-                      'ADA': 1.05,       // Current ADA price
-                      'DOGE': 0.32       // Current DOGE price
-                    };
-                    if (fallbackPrices[token.symbol]) {
-                      priceData[token.symbol.toLowerCase()] = {
-                        usd: fallbackPrices[token.symbol],
-                        usd_24h_change: 0
-                      };
-                      console.log(`✅ Using fallback price for ${token.symbol}: $${fallbackPrices[token.symbol]}`);
-                    }
+                    console.log(`⚠️ Invalid price for ${token.symbol}: $${priceInUSD} - will show zero`);
                   }
                 } else {
-                  console.log(`⚠️ No raw value for ${token.symbol} - using fallback`);
-                  // Force fallback for tokens that commonly fail
-                  const forceFallbackPrices = {
-                    'SOL': 185.50,
-                    'XRP': 2.30,
-                    'ADA': 1.05,
-                    'DOGE': 0.32
-                  };
-                  if (forceFallbackPrices[token.symbol]) {
-                    priceData[token.symbol.toLowerCase()] = {
-                      usd: forceFallbackPrices[token.symbol],
-                      usd_24h_change: 0
-                    };
-                    console.log(`✅ Using forced fallback price for ${token.symbol}: $${forceFallbackPrices[token.symbol]}`);
-                  }
+                  console.log(`⚠️ No raw value for ${token.symbol} - will show zero price`);
                 }
               }
 
@@ -476,22 +442,10 @@ export function registerRoutes(app: Application) {
         }
       }
 
-      // Fallback with current realistic prices if all APIs failed
+      // If both 1inch and CoinGecko fail, log but don't provide mock prices
       if (Object.keys(priceData).length === 0) {
-        console.log('⚠️ Using fallback mock data with current market prices');
-        priceData = {
-          'btc': { usd: 67800.00, usd_24h_change: 1.8 },
-          'eth': { usd: 3420.50, usd_24h_change: 2.3 },
-          'usdt': { usd: 1.00, usd_24h_change: 0.02 },
-          'sol': { usd: 185.50, usd_24h_change: 4.2 },
-          'bnb': { usd: 620.30, usd_24h_change: 2.1 },
-          'xrp': { usd: 0.52, usd_24h_change: 1.8 },
-          'usdc': { usd: 1.00, usd_24h_change: -0.05 },
-          'steth': { usd: 3400.00, usd_24h_change: 2.1 },
-          'ada': { usd: 0.45, usd_24h_change: 3.1 },
-          'doge': { usd: 0.08, usd_24h_change: 5.5 }
-        };
-        dataSource = 'mock';
+        console.log('⚠️ All price APIs failed - tokens will show zero prices');
+        dataSource = 'unavailable';
       }
 
       // Calculate balances and format response
@@ -501,17 +455,7 @@ export function registerRoutes(app: Application) {
         const price = priceInfo?.usd || 0;
 
         if (!priceInfo) {
-          console.warn(`⚠️ No price data for ${token.symbol}`);
-          // Explicitly set stablecoin prices to 1.00 if no price info is found
-          if (token.symbol === 'USDC' || token.symbol === 'USDT') {
-            console.log(`✅ Applying default $1.00 price for ${token.symbol}`);
-            return {
-              ...token,
-              price: 1.00,
-              change24h: 0,
-              balanceUSD: balance * 1.00
-            };
-          }
+          console.warn(`⚠️ No price data for ${token.symbol} - showing zero price`);
         }
 
         return {
@@ -700,21 +644,10 @@ export function registerRoutes(app: Application) {
         }
       }
 
-      // Fallback with mock data if all APIs failed
+      // If both APIs failed, leave price data empty - tokens will show zero
       if (Object.keys(priceData).length === 0) {
-        priceData = {
-          'bitcoin': { usd: 67800.00, usd_24h_change: 1.8 },
-          'ethereum': { usd: 3420.50, usd_24h_change: 2.3 },
-          'tether': { usd: 1.00, usd_24h_change: 0.02 },
-          'solana': { usd: 185.50, usd_24h_change: 4.2 },
-          'binancecoin': { usd: 620.30, usd_24h_change: 2.1 },
-          'ripple': { usd: 0.52, usd_24h_change: 1.8 },
-          'usd-coin': { usd: 1.00, usd_24h_change: -0.05 },
-          'staked-ether': { usd: 3400.00, usd_24h_change: 2.1 },
-          'cardano': { usd: 0.45, usd_24h_change: 3.1 },
-          'dogecoin': { usd: 0.08, usd_24h_change: 5.5 }
-        };
-        dataSource = 'mock';
+        console.log('⚠️ All price APIs failed for crypto prices - will return empty data');
+        dataSource = 'unavailable';
       }
 
       console.log('📋 Crypto prices data source:', dataSource);
