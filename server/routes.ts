@@ -31,7 +31,7 @@ export function registerRoutes(app: Application) {
         console.log('🔑 API Key length:', apiKey ? apiKey.length : 0);
         console.log('🔑 API Key preview:', apiKey ? `${apiKey.substring(0, 12)}...${apiKey.substring(apiKey.length - 4)}` : 'N/A');
         console.log('🔑 API Key type:', typeof apiKey);
-        
+
         // Check for common API key issues
         if (apiKey) {
           console.log('🔑 API Key validation:');
@@ -44,7 +44,7 @@ export function registerRoutes(app: Application) {
           const cleanApiKey = apiKey.trim();
           const oneInchUrl = `https://api.1inch.dev/price/v1.1/1`;
           console.log('📡 1inch API base URL:', oneInchUrl);
-          
+
           // Test API key first with a simple request
           console.log('🧪 Testing API key with a simple ETH price request...');
           try {
@@ -55,10 +55,10 @@ export function registerRoutes(app: Application) {
                 'Accept': 'application/json'
               }
             });
-            
+
             console.log('🧪 API key test response status:', testResponse.status);
             console.log('🧪 API key test response headers:', Object.fromEntries(testResponse.headers.entries()));
-            
+
             if (!testResponse.ok) {
               const errorText = await testResponse.text();
               console.log('🧪 API key test failed. Error response:', errorText);
@@ -95,13 +95,13 @@ export function registerRoutes(app: Application) {
 
               // Get current ETH price for conversion reference
               let ethPriceUSD = 3420.50; // fallback ETH price
-              
+
               try {
                 // Try to get current ETH price from CoinGecko for conversion
                 const ethResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd', {
                   headers: { 'Accept': 'application/json', 'User-Agent': 'BitWallet/1.0' }
                 });
-                
+
                 if (ethResponse.ok) {
                   const ethData = await ethResponse.json();
                   if (ethData?.ethereum?.usd) {
@@ -117,34 +117,34 @@ export function registerRoutes(app: Application) {
               for (const token of tokens) {
                 const addressKey = token.address.toLowerCase();
                 const rawValue = bulkData[addressKey];
-                
+
                 if (rawValue) {
                   let priceInUSD = 0;
                   const weiValue = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
-                  
+
                   console.log(`📊 Processing ${token.symbol}: raw value = ${rawValue}, wei value = ${weiValue}`);
-                  
+
                   if (token.symbol === 'ETH') {
                     // For ETH, use the direct USD price we fetched
                     priceInUSD = ethPriceUSD;
                   } else if (weiValue > 0) {
                     // 1inch API returns the amount of tokens needed to equal 1 ETH
                     // Price in USD = ETH_price_USD / (number_of_tokens_for_1_ETH / 10^decimals)
-                    
+
                     let decimals = 18; // Default for most ERC-20 tokens
                     if (token.symbol === 'USDC' || token.symbol === 'USDT') {
                       decimals = 6;
                     } else if (token.symbol === 'WBTC') {
                       decimals = 8;
                     }
-                    
+
                     // Convert raw value to actual token amount
                     const tokenAmountFor1ETH = weiValue / Math.pow(10, decimals);
                     priceInUSD = ethPriceUSD / tokenAmountFor1ETH;
-                    
+
                     console.log(`📊 ${token.symbol} calc: decimals=${decimals}, tokenAmount=${tokenAmountFor1ETH}, price=${priceInUSD}`);
                   }
-                  
+
                   // More lenient sanity checks - just check for positive reasonable values
                   let isValidPrice = false;
                   if (token.symbol === 'ETH' && priceInUSD > 100 && priceInUSD < 20000) {
@@ -156,7 +156,7 @@ export function registerRoutes(app: Application) {
                   } else if (token.symbol === 'LINK' && priceInUSD > 0.10 && priceInUSD < 1000) {
                     isValidPrice = true;
                   }
-                  
+
                   if (isValidPrice) {
                     priceData[token.symbol.toLowerCase()] = {
                       usd: priceInUSD,
@@ -181,6 +181,8 @@ export function registerRoutes(app: Application) {
                       console.log(`✅ Using fallback price for ${token.symbol}: $${fallbackPrices[token.symbol]}`);
                     }
                   }
+                } else {
+                  console.log(`⚠️ No raw value for ${token.symbol} - using fallback`);
                 }
               }
 
@@ -191,11 +193,11 @@ export function registerRoutes(app: Application) {
             } else {
               const errorText = await bulkResponse.text();
               console.log(`❌ Bulk fetch failed. Status: ${bulkResponse.status}, Error: ${errorText}`);
-              
+
               // Try individual fetches as fallback
               console.log('🔄 Trying individual token fetches...');
               priceData = {};
-              
+
               for (const token of tokens) {
                 try {
                   console.log(`📡 Fetching individual price for ${token.symbol} at ${token.address}`);
@@ -212,13 +214,13 @@ export function registerRoutes(app: Application) {
                   if (response.ok) {
                     const data = await response.json();
                     console.log(`✅ Got ${token.symbol} individual response (raw wei):`, data);
-                    
+
                     let rawPrice = null;
-                    
+
                     if (typeof data === 'number') {
                       rawPrice = data;
-                    } else if (data[token.address.toLowerCase()]) {
-                      rawPrice = data[token.address.toLowerCase()];
+                    } else if (data[crypto.address.toLowerCase()]) {
+                      rawPrice = data[crypto.address.toLowerCase()];
                     } else if (data.price) {
                       rawPrice = data.price;
                     } else if (Object.keys(data).length === 1) {
@@ -227,7 +229,7 @@ export function registerRoutes(app: Application) {
 
                     if (rawPrice && typeof rawPrice === 'number') {
                       let priceInUSD = 0;
-                      
+
                       // Get current ETH price for conversion
                       let ethPriceUSD = 3420.50;
                       try {
@@ -243,13 +245,13 @@ export function registerRoutes(app: Application) {
                       } catch (e) {
                         console.log('Using fallback ETH price for individual conversion');
                       }
-                      
+
                       if (token.symbol === 'ETH') {
                         priceInUSD = ethPriceUSD;
                       } else {
                         // Convert raw value to USD with proper decimal handling
                         const weiValue = typeof rawPrice === 'string' ? parseFloat(rawPrice) : rawPrice;
-                        
+
                         if (weiValue > 0) {
                           let decimals = 18; // Default for most ERC-20 tokens
                           if (token.symbol === 'USDC' || token.symbol === 'USDT') {
@@ -257,14 +259,14 @@ export function registerRoutes(app: Application) {
                           } else if (token.symbol === 'WBTC') {
                             decimals = 8;
                           }
-                          
+
                           const tokenAmountFor1ETH = weiValue / Math.pow(10, decimals);
                           priceInUSD = ethPriceUSD / tokenAmountFor1ETH;
-                          
+
                           console.log(`📊 Individual ${token.symbol} calc: decimals=${decimals}, tokenAmount=${tokenAmountFor1ETH}, price=${priceInUSD}`);
                         }
                       }
-                      
+
                       // More lenient validation
                       let isValidPrice = false;
                       if (token.symbol === 'ETH' && priceInUSD > 100 && priceInUSD < 20000) {
@@ -276,7 +278,7 @@ export function registerRoutes(app: Application) {
                       } else if (token.symbol === 'LINK' && priceInUSD > 0.10 && priceInUSD < 1000) {
                         isValidPrice = true;
                       }
-                      
+
                       if (isValidPrice) {
                         priceData[token.symbol.toLowerCase()] = {
                           usd: priceInUSD,
@@ -404,6 +406,16 @@ export function registerRoutes(app: Application) {
 
         if (!priceInfo) {
           console.warn(`⚠️ No price data for ${token.symbol}`);
+          // Explicitly set stablecoin prices to 1.00 if no price info is found
+          if (token.symbol === 'USDC' || token.symbol === 'USDT') {
+            console.log(`✅ Applying default $1.00 price for ${token.symbol}`);
+            return {
+              ...token,
+              price: 1.00,
+              change24h: 0,
+              balanceUSD: balance * 1.00
+            };
+          }
         }
 
         return {
@@ -512,7 +524,7 @@ export function registerRoutes(app: Application) {
       try {
         console.log('🔄 Trying 1inch API for crypto prices...');
         const apiKey = process.env.ONEINCH_API_KEY;
-        
+
         if (apiKey) {
           const oneInchUrl = `https://api.1inch.dev/price/v1.1/1`;
 
@@ -529,7 +541,7 @@ export function registerRoutes(app: Application) {
               if (response.ok) {
                 const data = await response.json();
                 let price = null;
-                
+
                 if (typeof data === 'number') {
                   price = data;
                 } else if (data[crypto.address.toLowerCase()]) {
@@ -578,7 +590,7 @@ export function registerRoutes(app: Application) {
           if (response.ok) {
             const data = await response.json();
             priceData = {};
-            
+
             for (const [coinId, tokenData] of Object.entries(data)) {
               if (tokenData && typeof tokenData.usd === 'number') {
                 priceData[coinId] = {
