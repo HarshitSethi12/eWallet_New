@@ -11,13 +11,18 @@ export function registerRoutes(app: Application) {
       console.log('🔍 Fetching token data...');
       console.log('🔍 Environment check - All env vars:', Object.keys(process.env).filter(key => key.includes('INCH') || key.includes('API')));
 
-      // Define tokens we want to fetch prices for with correct mainnet addresses
+      // Define top 10 tokens by market cap with correct mainnet addresses
       const tokens = [
+        { symbol: 'BTC', name: 'Bitcoin', address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', balance: '0.05', logoURI: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png' }, // Using WBTC address for 1inch
         { symbol: 'ETH', name: 'Ethereum', address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', balance: '2.5', logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' },
-        { symbol: 'USDC', name: 'USD Coin', address: '0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a', balance: '1000', logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png' },
         { symbol: 'USDT', name: 'Tether USD', address: '0xdac17f958d2ee523a2206206994597c13d831ec7', balance: '500', logoURI: 'https://assets.coingecko.com/coins/images/325/small/Tether.png' },
-        { symbol: 'WBTC', name: 'Wrapped Bitcoin', address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', balance: '0.1', logoURI: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png' },
-        { symbol: 'LINK', name: 'Chainlink', address: '0x514910771af9ca656af840dff83e8264ecf986ca', balance: '150', logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png' }
+        { symbol: 'SOL', name: 'Solana', address: '0xd31a59c85ae9d8ede8fbf8c4b7e05b89c9e96eb2', balance: '25', logoURI: 'https://assets.coingecko.com/coins/images/4128/small/solana.png' }, // SOL token address
+        { symbol: 'BNB', name: 'BNB', address: '0xB8c77482e45F1F44dE1745F52C74426C631bDD52', balance: '5', logoURI: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png' },
+        { symbol: 'XRP', name: 'XRP', address: '0x1d2f0da169ceb9fc7b3144628db156f3f6c60dbe', balance: '2000', logoURI: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png' },
+        { symbol: 'USDC', name: 'USD Coin', address: '0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a', balance: '1000', logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png' },
+        { symbol: 'STETH', name: 'Lido Staked ETH', address: '0xae7ab96520de3a18e5e111b5eaab095312d7fe84', balance: '1.8', logoURI: 'https://assets.coingecko.com/coins/images/13442/small/steth_logo.png' },
+        { symbol: 'ADA', name: 'Cardano', address: '0x3ee2200efb3400fabb9aacf31297cbdd1d435d47', balance: '3000', logoURI: 'https://assets.coingecko.com/coins/images/975/small/cardano.png' },
+        { symbol: 'DOGE', name: 'Dogecoin', address: '0x4206931337dc273a630d328da6441786bfad668f', balance: '5000', logoURI: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png' }
       ];
 
       let priceData = {};
@@ -147,13 +152,19 @@ export function registerRoutes(app: Application) {
 
                   // More lenient sanity checks - just check for positive reasonable values
                   let isValidPrice = false;
-                  if (token.symbol === 'ETH' && priceInUSD > 100 && priceInUSD < 20000) {
+                  if ((token.symbol === 'BTC' || token.symbol === 'WBTC') && priceInUSD > 10000 && priceInUSD < 200000) {
+                    isValidPrice = true;
+                  } else if (token.symbol === 'ETH' && priceInUSD > 100 && priceInUSD < 20000) {
                     isValidPrice = true;
                   } else if ((token.symbol === 'USDC' || token.symbol === 'USDT') && priceInUSD > 0.50 && priceInUSD < 2.00) {
                     isValidPrice = true;
-                  } else if (token.symbol === 'WBTC' && priceInUSD > 10000 && priceInUSD < 200000) {
+                  } else if (token.symbol === 'SOL' && priceInUSD > 10 && priceInUSD < 5000) {
                     isValidPrice = true;
-                  } else if (token.symbol === 'LINK' && priceInUSD > 0.10 && priceInUSD < 1000) {
+                  } else if (token.symbol === 'BNB' && priceInUSD > 50 && priceInUSD < 5000) {
+                    isValidPrice = true;
+                  } else if ((token.symbol === 'XRP' || token.symbol === 'ADA' || token.symbol === 'DOGE') && priceInUSD > 0.01 && priceInUSD < 100) {
+                    isValidPrice = true;
+                  } else if (token.symbol === 'STETH' && priceInUSD > 100 && priceInUSD < 20000) {
                     isValidPrice = true;
                   }
 
@@ -167,11 +178,16 @@ export function registerRoutes(app: Application) {
                     console.log(`⚠️ Invalid price for ${token.symbol}: $${priceInUSD} - using fallback`);
                     // Use fallback prices for invalid calculations
                     const fallbackPrices = {
+                      'BTC': 67800.00,
                       'ETH': 3420.50,
-                      'USDC': 1.00,
                       'USDT': 1.00,
-                      'WBTC': 67800.00,
-                      'LINK': 14.85
+                      'SOL': 185.50,
+                      'BNB': 620.30,
+                      'XRP': 0.52,
+                      'USDC': 1.00,
+                      'STETH': 3400.00,
+                      'ADA': 0.45,
+                      'DOGE': 0.08
                     };
                     if (fallbackPrices[token.symbol]) {
                       priceData[token.symbol.toLowerCase()] = {
@@ -342,7 +358,7 @@ export function registerRoutes(app: Application) {
       if (Object.keys(priceData).length === 0) {
         try {
           console.log('🔄 Falling back to CoinGecko...');
-          const coinIds = 'ethereum,usd-coin,tether,wrapped-bitcoin,chainlink';
+          const coinIds = 'bitcoin,ethereum,tether,solana,binancecoin,ripple,usd-coin,staked-ether,cardano,dogecoin';
           const cgUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds}&vs_currencies=usd&include_24hr_change=true`;
 
           const response = await fetch(cgUrl, {
@@ -358,11 +374,16 @@ export function registerRoutes(app: Application) {
 
             // Map CoinGecko IDs to our token symbols
             const coinGeckoMap = {
+              'bitcoin': 'btc',
               'ethereum': 'eth',
-              'usd-coin': 'usdc',
               'tether': 'usdt',
-              'wrapped-bitcoin': 'wbtc',
-              'chainlink': 'link'
+              'solana': 'sol',
+              'binancecoin': 'bnb',
+              'ripple': 'xrp',
+              'usd-coin': 'usdc',
+              'staked-ether': 'steth',
+              'cardano': 'ada',
+              'dogecoin': 'doge'
             };
 
             priceData = {};
@@ -389,11 +410,16 @@ export function registerRoutes(app: Application) {
       if (Object.keys(priceData).length === 0) {
         console.log('⚠️ Using fallback mock data with current market prices');
         priceData = {
+          'btc': { usd: 67800.00, usd_24h_change: 1.8 },
           'eth': { usd: 3420.50, usd_24h_change: 2.3 },
-          'usdc': { usd: 1.00, usd_24h_change: -0.05 },
           'usdt': { usd: 1.00, usd_24h_change: 0.02 },
-          'wbtc': { usd: 67800.00, usd_24h_change: 1.8 },
-          'link': { usd: 14.85, usd_24h_change: 5.7 }
+          'sol': { usd: 185.50, usd_24h_change: 4.2 },
+          'bnb': { usd: 620.30, usd_24h_change: 2.1 },
+          'xrp': { usd: 0.52, usd_24h_change: 1.8 },
+          'usdc': { usd: 1.00, usd_24h_change: -0.05 },
+          'steth': { usd: 3400.00, usd_24h_change: 2.1 },
+          'ada': { usd: 0.45, usd_24h_change: 3.1 },
+          'doge': { usd: 0.08, usd_24h_change: 5.5 }
         };
         dataSource = 'mock';
       }
@@ -501,20 +527,18 @@ export function registerRoutes(app: Application) {
     try {
       console.log('🔍 Fetching crypto prices for tickers...');
 
-      // Define crypto tokens for price tickers with correct mainnet addresses
+      // Define top 10 crypto tokens by market cap with correct mainnet addresses
       const cryptoTokens = [
         { id: 'bitcoin', symbol: 'BTC', address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599' }, // WBTC address for 1inch
         { id: 'ethereum', symbol: 'ETH', address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' },
-        { id: 'cardano', symbol: 'ADA', address: '0x3ee2200efb3400fabb9aacf31297cbdd1d435d47' }, // ADA BSC address (1inch supports multiple chains)
-        { id: 'polkadot', symbol: 'DOT', address: '0x7083609fce4d1d8dc0c979aab8c869ea2c873402' }, // DOT BSC address
-        { id: 'chainlink', symbol: 'LINK', address: '0x514910771af9ca656af840dff83e8264ecf986ca' },
-        { id: 'litecoin', symbol: 'LTC', address: '0x4338665cbb7b2485a8855a139b75d5e34ab0db94' }, // LTC token address
-        { id: 'stellar', symbol: 'XLM', address: '0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a' }, // Using USDC address as placeholder
-        { id: 'tron', symbol: 'TRX', address: '0x85eac5ac2f758618dfa09bdbe0cf174e7d574d5b' }, // TRX token address
+        { id: 'tether', symbol: 'USDT', address: '0xdac17f958d2ee523a2206206994597c13d831ec7' },
+        { id: 'solana', symbol: 'SOL', address: '0xd31a59c85ae9d8ede8fbf8c4b7e05b89c9e96eb2' },
+        { id: 'binancecoin', symbol: 'BNB', address: '0xB8c77482e45F1F44dE1745F52C74426C631bDD52' },
+        { id: 'ripple', symbol: 'XRP', address: '0x1d2f0da169ceb9fc7b3144628db156f3f6c60dbe' },
+        { id: 'usd-coin', symbol: 'USDC', address: '0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a' },
         { id: 'staked-ether', symbol: 'STETH', address: '0xae7ab96520de3a18e5e111b5eaab095312d7fe84' },
-        { id: 'wrapped-bitcoin', symbol: 'WBTC', address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599' },
-        { id: 'leo-token', symbol: 'LEO', address: '0x2af5d2ad76741191d15dfe7bf6ac92d4bd912ca3' },
-        { id: 'usd-coin', symbol: 'USDC', address: '0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a' }
+        { id: 'cardano', symbol: 'ADA', address: '0x3ee2200efb3400fabb9aacf31297cbdd1d435d47' },
+        { id: 'dogecoin', symbol: 'DOGE', address: '0x4206931337dc273a630d328da6441786bfad668f' }
       ];
 
       let priceData = {};
@@ -577,7 +601,7 @@ export function registerRoutes(app: Application) {
       if (Object.keys(priceData).length === 0) {
         try {
           console.log('🔄 Falling back to CoinGecko for crypto prices...');
-          const coinIds = 'bitcoin,ethereum,cardano,polkadot,chainlink,litecoin,stellar,tron,staked-ether,wrapped-bitcoin,leo-token,usd-coin';
+          const coinIds = 'bitcoin,ethereum,tether,solana,binancecoin,ripple,usd-coin,staked-ether,cardano,dogecoin';
           const cgUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds}&vs_currencies=usd&include_24hr_change=true`;
 
           const response = await fetch(cgUrl, {
@@ -611,16 +635,14 @@ export function registerRoutes(app: Application) {
         priceData = {
           'bitcoin': { usd: 67800.00, usd_24h_change: 1.8 },
           'ethereum': { usd: 3420.50, usd_24h_change: 2.3 },
-          'cardano': { usd: 0.45, usd_24h_change: 3.1 },
-          'polkadot': { usd: 6.80, usd_24h_change: 4.2 },
-          'chainlink': { usd: 14.85, usd_24h_change: 5.7 },
-          'litecoin': { usd: 85.50, usd_24h_change: -1.2 },
-          'stellar': { usd: 0.12, usd_24h_change: 2.8 },
-          'tron': { usd: 0.08, usd_24h_change: 1.5 },
+          'tether': { usd: 1.00, usd_24h_change: 0.02 },
+          'solana': { usd: 185.50, usd_24h_change: 4.2 },
+          'binancecoin': { usd: 620.30, usd_24h_change: 2.1 },
+          'ripple': { usd: 0.52, usd_24h_change: 1.8 },
+          'usd-coin': { usd: 1.00, usd_24h_change: -0.05 },
           'staked-ether': { usd: 3400.00, usd_24h_change: 2.1 },
-          'wrapped-bitcoin': { usd: 67750.00, usd_24h_change: 1.9 },
-          'leo-token': { usd: 5.95, usd_24h_change: 0.8 },
-          'usd-coin': { usd: 1.00, usd_24h_change: -0.05 }
+          'cardano': { usd: 0.45, usd_24h_change: 3.1 },
+          'dogecoin': { usd: 0.08, usd_24h_change: 5.5 }
         };
         dataSource = 'mock';
       }

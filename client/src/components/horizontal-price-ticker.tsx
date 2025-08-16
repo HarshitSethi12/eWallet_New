@@ -152,16 +152,18 @@ export function HorizontalPriceTicker() {
         }
         const data = await response.json();
 
-        // Transform the CoinGecko API response to match our expected format
+        // Transform the API response to match our expected format for top 10 cryptocurrencies
         const cryptoList = [
           { symbol: 'BTC', name: 'Bitcoin', price: data.bitcoin?.usd || 0, change: data.bitcoin?.usd_24h_change || 0 },
           { symbol: 'ETH', name: 'Ethereum', price: data.ethereum?.usd || 0, change: data.ethereum?.usd_24h_change || 0 },
+          { symbol: 'USDT', name: 'Tether', price: data.tether?.usd || 0, change: data.tether?.usd_24h_change || 0 },
+          { symbol: 'SOL', name: 'Solana', price: data.solana?.usd || 0, change: data.solana?.usd_24h_change || 0 },
+          { symbol: 'BNB', name: 'BNB', price: data.binancecoin?.usd || 0, change: data.binancecoin?.usd_24h_change || 0 },
+          { symbol: 'XRP', name: 'XRP', price: data.ripple?.usd || 0, change: data.ripple?.usd_24h_change || 0 },
+          { symbol: 'USDC', name: 'USD Coin', price: data['usd-coin']?.usd || 0, change: data['usd-coin']?.usd_24h_change || 0 },
+          { symbol: 'STETH', name: 'Staked Ether', price: data['staked-ether']?.usd || 0, change: data['staked-ether']?.usd_24h_change || 0 },
           { symbol: 'ADA', name: 'Cardano', price: data.cardano?.usd || 0, change: data.cardano?.usd_24h_change || 0 },
-          { symbol: 'DOT', name: 'Polkadot', price: data.polkadot?.usd || 0, change: data.polkadot?.usd_24h_change || 0 },
-          { symbol: 'LINK', name: 'Chainlink', price: data.chainlink?.usd || 0, change: data.chainlink?.usd_24h_change || 0 },
-          { symbol: 'LTC', name: 'Litecoin', price: data.litecoin?.usd || 0, change: data.litecoin?.usd_24h_change || 0 },
-          { symbol: 'XLM', name: 'Stellar', price: data.stellar?.usd || 0, change: data.stellar?.usd_24h_change || 0 },
-          { symbol: 'TRX', name: 'Tron', price: data.tron?.usd || 0, change: data.tron?.usd_24h_change || 0 },
+          { symbol: 'DOGE', name: 'Dogecoin', price: data.dogecoin?.usd || 0, change: data.dogecoin?.usd_24h_change || 0 },
         ];
 
         return cryptoList;
