@@ -3,7 +3,7 @@ import { Server } from "http";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import { registerRoutes } from "./routes";
+import { registerRoutes, router } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
@@ -167,7 +167,9 @@ process.on('unhandledRejection', (reason, promise) => {
       }
     });
 
-    const server = await registerRoutes(app);
+    // ===== API ROUTES REGISTRATION =====
+    // Register all API routes from routes.ts file
+    app.use('/api', router);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
