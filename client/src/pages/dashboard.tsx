@@ -113,21 +113,43 @@ const mockTransactions = [
 function WalletTabs() {
   // ===== REAL-TIME TOKEN DATA FETCHING =====
   // Fetch cryptocurrency token data from our API (1inch or CoinGecko)
-  const { data: tokenData, isLoading: tokensLoading, error: tokensError } = useQuery({
+  const { data: tokenData, isLoading: tokensLoading, error: tokensError, refetch: refetchTokens } = useQuery({
     queryKey: ["/api/tokens"],              // Unique cache key for this query
     queryFn: () => apiRequest("/api/tokens"), // Function that makes the API call
     refetchInterval: 30000,                 // Refresh data every 30 seconds
+    retry: 3,                               // Retry 3 times on failure
     onSuccess: (data) => {                  // Callback when data is successfully fetched
       console.log('🎯 Token data received:', data);
       console.log('🎯 Data source:', data?.source);
       console.log('🎯 Number of tokens:', data?.tokens?.length);
       console.log('🎯 All token prices:', data?.tokens?.map(t => `${t.symbol}: $${t.price}`));
+    },
+    onError: (error) => {                   // Callback when API call fails
+      console.error('❌ Token data fetch error:', error);
     }
   });
 
+  // ===== MANUAL REFRESH FUNCTION =====
+  // Function to manually refresh token prices
+  const handleRefreshPrices = () => {
+    console.log('🔄 Manually refreshing token prices...');
+    refetchTokens();
+  };
+
   // ===== DATA SELECTION LOGIC =====
-  // Use real API data when available, fallback to mock data during loading
+  // Use real API data when available, fallback to mock data during loading/error
   const portfolioTokens = tokenData?.tokens || mockTokens;
+  
+  // ===== DEBUG LOGGING =====
+  // Log the current data source for debugging
+  React.useEffect(() => {
+    if (tokenData) {
+      console.log('📊 Dashboard using token data from:', tokenData.source);
+      console.log('📊 Token data:', tokenData.tokens);
+    } else if (tokensError) {
+      console.error('❌ Token data error:', tokensError);
+    }
+  }, [tokenData, tokensError]);
 
   // ===== PORTFOLIO CALCULATIONS =====
   // Calculate total portfolio value by summing all token values
@@ -295,12 +317,28 @@ function WalletTabs() {
           <Card className="border-gray-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold text-amber-700 flex items-center justify-between">
-                Token Prices
-                {tokenData?.source && (
-                  <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                    {tokenData.source === '1inch' ? '1inch API' : 'CoinGecko'}
-                  </span>
-                )}
+                <span>Token Prices</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRefreshPrices}
+                    disabled={tokensLoading}
+                    className="h-6 px-2 text-xs"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${tokensLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                  {tokenData?.source && (
+                    <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      {tokenData.source === '1inch' ? '1inch API' : tokenData.source === 'coingecko' ? 'CoinGecko' : 'Mock Data'}
+                    </span>
+                  )}
+                  {tokensError && (
+                    <span className="text-xs font-normal text-red-500 bg-red-100 px-2 py-1 rounded">
+                      Error
+                    </span>
+                  )}
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
