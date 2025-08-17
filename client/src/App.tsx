@@ -175,6 +175,67 @@ function Footer() {
   );
 }
 
+// ===== AUTHENTICATION PROVIDER COMPONENT =====
+// This component provides authentication context to the entire app
+function AuthProvider({ children }: { children: React.ReactNode }) {
+  // ===== AUTHENTICATION STATE =====
+  // State for storing user data and authentication status
+  const [user, setUser] = React.useState(null);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  // ===== SESSION CHECK EFFECT =====
+  // Check if user has an existing session when app loads
+  React.useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Session check failed:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkSession();
+  }, []);
+
+  // ===== AUTHENTICATION CONTEXT VALUE =====
+  // Context value that will be provided to all child components
+  const authValue = {
+    user,
+    isAuthenticated,
+    isLoading,
+    setUser,
+    setIsAuthenticated
+  };
+
+  // ===== LOADING STATE =====
+  // Show loading spinner while checking session
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>{children}</div>
+  );
+}
+
 // ===== MAIN APP COMPONENT =====
 // This is the root component that wraps the entire application
 function App() {
@@ -182,29 +243,32 @@ function App() {
     // ===== REACT QUERY PROVIDER =====
     // Provides React Query context to all child components for data fetching
     <QueryClientProvider client={queryClient}>
-      
-      {/* ===== MAIN APP CONTAINER ===== */}
-      {/* Full-screen container with flex layout */}
-      <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--color-secondary)', margin: 0, padding: 0 }}>
-        
-        {/* ===== NAVIGATION BAR ===== */}
-        {/* Top navigation that stays fixed */}
-        <Navigation />
-        
-        {/* ===== MAIN CONTENT AREA ===== */}
-        {/* Flexible content area that takes remaining space */}
-        <main className="flex-1 overflow-auto">
-          <Router />
-        </main>
-        
-        {/* ===== FOOTER ===== */}
-        {/* Bottom footer that stays at bottom */}
-        <Footer />
-        
-        {/* ===== TOAST NOTIFICATIONS ===== */}
-        {/* Global toast notification system */}
-        <Toaster />
-      </div>
+      {/* ===== AUTHENTICATION PROVIDER ===== */}
+      {/* Provides authentication context to all child components */}
+      <AuthProvider>
+        {/* ===== MAIN APP CONTAINER ===== */}
+        {/* Full-screen container with flex layout */}
+        <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--color-secondary)', margin: 0, padding: 0 }}>
+          
+          {/* ===== NAVIGATION BAR ===== */}
+          {/* Top navigation that stays fixed */}
+          <Navigation />
+          
+          {/* ===== MAIN CONTENT AREA ===== */}
+          {/* Flexible content area that takes remaining space */}
+          <main className="flex-1 overflow-auto">
+            <Router />
+          </main>
+          
+          {/* ===== FOOTER ===== */}
+          {/* Bottom footer that stays at bottom */}
+          <Footer />
+          
+          {/* ===== TOAST NOTIFICATIONS ===== */}
+          {/* Global toast notification system */}
+          <Toaster />
+        </div>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
