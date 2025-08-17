@@ -347,7 +347,6 @@ router.post('/auth/metamask', async (req, res) => {
       } catch (dbError) {
         console.warn('Warning: Could not create database session:', dbError);
       }
-      };
 
       console.log('✅ MetaMask user authenticated successfully');
 
