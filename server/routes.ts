@@ -393,19 +393,6 @@ router.post('/ai/gemini-chat', async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // For now, return a simple response since we don't have Gemini API setup
-    res.json({
-      response: "I'm a BitWallet AI assistant. I can help you with cryptocurrency questions and wallet management.",
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('❌ Gemini AI chat error:', error);
-    res.status(500).json({ error: 'AI chat service unavailable' });
-  }
-});age) {
-      return res.status(400).json({ error: 'Message is required' });
-    }
-
     // Check if Gemini API key is configured
     if (!process.env.GEMINI_API_KEY) {
       console.log('⚠️ Gemini API key not configured, returning fallback response');
