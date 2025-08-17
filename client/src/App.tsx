@@ -13,8 +13,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Button } from "@/components/ui/button";
 // Logout icon
 import { LogOut } from "lucide-react";
-// Authentication hook
-import { useAuth } from "@/hooks/use-auth";
+// Authentication hook and provider
+import { useAuth, AuthProvider } from "@/hooks/use-auth";
 // Page components
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
@@ -27,7 +27,7 @@ function Navigation() {
   // ===== AUTHENTICATION STATE =====
   // Get user authentication data and functions
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
-  
+
   // ===== DEBUG LOGGING =====
   // Log authentication state for debugging purposes
   console.log('Navigation - User:', user);
@@ -38,7 +38,7 @@ function Navigation() {
     // Main navigation bar with custom background color
     <nav className="border-b" style={{ backgroundColor: 'var(--color-nav)' }}>
       <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 flex items-center text-white">
-        
+
         {/* ===== LEFT SPACER SECTION ===== */}
         {/* Creates balanced spacing when user is authenticated */}
         <div className="flex-1">
@@ -54,10 +54,10 @@ function Navigation() {
           <Link href="/">
             <Button variant="link" className="text-2xl sm:text-3xl hover:text-white/90 flex items-center py-1 sm:py-2">
               <span className="flex items-end">
-                <span 
-                  className="font-bold" 
-                  style={{ 
-                    fontFamily: "'Poppins', sans-serif", 
+                <span
+                  className="font-bold"
+                  style={{
+                    fontFamily: "'Poppins', sans-serif",
                     letterSpacing: "-0.01em",
                     paddingRight: "2px",
                     color: "#F7F3E9"
@@ -65,10 +65,10 @@ function Navigation() {
                 >
                   Bit
                 </span>
-                <span 
+                <span
                   className="font-bold"
-                  style={{ 
-                    fontFamily: "'Poppins', sans-serif", 
+                  style={{
+                    fontFamily: "'Poppins', sans-serif",
                     letterSpacing: "-0.01em",
                     color: "#A0826D"
                   }}
@@ -85,9 +85,9 @@ function Navigation() {
           {isAuthenticated && user && (
             <div className="flex items-center gap-3">
               {user.picture ? (
-                <img 
-                  src={user.picture} 
-                  alt={user.name} 
+                <img
+                  src={user.picture}
+                  alt={user.name}
                   className="w-8 h-8 rounded-full border-2 border-white/20 shadow-lg"
                 />
               ) : (
@@ -97,8 +97,8 @@ function Navigation() {
                   </span>
                 </div>
               )}
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="ghost"
                 className="text-white/80 hover:bg-white/10 hover:text-white px-2 py-1 h-8 text-xs"
                 onClick={logout}
@@ -129,20 +129,20 @@ function Router() {
     <Switch>
       {/* Dashboard page route - shows user's wallet dashboard */}
       <Route path="/dashboard" component={Dashboard} />
-      
+
       {/* Admin sessions page route - for session management */}
       <Route path="/admin/sessions" component={AdminSessions} />
-      
+
       {/* Send and receive routes - currently redirect to Home */}
       <Route path="/send" component={Home} />
       <Route path="/receive" component={Home} />
-      
+
       {/* Placeholder signup route */}
       <Route path="/signup" component={() => <div>Sign Up Page</div>} />
-      
+
       {/* Home page route - main landing page */}
       <Route path="/" component={Home} />
-      
+
       {/* Catch-all route for 404 pages */}
       <Route component={NotFound} />
     </Switch>
@@ -159,9 +159,9 @@ function Footer() {
           <div className="flex items-center">
             {/* ===== COPYRIGHT TEXT ===== */}
             {/* Styled copyright notice with custom font */}
-            <span 
+            <span
               className="text-lg font-medium"
-              style={{ 
+              style={{
                 fontFamily: "'Poppins', sans-serif",
                 color: "#F7F3E9"
               }}
@@ -175,64 +175,29 @@ function Footer() {
   );
 }
 
-// ===== AUTHENTICATION PROVIDER COMPONENT =====
-// This component provides authentication context to the entire app
-function AuthProvider({ children }: { children: React.ReactNode }) {
-  // ===== AUTHENTICATION STATE =====
-  // State for storing user data and authentication status
-  const [user, setUser] = React.useState(null);
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(true);
-
-  // ===== SESSION CHECK EFFECT =====
-  // Check if user has an existing session when app loads
-  React.useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const response = await fetch('/api/auth/session', {
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          setIsAuthenticated(true);
-        }
-      } catch (error) {
-        console.error('Session check failed:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkSession();
-  }, []);
-
-  // ===== AUTHENTICATION CONTEXT VALUE =====
-  // Context value that will be provided to all child components
-  const authValue = {
-    user,
-    isAuthenticated,
-    isLoading,
-    setUser,
-    setIsAuthenticated
-  };
-
-  // ===== LOADING STATE =====
-  // Show loading spinner while checking session
-  if (isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
+// ===== APP CONTENT COMPONENT =====
+// This component contains all the main app content that needs authentication context
+function AppContent() {
   return (
-    <div>{children}</div>
+    <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--color-secondary)', margin: 0, padding: 0 }}>
+      {/* ===== NAVIGATION BAR ===== */}
+      {/* Top navigation that stays fixed */}
+      <Navigation />
+
+      {/* ===== MAIN CONTENT AREA ===== */}
+      {/* Flexible content area that takes remaining space */}
+      <main className="flex-1 overflow-auto">
+        <Router />
+      </main>
+
+      {/* ===== FOOTER ===== */}
+      {/* Bottom footer that stays at bottom */}
+      <Footer />
+
+      {/* ===== TOAST NOTIFICATIONS ===== */}
+      {/* Global toast notification system */}
+      <Toaster />
+    </div>
   );
 }
 
@@ -246,28 +211,9 @@ function App() {
       {/* ===== AUTHENTICATION PROVIDER ===== */}
       {/* Provides authentication context to all child components */}
       <AuthProvider>
-        {/* ===== MAIN APP CONTAINER ===== */}
-        {/* Full-screen container with flex layout */}
-        <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--color-secondary)', margin: 0, padding: 0 }}>
-          
-          {/* ===== NAVIGATION BAR ===== */}
-          {/* Top navigation that stays fixed */}
-          <Navigation />
-          
-          {/* ===== MAIN CONTENT AREA ===== */}
-          {/* Flexible content area that takes remaining space */}
-          <main className="flex-1 overflow-auto">
-            <Router />
-          </main>
-          
-          {/* ===== FOOTER ===== */}
-          {/* Bottom footer that stays at bottom */}
-          <Footer />
-          
-          {/* ===== TOAST NOTIFICATIONS ===== */}
-          {/* Global toast notification system */}
-          <Toaster />
-        </div>
+        {/* ===== MAIN APP CONTENT ===== */}
+        {/* All app content wrapped with proper authentication context */}
+        <AppContent />
       </AuthProvider>
     </QueryClientProvider>
   );
