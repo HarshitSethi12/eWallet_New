@@ -17,7 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { 
   Send, 
   ArrowDownLeft, 
-  Wallet, 
+  Wallet as WalletIcon, 
   TrendingUp, 
   TrendingDown, 
   Eye,
