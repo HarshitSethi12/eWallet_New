@@ -295,7 +295,7 @@ router.post('/auth/metamask', async (req, res) => {
 
     // Verify the signature using ethers library
     try {
-      const recoveredAddress = ethers.utils.verifyMessage(message, signature);
+      const recoveredAddress = ethers.verifyMessage(message, signature);
       console.log('   Recovered Address:', recoveredAddress);
 
       // Check if the recovered address matches the claimed address
