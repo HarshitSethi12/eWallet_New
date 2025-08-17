@@ -5,23 +5,36 @@ import { createServer } from "http";
 export function registerRoutes(app: Application) {
   const router = Router();
 
-  // Token list endpoint for 1inch integration
+  // ===== TOKEN LIST API ENDPOINT =====
+  // This endpoint provides cryptocurrency token data with real-time prices
   router.get("/api/tokens", async (req, res) => {
     try {
+      // ===== LOGGING FOR DEBUGGING =====
       console.log('🔍 Fetching token data...');
       console.log('🔍 Environment check - All env vars:', Object.keys(process.env).filter(key => key.includes('INCH') || key.includes('API')));
 
-      // Define top 10 tokens by market cap with correct mainnet addresses
+      // ===== TOKEN DEFINITIONS =====
+      // Define top 10 cryptocurrency tokens by market cap with their Ethereum mainnet addresses
       const tokens = [
-        { symbol: 'BTC', name: 'Bitcoin', address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', balance: '0.05', logoURI: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png' }, // WBTC
+        // WBTC (Wrapped Bitcoin) - represents Bitcoin on Ethereum network
+        { symbol: 'BTC', name: 'Bitcoin', address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', balance: '0.05', logoURI: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png' },
+        // Native Ethereum token
         { symbol: 'ETH', name: 'Ethereum', address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', balance: '2.5', logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' },
+        // Tether USD stablecoin
         { symbol: 'USDT', name: 'Tether USD', address: '0xdac17f958d2ee523a2206206994597c13d831ec7', balance: '500', logoURI: 'https://assets.coingecko.com/coins/images/325/small/Tether.png' },
+        // Solana token on Ethereum
         { symbol: 'SOL', name: 'Solana', address: '0xd31a59c85ae9d8ede8fbf8c4b7e05b89c9e96eb2', balance: '25', logoURI: 'https://assets.coingecko.com/coins/images/4128/small/solana.png' },
+        // Binance Coin
         { symbol: 'BNB', name: 'BNB', address: '0xb8c77482e45f1f44de1745f52c74426c631bdd52', balance: '5', logoURI: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png' },
+        // Ripple (XRP) token on Ethereum
         { symbol: 'XRP', name: 'XRP', address: '0x1d2f0da169ceb9fc7b3144628db156f3f6c60dbe', balance: '2000', logoURI: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png' },
+        // USD Coin stablecoin
         { symbol: 'USDC', name: 'USD Coin', address: '0xa0b86a33e6441b8c18d94ec8e42a99f0ba44683a', balance: '1000', logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png' },
+        // Lido Staked Ethereum
         { symbol: 'STETH', name: 'Lido Staked ETH', address: '0xae7ab96520de3a18e5e111b5eaab095312d7fe84', balance: '1.8', logoURI: 'https://assets.coingecko.com/coins/images/13442/small/steth_logo.png' },
+        // Cardano token on Ethereum
         { symbol: 'ADA', name: 'Cardano', address: '0x3ee2200efb3400fabb9aacf31297cbdd1d435d47', balance: '3000', logoURI: 'https://assets.coingecko.com/coins/images/975/small/cardano.png' },
+        // Dogecoin token on Ethereum
         { symbol: 'DOGE', name: 'Dogecoin', address: '0x4206931337dc273a630d328da6441786bfad668f', balance: '5000', logoURI: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png' }
       ];
 

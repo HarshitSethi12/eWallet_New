@@ -1,26 +1,51 @@
 
+// ===== IMPORT SECTION =====
+// This section imports all the external libraries and components needed for this page
+
+// React Query for data fetching and caching
 import { useQuery } from "@tanstack/react-query";
+// Wouter for client-side routing (navigation between pages)
 import { Link, useLocation } from "wouter";
+// UI components from our custom component library
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AddressCard } from "@/components/address-card";
 import { TransactionList } from "@/components/transaction-list";
+// Icons from Lucide React icon library
 import { Send, ArrowDownLeft, Wallet as WalletIcon, ShieldCheck, LogOut } from "lucide-react";
+// Mock blockchain utilities for development/testing
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
+// API request helper function
 import { apiRequest } from "@/lib/queryClient";
+// TypeScript type definitions for our data structures
 import type { Wallet, Transaction } from "@shared/schema";
+// React Icons for additional icons
 import { RiExchangeFundsFill } from "react-icons/ri";
+// Custom hooks for authentication and MetaMask wallet connection
 import { useAuth } from "@/hooks/use-auth";
 import { useMetaMask } from "@/hooks/use-metamask";
+// Component for displaying cryptocurrency prices
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
+// React core library
 import React from "react";
 
+// ===== WELCOME PAGE COMPONENT =====
+// This is the main landing page that users see when they first visit the app
 function WelcomePage() {
+  // ===== AUTHENTICATION HOOKS =====
+  // Get authentication functions and state from our custom auth hook
   const { login, loginWithMetaMask, isMetaMaskLoading, user, isAuthenticated, logout, isLoggingOut } = useAuth();
+  
+  // ===== METAMASK WALLET HOOKS =====
+  // Get MetaMask wallet connection functions and state
   const { connectWallet, signMessage, account, isConnecting, disconnectWallet, forceReconnect } = useMetaMask();
+  
+  // ===== ROUTING HOOK =====
+  // Get current page location for navigation
   const [location] = useLocation();
   
-  // Check for authentication errors in URL
+  // ===== ERROR HANDLING EFFECT =====
+  // Check URL parameters for authentication errors when the page loads
   React.useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
@@ -28,12 +53,15 @@ function WelcomePage() {
       console.error('Authentication error:', error);
       // You can add a toast notification here if needed
     }
-  }, [location]);
+  }, [location]); // Run this effect when the location changes
 
+  // ===== METAMASK LOGIN HANDLER FUNCTION =====
+  // This function handles the complete MetaMask authentication process
   const handleMetaMaskLogin = async () => {
     console.log('🔵 MetaMask button clicked');
     
-    // Check if MetaMask is installed
+    // ===== METAMASK INSTALLATION CHECK =====
+    // Check if MetaMask browser extension is installed
     if (!window.ethereum) {
       alert('MetaMask is not installed! Please install MetaMask extension.');
       return;
@@ -42,7 +70,8 @@ function WelcomePage() {
     try {
       console.log('🔵 Attempting to connect to MetaMask...');
       
-      // Connect to MetaMask and get the address
+      // ===== WALLET CONNECTION STEP =====
+      // Connect to MetaMask and get the user's wallet address
       const address = await connectWallet();
       console.log('🔵 Connection result:', address);
       
@@ -52,13 +81,17 @@ function WelcomePage() {
 
       console.log('✅ MetaMask connected successfully:', address);
       
-      // Small delay to ensure state is updated
+      // ===== STATE SYNCHRONIZATION =====
+      // Small delay to ensure state is updated properly
       await new Promise(resolve => setTimeout(resolve, 100));
       
+      // ===== MESSAGE SIGNING STEP =====
+      // Create a unique message for the user to sign (proves wallet ownership)
       const message = `Sign this message to authenticate with your wallet: ${Date.now()}`;
       console.log('🔵 Requesting signature for message:', message);
       
-      // Use the address directly instead of relying on state
+      // ===== DIGITAL SIGNATURE REQUEST =====
+      // Request user to sign the message with their private key
       const signature = await window.ethereum.request({
         method: 'personal_sign',
         params: [message, address]
@@ -66,8 +99,10 @@ function WelcomePage() {
       
       console.log('🔵 Signature received:', signature ? 'Yes' : 'No');
       
+      // ===== AUTHENTICATION COMPLETION =====
       if (signature) {
         console.log('🔵 Calling loginWithMetaMask...');
+        // Send the signed message to our backend for verification
         // This will automatically route to dashboard on success
         loginWithMetaMask({ message, signature, address });
       } else {
@@ -77,7 +112,8 @@ function WelcomePage() {
     } catch (error) {
       console.error('❌ MetaMask authentication error:', error);
       
-      // Handle specific MetaMask errors
+      // ===== ERROR HANDLING =====
+      // Handle specific MetaMask error codes with user-friendly messages
       if (error.code === 4001) {
         alert('Please approve the connection request in MetaMask.');
       } else if (error.code === -32002) {
@@ -86,7 +122,8 @@ function WelcomePage() {
         alert(`Connection failed: ${error.message || 'Please try again.'}`);
       }
       
-      // Reset connection state on error
+      // ===== CLEANUP ON ERROR =====
+      // Reset connection state if authentication fails
       disconnectWallet();
     }
   };
@@ -228,29 +265,44 @@ function WelcomePage() {
   );
 }
 
+// ===== DASHBOARD PAGE COMPONENT =====
+// This component shows the user's wallet dashboard after they're authenticated
 function DashboardPage() {
+  // ===== AUTHENTICATION HOOKS =====
+  // Get user data and authentication functions
   const { user, logout, isLoggingOut, checkSessionStatus } = useAuth();
+  
+  // ===== METAMASK HOOKS =====
+  // Get MetaMask disconnect function
   const { disconnectWallet } = useMetaMask();
+  
+  // ===== NAVIGATION HOOKS =====
+  // Get navigation function to change pages programmatically
   const [, setLocation] = useLocation();
+  
+  // ===== SESSION STATUS STATE =====
+  // Local state to store session check results
   const [sessionStatus, setSessionStatus] = React.useState(null);
 
-  // Manual session check function
+  // ===== SESSION CHECK HANDLER =====
+  // Function to manually check if user session is still valid
   const handleCheckSession = async () => {
     const status = await checkSessionStatus();
     setSessionStatus(status);
     console.log('📊 Manual session check result:', status);
   };
 
-  
-
+  // ===== DATA FETCHING WITH REACT QUERY =====
+  // Fetch user's wallet data from the API
   const { data: wallets } = useQuery({
-    queryKey: ["/api/wallets"],
-    queryFn: () => apiRequest("/api/wallets"),
+    queryKey: ["/api/wallets"],           // Unique key for this query
+    queryFn: () => apiRequest("/api/wallets"),  // Function to fetch the data
   });
 
+  // Fetch user's transaction history from the API
   const { data: transactions } = useQuery({
-    queryKey: ["/api/transactions"],
-    queryFn: () => apiRequest("/api/transactions"),
+    queryKey: ["/api/transactions"],      // Unique key for this query
+    queryFn: () => apiRequest("/api/transactions"), // Function to fetch the data
   });
 
   return (
@@ -380,10 +432,19 @@ function DashboardPage() {
   );
 }
 
+// ===== MAIN HOME PAGE COMPONENT =====
+// This is the default export component that decides what to show on the home page
 export default function Home() {
+  // ===== AUTHENTICATION STATE =====
+  // Get authentication status and user data
   const { isAuthenticated, user } = useAuth();
+  
+  // ===== NAVIGATION HOOK =====
+  // Get navigation function (not used but available for future use)
   const [, setLocation] = useLocation();
 
+  // ===== PAGE ROUTING LOGIC =====
   // Always show welcome page on home route
+  // Note: The welcome page itself handles showing login buttons or authenticated user info
   return <WelcomePage />;
 }

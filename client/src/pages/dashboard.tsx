@@ -1,23 +1,37 @@
+// ===== IMPORT SECTION =====
+// React Query for server state management and data fetching
 import { useQuery } from "@tanstack/react-query";
+// Wouter for client-side routing
 import { Link } from "wouter";
+// UI components from our component library
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+// Custom components for wallet functionality
 import { AddressCard } from "@/components/address-card";
 import { TransactionList } from "@/components/transaction-list";
 import { AiChat } from "@/components/ai-chat";
+// Icons from Lucide React
 import { Send, ArrowDownLeft, Wallet as WalletIcon, ShieldCheck, LogOut, TrendingUp, TrendingDown, Eye, Coins, Clock, BarChart3 } from "lucide-react";
+// Mock blockchain utilities for development
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
+// API request helper
 import { apiRequest } from "@/lib/queryClient";
+// TypeScript types for data structures
 import type { Wallet, Transaction } from "@shared/schema";
+// React Icons for additional icons
 import { RiExchangeFundsFill } from "react-icons/ri";
+// Custom hooks for authentication and MetaMask
 import { useAuth } from "@/hooks/use-auth";
 import { useMetaMask } from "@/hooks/use-metamask";
+// Price ticker component
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
+// React core library
 import React from "react";
 
-// Mock data for demonstration
+// ===== MOCK DATA FOR DEVELOPMENT =====
+// Mock token portfolio data to show while developing/testing
 const mockTokens = [
   { symbol: 'ETH', name: 'Ethereum', balance: '2.5', price: 2340.50, change24h: 5.2, balanceUSD: 5851.25, logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' },
   { symbol: 'USDC', name: 'USD Coin', balance: '1000', price: 1.00, change24h: -0.1, balanceUSD: 1000.00, logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png' },
@@ -25,6 +39,7 @@ const mockTokens = [
   { symbol: 'UNI', name: 'Uniswap', balance: '75', price: 6.80, change24h: -3.2, balanceUSD: 510.00, logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png' }
 ];
 
+// Mock transaction history data for demonstration
 const mockTransactions = [
   { id: '1', type: 'receive', token: 'ETH', amount: '0.5', value: '$1170.25', from: '0x742d...5A8f', timestamp: '2 hours ago', status: 'completed' },
   { id: '2', type: 'send', token: 'USDC', amount: '200', value: '$200.00', to: '0x91A2...3B7c', timestamp: '1 day ago', status: 'completed' },
@@ -32,13 +47,16 @@ const mockTransactions = [
   { id: '4', type: 'receive', token: 'UNI', amount: '10', value: '$68.00', from: '0x4f5e...2D1a', timestamp: '1 week ago', status: 'completed' }
 ];
 
+// ===== WALLET TABS COMPONENT =====
+// This component creates the tabbed interface for the wallet dashboard
 function WalletTabs() {
-  // Fetch real token data from API (uses 1inch API if available, falls back to CoinGecko)
+  // ===== REAL-TIME TOKEN DATA FETCHING =====
+  // Fetch cryptocurrency token data from our API (1inch or CoinGecko)
   const { data: tokenData, isLoading: tokensLoading, error: tokensError } = useQuery({
-    queryKey: ["/api/tokens"],
-    queryFn: () => apiRequest("/api/tokens"),
-    refetchInterval: 30000,
-    onSuccess: (data) => {
+    queryKey: ["/api/tokens"],              // Unique cache key for this query
+    queryFn: () => apiRequest("/api/tokens"), // Function that makes the API call
+    refetchInterval: 30000,                 // Refresh data every 30 seconds
+    onSuccess: (data) => {                  // Callback when data is successfully fetched
       console.log('🎯 Token data received:', data);
       console.log('🎯 Data source:', data?.source);
       console.log('🎯 Number of tokens:', data?.tokens?.length);
@@ -46,11 +64,18 @@ function WalletTabs() {
     }
   });
 
-  // Use real data when available, fallback to mock data during loading
+  // ===== DATA SELECTION LOGIC =====
+  // Use real API data when available, fallback to mock data during loading
   const portfolioTokens = tokenData?.tokens || mockTokens; 
 
+  // ===== PORTFOLIO CALCULATIONS =====
+  // Calculate total portfolio value by summing all token values
   const totalPortfolioValue = portfolioTokens.reduce((sum, token) => sum + token.balanceUSD, 0);
+  
+  // Mock initial investment amount for profit/loss calculation
   const initialInvestment = 8500; // Mock initial investment
+  
+  // Calculate portfolio performance percentage
   const portfolioChange = ((totalPortfolioValue - initialInvestment) / initialInvestment) * 100;
 
   return (

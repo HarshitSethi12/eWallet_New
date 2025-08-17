@@ -1,7 +1,15 @@
+// ===== AUTHENTICATION HOOK FILE =====
+// This file contains the main authentication logic for the application
+
+// React core library
 import React from "react";
+// React Query for server state management
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+// Custom hook for showing toast notifications
 import { useToast } from "@/hooks/use-toast";
+// Wouter for navigation between pages
 import { useLocation } from "wouter";
+// MetaMask wallet integration hook
 import { useMetaMask } from "./use-metamask";
 
 interface User {
