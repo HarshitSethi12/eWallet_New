@@ -1,4 +1,67 @@
 // ===== IMPORT SECTION =====
+// This section imports all the external libraries and components needed for the dashboard
+
+// React core library for component state management
+import React, { useState } from 'react';
+// React Query for data fetching and caching
+import { useQuery } from "@tanstack/react-query";
+// UI components from our custom component library
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+// Icons from Lucide React icon library
+import { 
+  Send, 
+  ArrowDownLeft, 
+  Wallet, 
+  TrendingUp, 
+  TrendingDown, 
+  Eye,
+  EyeOff,
+  BarChart3,
+  Coins,
+  Clock,
+  Copy,
+  ExternalLink,
+  Plus,
+  Settings,
+  RefreshCw,
+  Bell,
+  Star,
+  Filter,
+  Download,
+  Upload,
+  Search,
+  ChevronRight
+} from "lucide-react";
+// Authentication hook for user data
+import { useAuth } from "@/hooks/use-auth";
+// API request helper function
+import { apiRequest } from "@/lib/queryClient";
+// Custom components for dashboard functionality
+import { AiChat } from "@/components/ai-chat";
+import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
+import { DexSwap } from "@/components/dex-swap";
+import { NotesPanel } from "@/components/notes-panel";
+
+// ===== TYPE DEFINITIONS =====
+// Define TypeScript interfaces for cryptocurrency asset data
+interface CryptoAsset {
+  id: string;           // Unique identifier for the asset
+  symbol: string;       // Asset symbol (e.g., BTC, ETH)
+  name: string;         // Full name of the asset
+  balance: number;      // User's balance of this asset
+  value: number;        // USD value of user's balance
+  price: number;        // Current price per unit
+  change24h: number;    // 24-hour price change percentage
+  icon: string;         // URL or path to asset icon
+}
+
+// ===== IMPORT SECTION =====
 // React Query for server state management and data fetching
 import { useQuery } from "@tanstack/react-query";
 // Wouter for client-side routing
@@ -71,10 +134,10 @@ function WalletTabs() {
   // ===== PORTFOLIO CALCULATIONS =====
   // Calculate total portfolio value by summing all token values
   const totalPortfolioValue = portfolioTokens.reduce((sum, token) => sum + token.balanceUSD, 0);
-  
+
   // Mock initial investment amount for profit/loss calculation
   const initialInvestment = 8500; // Mock initial investment
-  
+
   // Calculate portfolio performance percentage
   const portfolioChange = ((totalPortfolioValue - initialInvestment) / initialInvestment) * 100;
 
@@ -339,28 +402,114 @@ function WalletTabs() {
   );
 }
 
+// ===== MAIN DASHBOARD COMPONENT =====
+// This is the main dashboard component that displays user's cryptocurrency portfolio
 export default function Dashboard() {
-  const { user, logout, isLoggingOut, checkSessionStatus } = useAuth();
-  const { disconnectWallet } = useMetaMask();
-  const [sessionStatus, setSessionStatus] = React.useState(null);
+  // ===== AUTHENTICATION STATE =====
+  // Get current user data from authentication context
+  const { user } = useAuth();
+  // State to control whether portfolio balance is visible or hidden
+  const [balanceVisible, setBalanceVisible] = useState(true);
+  // State to track selected timeframe for portfolio data (7 days, 30 days, etc.)
+  const [selectedTimeframe, setSelectedTimeframe] = useState('7d');
 
-  // Manual session check function
-  const handleCheckSession = async () => {
-    const status = await checkSessionStatus();
-    setSessionStatus(status);
-    console.log('📊 Manual session check result:', status);
+  // ===== MOCK DATA SECTION =====
+  // Mock portfolio data for demonstration purposes
+  // In a real app, this would come from API calls
+  const portfolioData = {
+    totalValue: 24567.89,        // Total USD value of user's portfolio
+    totalChange24h: 5.67,        // 24-hour percentage change
+    assets: [                    // Array of user's cryptocurrency assets
+      {
+        id: 'bitcoin',
+        symbol: 'BTC',
+        name: 'Bitcoin',
+        balance: 0.75,           // Amount of Bitcoin user owns
+        value: 19250.00,         // USD value of Bitcoin holdings
+        price: 25666.67,         // Current Bitcoin price
+        change24h: 2.3,          // 24-hour price change
+        icon: '/api/placeholder/32/32'
+      },
+      {
+        id: 'ethereum',
+        symbol: 'ETH',
+        name: 'Ethereum',
+        balance: 2.5,            // Amount of Ethereum user owns
+        value: 4125.50,          // USD value of Ethereum holdings
+        price: 1650.20,          // Current Ethereum price
+        change24h: -1.2,         // 24-hour price change (negative = decrease)
+        icon: '/api/placeholder/32/32'
+      },
+      {
+        id: 'cardano',
+        symbol: 'ADA',
+        name: 'Cardano',
+        balance: 1000,           // Amount of Cardano user owns
+        value: 1192.40,          // USD value of Cardano holdings
+        price: 1.19,             // Current Cardano price
+        change24h: 8.9,          // 24-hour price change (positive = increase)
+        icon: '/api/placeholder/32/32'
+      }
+    ] as CryptoAsset[]
   };
 
+  // ===== MOCK TRANSACTION DATA =====
+  // Sample transaction history for the user
+  const recentTransactions = [
+    {
+      id: '1',
+      type: 'received',              // Transaction type: received cryptocurrency
+      asset: 'BTC',                  // Asset involved in transaction
+      amount: 0.025,                 // Amount of cryptocurrency
+      value: 642.50,                 // USD value at time of transaction
+      timestamp: '2 hours ago',      // When transaction occurred
+      status: 'completed',           // Transaction status
+      hash: '0x123...abc'            // Blockchain transaction hash
+    },
+    {
+      id: '2',
+      type: 'sent',                  // Transaction type: sent cryptocurrency
+      asset: 'ETH',
+      amount: 0.5,
+      value: 825.10,
+      timestamp: '1 day ago',
+      status: 'completed',
+      hash: '0x456...def'
+    },
+    {
+      id: '3',
+      type: 'swap',                  // Transaction type: swapped one crypto for another
+      asset: 'ADA',
+      amount: 500,
+      value: 595.00,
+      timestamp: '3 days ago',
+      status: 'completed',
+      hash: '0x789...ghi'
+    }
+  ];
+
+  // ===== CALCULATED VALUES =====
+  // Calculate styling and display values based on portfolio performance
+  const totalChangeColor = portfolioData.totalChange24h >= 0 ? 'text-green-600' : 'text-red-600';
+  const totalChangeIcon = portfolioData.totalChange24h >= 0 ? TrendingUp : TrendingDown;
+  const portfolioValue = portfolioData.totalValue;
+  const changePercentage = Math.abs(portfolioData.totalChange24h);
+
+  // ===== API DATA FETCHING =====
+  // Fetch wallet data using React Query
   const { data: wallets } = useQuery({
-    queryKey: ["/api/wallets"],
-    queryFn: () => apiRequest("/api/wallets"),
+    queryKey: ["/api/wallets"], // Unique key for caching wallet data
+    queryFn: () => apiRequest("/api/wallets"), // Function to fetch wallet data
   });
 
+  // Fetch transaction data using React Query
   const { data: transactions } = useQuery({
-    queryKey: ["/api/transactions"],
-    queryFn: () => apiRequest("/api/transactions"),
+    queryKey: ["/api/transactions"], // Unique key for caching transaction data
+    queryFn: () => apiRequest("/api/transactions"), // Function to fetch transaction data
   });
 
+  // ===== RENDER LOGIC =====
+  // Render the main dashboard structure
   return (
     <div className="h-full flex flex-col">
       {/* Main content container that takes full available space */}

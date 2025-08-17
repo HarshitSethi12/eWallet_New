@@ -1,216 +1,280 @@
+
+// ===== IMPORT SECTION =====
+// Import database configuration and schema definitions
+
+import { db } from './db';                      // Database connection instance
 import { 
-  type Wallet, 
-  type InsertWallet, 
-  type Transaction, 
-  type InsertTransaction, 
-  type Contact, 
-  type InsertContact,
-  type UserSession,
-  type InsertUserSession,
-  wallets,
-  transactions,
-  contacts,
-  metamaskUsers,
-  userSessions
-} from "@shared/schema";
-import { db, sessions } from "./db";
-import { eq, desc } from "drizzle-orm";
+  userSessions,                               // User sessions table schema
+  metamaskUsers,                              // MetaMask users table schema
+  InsertUserSession,                          // TypeScript type for inserting user sessions
+  InsertMetaMaskUser                          // TypeScript type for inserting MetaMask users
+} from '@shared/schema';
+import { eq, desc } from 'drizzle-orm';        // Database query operators
 
-export interface IStorage {
-  // Wallet operations
-  getWallet(address: string): Promise<Wallet | undefined>;
-  createWallet(wallet: InsertWallet): Promise<Wallet>;
-  updateWalletBalance(address: string, balance: number): Promise<Wallet>;
-
-  // Transaction operations
-  getTransactions(address: string): Promise<Transaction[]>;
-  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
-  confirmTransaction(id: number): Promise<Transaction>;
-
-  // Contact operations
-  getContacts(): Promise<Contact[]>;
-  createContact(contact: InsertContact): Promise<Contact>;
-  deleteContact(id: number): Promise<void>;
-
-  // Session operations
-  createUserSession(sessionData: {
-    userId: number | null;
-    email: string | null;
-    name: string;
-    walletAddress?: string;
-    phone?: string;
-    ipAddress: string;
-    userAgent: string;
-    sessionId: string;
-  }): Promise<number>;
-  endUserSession(sessionId: number): Promise<void>;
-  getAllUserSessions(): Promise<any[]>;
-  getUserSessionsByEmail(email: string): Promise<any[]>;
-
-  getMetaMaskUser(address: string): Promise<any>;
-  createMetaMaskUser(userData: { address: string; displayName: string; lastLogin: string }): Promise<any>;
-  updateMetaMaskUserLogin(address: string): Promise<void>;
-}
-
-export class DatabaseStorage implements IStorage {
-  async getWallet(address: string): Promise<Wallet | undefined> {
-    const [wallet] = await db.select().from(wallets).where(eq(wallets.address, address));
-    return wallet || undefined;
-  }
-
-  async createWallet(wallet: InsertWallet): Promise<Wallet> {
-    const [newWallet] = await db
-      .insert(wallets)
-      .values(wallet)
-      .returning();
-    return newWallet;
-  }
-
-  async updateWalletBalance(address: string, balance: number): Promise<Wallet> {
-    const [updatedWallet] = await db
-      .update(wallets)
-      .set({ lastBalance: balance.toString(), updatedAt: new Date() })
-      .where(eq(wallets.address, address))
-      .returning();
-    if (!updatedWallet) {
-      throw new Error(`Wallet not found: ${address}`);
-    }
-    return updatedWallet;
-  }
-
-  async getTransactions(address: string): Promise<Transaction[]> {
-    return await db
-      .select()
-      .from(transactions)
-      .where(eq(transactions.fromAddress, address))
-      .orderBy(transactions.timestamp);
-  }
-
-  async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
-    const [newTransaction] = await db
-      .insert(transactions)
-      .values({
-        ...transaction,
-        timestamp: new Date(),
-        confirmed: false
-      })
-      .returning();
-    return newTransaction;
-  }
-
-  async confirmTransaction(id: number): Promise<Transaction> {
-    const [updatedTransaction] = await db
-      .update(transactions)
-      .set({ confirmed: true })
-      .where(eq(transactions.id, id))
-      .returning();
-    if (!updatedTransaction) {
-      throw new Error(`Transaction not found: ${id}`);
-    }
-    return updatedTransaction;
-  }
-
-  async getContacts(): Promise<Contact[]> {
-    return await db.select().from(contacts).orderBy(contacts.name);
-  }
-
-  async createContact(contact: InsertContact): Promise<Contact> {
-    const [newContact] = await db
-      .insert(contacts)
-      .values(contact)
-      .returning();
-    return newContact;
-  }
-
-  async deleteContact(id: number): Promise<void> {
-    await db.delete(contacts).where(eq(contacts.id, id));
-  }
-
-  async getMetaMaskUser(address: string) {
-    const result = await db.select().from(metamaskUsers).where(eq(metamaskUsers.address, address.toLowerCase())).limit(1);
-    return result[0] || null;
-  }
-
-  async createMetaMaskUser(userData: { address: string; displayName: string; lastLogin: Date }) {
-    const result = await db.insert(metamaskUsers).values(userData).returning();
-    return result[0];
-  }
-
-  async updateMetaMaskUserLogin(address: string) {
-    await db.update(metamaskUsers)
-      .set({ lastLogin: new Date() })
-      .where(eq(metamaskUsers.address, address.toLowerCase()));
-  }
-
+// ===== STORAGE CLASS =====
+// This class handles all database operations for the application
+class Storage {
+  
+  // ===== USER SESSION MANAGEMENT =====
+  
+  /**
+   * Creates a new user session record in the database
+   * This tracks when users log in and their session details
+   */
   async createUserSession(sessionData: {
-    userId: number | null;
-    email: string | null;
-    name: string;
-    phone?: string;
-    walletAddress?: string;
-    ipAddress: string;
-    userAgent: string;
-    sessionId: string;
-  }): Promise<number> {
+    userId?: number | null;      // Optional user ID (may be null for new users)
+    email?: string | null;       // User's email address
+    name: string;                // User's display name
+    phone?: string | null;       // Phone number (for phone auth)
+    walletAddress?: string | null; // MetaMask wallet address (for MetaMask auth)
+    ipAddress: string;           // User's IP address for security tracking
+    userAgent: string;           // Browser user agent string
+    sessionId: string;           // Express session ID
+  }) {
     try {
-      const [session] = await db.insert(sessions).values({
+      console.log('💾 Creating user session in database...');
+      
+      // Insert new session record into database
+      const result = await db.insert(userSessions).values({
         userId: sessionData.userId,
         email: sessionData.email,
         name: sessionData.name,
-        walletAddress: sessionData.walletAddress || null,
-        phone: sessionData.phone || null,
+        phone: sessionData.phone,
+        walletAddress: sessionData.walletAddress,
         ipAddress: sessionData.ipAddress,
         userAgent: sessionData.userAgent,
         sessionId: sessionData.sessionId,
-        loginTime: new Date()
-      }).returning();
+        startTime: new Date(),               // Set current time as start time
+        isActive: true,                      // Mark session as active
+      }).returning({ id: userSessions.id }); // Return the generated session ID
 
-      return session[0].id;
+      console.log('✅ User session created with ID:', result[0]?.id);
+      return result[0]?.id;
     } catch (error) {
-      console.error('Error creating user session:', error);
-      // Fallback: create a minimal session record
-      try {
-        const [session] = await db.insert(sessions).values({
-          userId: sessionData.userId,
-          email: sessionData.email,
-          name: sessionData.name,
-          ipAddress: sessionData.ipAddress,
-          userAgent: sessionData.userAgent,
-          sessionId: sessionData.sessionId,
-          loginTime: new Date()
-        }).returning();
+      console.error('❌ Error creating user session:', error);
+      throw error;
+    }
+  }
 
-        return session.id;
-      } catch (fallbackError) {
-        console.error('Fallback session creation failed:', fallbackError);
-        throw fallbackError;
+  /**
+   * Marks a user session as ended when they log out
+   * Calculates session duration and updates the database
+   */
+  async endUserSession(sessionId: number) {
+    try {
+      console.log('💾 Ending user session:', sessionId);
+      
+      // Get the session to calculate duration
+      const sessions = await db.select().from(userSessions).where(eq(userSessions.id, sessionId));
+      
+      if (sessions.length === 0) {
+        console.warn('⚠️ Session not found:', sessionId);
+        return;
       }
-    }
-  }
 
-  async endUserSession(sessionId: number): Promise<void> {
-    const session = await db.select().from(sessions).where(eq(sessions.id, sessionId));
-    if (session[0]) {
-      const loginTime = new Date(session[0].loginTime);
-      const logoutTime = new Date();
+      const session = sessions[0];
+      const endTime = new Date();
+      
+      // Calculate session duration in seconds
+      const duration = session.startTime 
+        ? Math.floor((endTime.getTime() - session.startTime.getTime()) / 1000)
+        : null;
 
-      await db.update(sessions)
-        .set({ 
-          logoutTime
+      // Update session with end time and duration
+      await db.update(userSessions)
+        .set({
+          endTime: endTime,
+          duration: duration,
+          isActive: false,                   // Mark session as inactive
+          updatedAt: new Date()
         })
-        .where(eq(sessions.id, sessionId));
+        .where(eq(userSessions.id, sessionId));
+
+      console.log('✅ User session ended. Duration:', duration, 'seconds');
+    } catch (error) {
+      console.error('❌ Error ending user session:', error);
+      throw error;
     }
   }
 
-  async getAllUserSessions(): Promise<any[]> {
-    return await db.select().from(sessions).orderBy(desc(sessions.loginTime));
+  /**
+   * Retrieves all user sessions from the database
+   * Used for admin monitoring and analytics
+   */
+  async getAllSessions() {
+    try {
+      console.log('📊 Fetching all user sessions...');
+      
+      // Get all sessions ordered by most recent first
+      const sessions = await db.select().from(userSessions).orderBy(desc(userSessions.startTime));
+      
+      console.log('✅ Retrieved', sessions.length, 'sessions');
+      return sessions;
+    } catch (error) {
+      console.error('❌ Error fetching sessions:', error);
+      throw error;
+    }
   }
 
-  async getUserSessionsByEmail(email: string): Promise<any[]> {
-    return await db.select().from(sessions)
-      .where(eq(sessions.email, email))
-      .orderBy(desc(sessions.loginTime));
+  /**
+   * Gets active (currently ongoing) user sessions
+   * Useful for monitoring current app usage
+   */
+  async getActiveSessions() {
+    try {
+      console.log('📊 Fetching active user sessions...');
+      
+      // Get only sessions where isActive is true
+      const activeSessions = await db.select()
+        .from(userSessions)
+        .where(eq(userSessions.isActive, true))
+        .orderBy(desc(userSessions.startTime));
+      
+      console.log('✅ Retrieved', activeSessions.length, 'active sessions');
+      return activeSessions;
+    } catch (error) {
+      console.error('❌ Error fetching active sessions:', error);
+      throw error;
+    }
+  }
+
+  // ===== METAMASK USER MANAGEMENT =====
+
+  /**
+   * Creates or updates a MetaMask user in the database
+   * Stores wallet address and user preferences
+   */
+  async createOrUpdateMetaMaskUser(userData: {
+    address: string;             // MetaMask wallet address (unique identifier)
+    displayName: string;         // User's chosen display name
+    ensName?: string | null;     // ENS domain name (if they have one)
+  }) {
+    try {
+      console.log('🦊 Creating/updating MetaMask user:', userData.address);
+      
+      // Try to find existing user first
+      const existingUsers = await db.select()
+        .from(metamaskUsers)
+        .where(eq(metamaskUsers.address, userData.address));
+
+      if (existingUsers.length > 0) {
+        // User exists, update their information
+        console.log('📝 Updating existing MetaMask user');
+        
+        const result = await db.update(metamaskUsers)
+          .set({
+            displayName: userData.displayName,
+            ensName: userData.ensName,
+            lastLogin: new Date()              // Update last login time
+          })
+          .where(eq(metamaskUsers.address, userData.address))
+          .returning();
+
+        return result[0];
+      } else {
+        // User doesn't exist, create new record
+        console.log('🆕 Creating new MetaMask user');
+        
+        const result = await db.insert(metamaskUsers)
+          .values({
+            address: userData.address,
+            displayName: userData.displayName,
+            ensName: userData.ensName,
+            lastLogin: new Date(),
+            createdAt: new Date()
+          })
+          .returning();
+
+        return result[0];
+      }
+    } catch (error) {
+      console.error('❌ Error creating/updating MetaMask user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Finds a MetaMask user by their wallet address
+   * Used during authentication to get user details
+   */
+  async getMetaMaskUserByAddress(address: string) {
+    try {
+      console.log('🔍 Finding MetaMask user by address:', address);
+      
+      const users = await db.select()
+        .from(metamaskUsers)
+        .where(eq(metamaskUsers.address, address));
+
+      if (users.length > 0) {
+        console.log('✅ MetaMask user found');
+        return users[0];
+      } else {
+        console.log('❌ MetaMask user not found');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error finding MetaMask user:', error);
+      throw error;
+    }
+  }
+
+  // ===== DATABASE MAINTENANCE =====
+
+  /**
+   * Cleans up old inactive sessions from the database
+   * Helps keep the database size manageable
+   */
+  async cleanupOldSessions(daysOld: number = 30) {
+    try {
+      console.log(`🧹 Cleaning up sessions older than ${daysOld} days...`);
+      
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+      // Delete old inactive sessions
+      const result = await db.delete(userSessions)
+        .where(eq(userSessions.isActive, false))
+        // Note: Additional date filtering would need more complex query
+        .returning({ id: userSessions.id });
+
+      console.log('✅ Cleaned up', result.length, 'old sessions');
+      return result.length;
+    } catch (error) {
+      console.error('❌ Error cleaning up old sessions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets database statistics for monitoring
+   * Returns counts of various database records
+   */
+  async getDatabaseStats() {
+    try {
+      console.log('📊 Gathering database statistics...');
+      
+      // Get counts of different record types
+      const totalSessions = await db.select().from(userSessions);
+      const activeSessions = await db.select().from(userSessions).where(eq(userSessions.isActive, true));
+      const metamaskUserCount = await db.select().from(metamaskUsers);
+
+      const stats = {
+        totalSessions: totalSessions.length,
+        activeSessions: activeSessions.length,
+        metamaskUsers: metamaskUserCount.length,
+        lastUpdated: new Date().toISOString()
+      };
+
+      console.log('✅ Database stats:', stats);
+      return stats;
+    } catch (error) {
+      console.error('❌ Error getting database stats:', error);
+      throw error;
+    }
   }
 }
 
-export const storage = new DatabaseStorage();
+// ===== EXPORT STORAGE INSTANCE =====
+// Create and export a single instance of the Storage class
+// This ensures we use the same database connection throughout the app
+export const storage = new Storage();

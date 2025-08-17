@@ -1,271 +1,283 @@
-// ===== AUTHENTICATION HOOK FILE =====
-// This file contains the main authentication logic for the application
+// ===== IMPORT SECTION =====
+// This section imports all the external libraries and components needed for authentication
 
-// React core library
-import React from "react";
-// React Query for server state management
+// React Query for data fetching and caching
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// Custom hook for showing toast notifications
-import { useToast } from "@/hooks/use-toast";
-// Wouter for navigation between pages
+// Wouter for client-side routing (navigation between pages)
 import { useLocation } from "wouter";
-// MetaMask wallet integration hook
-import { useMetaMask } from "./use-metamask";
+// React hooks for state management
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+// API request helper function
+import { apiRequest } from "@/lib/queryClient";
 
+// ===== TYPE DEFINITIONS =====
+// Define TypeScript interfaces for type safety
+
+// Interface defining what user data looks like
 interface User {
-  id: string;
-  email?: string;
-  name: string;
-  given_name?: string;
-  family_name?: string;
-  picture?: string | null;
-  phone?: string;
-  provider?: string;
-  walletAddress?: string;
+  id?: string;                    // Unique user identifier
+  email?: string;                 // User's email address
+  name?: string;                  // User's display name
+  given_name?: string;            // User's first name
+  family_name?: string;           // User's last name
+  picture?: string;               // URL to user's profile picture
+  provider?: 'google' | 'metamask' | 'phone';  // Authentication method used
+  walletAddress?: string;         // MetaMask wallet address (if using MetaMask)
+  phone?: string;                 // Phone number (if using phone auth)
 }
 
-export function useAuth() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+// Interface defining the authentication context structure
+interface AuthContextType {
+  user: User | null;              // Current user data or null if not logged in
+  isAuthenticated: boolean;       // Whether user is currently authenticated
+  login: () => void;              // Function to start Google OAuth login
+  loginWithMetaMask: (data: { message: string; signature: string; address: string }) => void;  // MetaMask login function
+  logout: () => void;             // Function to log out user
+  isLoading: boolean;             // Whether authentication is in progress
+  isLoggingOut: boolean;          // Whether logout is in progress
+  isMetaMaskLoading: boolean;     // Whether MetaMask authentication is in progress
+  checkSessionStatus: () => Promise<any>;  // Function to verify session status
+}
+
+// ===== CONTEXT CREATION =====
+// Create React context for sharing authentication state across components
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// ===== AUTHENTICATION PROVIDER COMPONENT =====
+// This component wraps the entire app and provides authentication functionality
+export function AuthProvider({ children }: { children: ReactNode }) {
+  // ===== STATE MANAGEMENT =====
+  // Local state to track authentication status and user data
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isMetaMaskLoading, setIsMetaMaskLoading] = useState(false);
+
+  // ===== ROUTING HOOKS =====
+  // Get navigation function to redirect users after authentication
   const [, setLocation] = useLocation();
-  const [isMetaMaskLoading, setIsMetaMaskLoading] = React.useState(false);
 
-  const { data: user, isLoading } = useQuery<User | null>({
-    queryKey: ["/auth/user"],
-    queryFn: async () => {
-      try {
-        const response = await fetch("/auth/user");
-        if (!response.ok) return null;
-        return response.json();
-      } catch {
-        return null;
-      }
-    },
+  // ===== REACT QUERY SETUP =====
+  // Query client for invalidating cached data
+  const queryClient = useQueryClient();
+
+  // ===== USER SESSION QUERY =====
+  // Automatically check if user is logged in when app loads
+  const { data: sessionUser, isLoading: sessionLoading, error: sessionError } = useQuery({
+    queryKey: ['auth-user'],        // Unique key for this query
+    queryFn: () => apiRequest('/auth/user'),  // Function to fetch user data
+    retry: 1,                       // Only retry once if it fails
+    staleTime: 5 * 60 * 1000,      // Consider data fresh for 5 minutes
   });
 
-  const loginMutation = useMutation({
-    mutationFn: async () => {
-      window.location.href = "/auth/google";
-    },
-  });
-
-  const appleLoginMutation = useMutation({
-    mutationFn: async () => {
-      window.location.href = "/auth/apple";
-    },
-  });
-
-  const metamaskLoginMutation = useMutation({
-    mutationFn: async ({ message, signature, address }: { message: string; signature: string; address: string }) => {
-      const response = await fetch("/api/auth/metamask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ message, signature, address }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "MetaMask authentication failed");
-      }
-
-      return response.json();
-    },
-    onSuccess: (data) => {
-      console.log('✅ MetaMask authentication successful:', data);
-      queryClient.invalidateQueries({ queryKey: ["/auth/user"] });
-      toast({
-        title: "Welcome!",
-        description: "You have been signed in with MetaMask.",
-      });
-      // Route to dashboard after successful authentication
-      setLocation("/dashboard");
-    },
-    onError: (error) => {
-      console.error('❌ MetaMask authentication failed:', error);
-      toast({
-        title: "Authentication failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      // Clear MetaMask connection if user is using MetaMask
-      if (user?.provider === 'metamask') {
-        try {
-          // Clear localStorage and sessionStorage
-          window.localStorage.removeItem('metamask-connected');
-          window.sessionStorage.clear();
-        } catch (error) {
-          console.error('Error clearing storage:', error);
-        }
-      }
-
-      const response = await fetch("/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Logout failed");
-    },
-    onSuccess: () => {
-      queryClient.clear();
-
-      // Force a complete page reload for MetaMask users to ensure clean state
-      if (user?.provider === 'metamask') {
-        window.location.href = '/';
-      } else {
-        setLocation("/");
-      }
-
-      toast({
-        title: "Signed out",
-        description: "You have been signed out successfully.",
-      });
-    },
-    onError: (error) => {
-      console.error("Logout failed:", error);
-      // Force reload as fallback for MetaMask users
-      if (user?.provider === 'metamask') {
-        window.location.href = '/';
-      }
-      toast({
-        title: "Logout failed",
-        description: "There was an error signing you out.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Check session status function
+  // ===== SESSION STATUS CHECK FUNCTION =====
+  // Function to manually verify if user's session is still valid
   const checkSessionStatus = async () => {
     try {
       console.log('🔍 Checking session status...');
-      const response = await fetch("/auth/user", {
-        credentials: "include",
+      const response = await fetch('/auth/user', {
+        method: 'GET',
+        credentials: 'include',      // Include cookies in request
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      console.log('🔍 Session check response status:', response.status);
 
       if (response.ok) {
         const userData = await response.json();
-        console.log('✅ Session active:', userData);
+        console.log('✅ Session is active:', userData);
         return {
           isActive: true,
           user: userData,
-          provider: userData.provider || userData.authMethod
+          provider: userData.provider || 'unknown'
         };
       } else {
-        console.log('❌ Session expired or invalid');
+        console.log('❌ Session is inactive or expired');
         return {
           isActive: false,
-          user: null,
-          provider: null
+          error: 'Session expired or invalid'
         };
       }
     } catch (error) {
-      console.error('🚨 Session check failed:', error);
+      console.error('❌ Session check failed:', error);
       return {
         isActive: false,
-        user: null,
-        provider: null,
-        error: error.message
+        error: error.message || 'Session check failed'
       };
     }
   };
 
-  // Enhanced logging for debugging
-  React.useEffect(() => {
-    if (user) {
-      console.log('🔐 Auth Status - User found:', {
-        provider: user.provider || user.authMethod,
-        address: user.walletAddress || user.address,
-        name: user.name || user.displayName,
-        isAuthenticated: !!user
-      });
-    } else {
-      console.log('🔓 Auth Status - No user found, isAuthenticated:', !!user);
-    }
-  }, [user]);
+  // ===== GOOGLE OAUTH LOGIN FUNCTION =====
+  // Function to initiate Google OAuth authentication
+  const login = () => {
+    console.log('🔵 Starting Google OAuth login...');
+    setIsLoading(true);
 
-  // Add session clearing utility
-  const clearSession = async () => {
-    try {
-      await fetch('/auth/clear-session', {
+    // Redirect to our backend's Google OAuth endpoint
+    // The backend will handle the OAuth flow and redirect back
+    window.location.href = '/auth/google';
+  };
+
+  // ===== METAMASK LOGIN MUTATION =====
+  // React Query mutation for MetaMask authentication
+  const loginWithMetaMaskMutation = useMutation({
+    // Function that sends MetaMask signature to backend for verification
+    mutationFn: async (data: { message: string; signature: string; address: string }) => {
+      console.log('🔵 Sending MetaMask auth data to backend...');
+      const response = await fetch('/api/auth/metamask', {
         method: 'POST',
-        credentials: 'include'
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',      // Include cookies for session
+        body: JSON.stringify(data),   // Send signature data
       });
-      // Clear local storage as well
-      window.localStorage.clear();
-      window.sessionStorage.clear();
-      queryClient.clear();
-      window.location.reload();
-    } catch (error) {
-      console.error('Error clearing session:', error);
-    }
-  };
 
-  return {
-    user: user || null,
-    isAuthenticated: !!user,
-    login: loginMutation.mutate,
-    loginWithApple: appleLoginMutation.mutate,
-    clearSession,
-    loginWithMetaMask: async ({ message, signature, address }: { message: string; signature: string; address: string }) => {
-      setIsMetaMaskLoading(true);
-      try {
-        console.log('🔵 Sending MetaMask auth to server:', { message, signature, address });
-
-        const response = await fetch('/api/auth/metamask', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message, signature, address }),
-          credentials: 'include'
-        });
-
-        console.log('🔵 Server response status:', response.status);
-        console.log('🔵 Server response headers:', response.headers.get('content-type'));
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ Server error response:', errorText);
-          throw new Error(`Authentication failed with status: ${response.status}`);
-        }
-
-        // Check if response is JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          const responseText = await response.text();
-          console.error('❌ Expected JSON but got:', responseText);
-          throw new Error('Server returned invalid response format');
-        }
-
-        const data = await response.json();
-        console.log('✅ MetaMask authentication successful:', data);
-        queryClient.invalidateQueries({ queryKey: ["/auth/user"] });
-        toast({
-          title: "Welcome!",
-          description: "You have been signed in with MetaMask.",
-        });
-        // Route to dashboard after successful authentication
-        setLocation("/dashboard");
-
-      } catch (error) {
-        console.error('❌ MetaMask authentication failed:', error);
-        toast({
-          title: "Authentication failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setIsMetaMaskLoading(false);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ MetaMask auth failed:', errorText);
+        throw new Error(`Authentication failed: ${response.status}`);
       }
+
+      const result = await response.json();
+      console.log('✅ MetaMask authentication successful');
+      return result;
     },
-    logout: logoutMutation.mutate,
-    isLoggingOut: logoutMutation.isPending,
-    isMetaMaskLoading,
-    checkSessionStatus,
+    // Function called when authentication succeeds
+    onSuccess: (data) => {
+      console.log('✅ MetaMask login successful, redirecting to dashboard...');
+      setIsMetaMaskLoading(false);
+
+      // Invalidate auth query to refetch user data
+      queryClient.invalidateQueries({ queryKey: ['auth-user'] });
+
+      // Redirect to dashboard
+      setLocation('/dashboard');
+    },
+    // Function called when authentication fails
+    onError: (error) => {
+      console.error('❌ MetaMask login failed:', error);
+      setIsMetaMaskLoading(false);
+      alert(`MetaMask authentication failed: ${error.message}`);
+    },
+  });
+
+  // ===== METAMASK LOGIN WRAPPER FUNCTION =====
+  // Wrapper function that sets loading state and triggers the mutation
+  const loginWithMetaMask = (data: { message: string; signature: string; address: string }) => {
+    console.log('🔵 loginWithMetaMask called');
+    setIsMetaMaskLoading(true);
+    loginWithMetaMaskMutation.mutate(data);
   };
+
+  // ===== LOGOUT MUTATION =====
+  // React Query mutation for logging out the user
+  const logoutMutation = useMutation({
+    // Function that calls the logout endpoint
+    mutationFn: async () => {
+      console.log('🔵 Calling logout endpoint...');
+      const response = await fetch('/auth/logout', {
+        method: 'POST',
+        credentials: 'include',      // Include cookies for session
+      });
+
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+
+      return response.json();
+    },
+    // Function called when logout succeeds
+    onSuccess: () => {
+      console.log('✅ Logout successful');
+
+      // Clear user state
+      setUser(null);
+      setIsLoggingOut(false);
+
+      // Clear all cached data
+      queryClient.clear();
+
+      // Redirect to home page
+      setLocation('/');
+    },
+    // Function called when logout fails
+    onError: (error) => {
+      console.error('❌ Logout failed:', error);
+      setIsLoggingOut(false);
+
+      // Even if logout fails, clear local state and redirect
+      setUser(null);
+      queryClient.clear();
+      setLocation('/');
+    },
+  });
+
+  // ===== LOGOUT WRAPPER FUNCTION =====
+  // Wrapper function that sets loading state and triggers logout
+  const logout = () => {
+    console.log('🔵 Logout initiated');
+    setIsLoggingOut(true);
+    logoutMutation.mutate();
+  };
+
+  // ===== USER STATE SYNCHRONIZATION EFFECT =====
+  // Effect to sync user state with session query results
+  useEffect(() => {
+    if (sessionUser && !sessionError) {
+      console.log('✅ Session user found, updating local state');
+      setUser(sessionUser);
+      setIsLoading(false);
+    } else if (sessionError) {
+      console.log('❌ Session error, clearing user state');
+      setUser(null);
+      setIsLoading(false);
+    } else if (!sessionLoading) {
+      console.log('ℹ️ No session found, user not authenticated');
+      setUser(null);
+      setIsLoading(false);
+    }
+  }, [sessionUser, sessionError, sessionLoading]);
+
+  // ===== AUTHENTICATION STATUS CALCULATION =====
+  // Determine if user is authenticated based on user state
+  const isAuthenticated = !!user;
+
+  // ===== CONTEXT VALUE =====
+  // Object containing all authentication functions and state
+  const value: AuthContextType = {
+    user,                           // Current user data
+    isAuthenticated,                // Authentication status
+    login,                          // Google OAuth login function
+    loginWithMetaMask,              // MetaMask login function
+    logout,                         // Logout function
+    isLoading: isLoading || sessionLoading,  // Combined loading state
+    isLoggingOut,                   // Logout loading state
+    isMetaMaskLoading,              // MetaMask loading state
+    checkSessionStatus,             // Session verification function
+  };
+
+  // ===== PROVIDER RENDER =====
+  // Provide authentication context to all child components
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// ===== CUSTOM HOOK =====
+// Custom hook to use authentication context in components
+export function useAuth() {
+  // Get authentication context
+  const context = useContext(AuthContext);
+
+  // Throw error if hook is used outside of AuthProvider
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+
+  return context;
 }
