@@ -621,11 +621,11 @@ router.get('/tokens', async (req, res) => {
           source: '1inch'
         });
       } else {
-        console.log('❌ 1inch API failed, falling back to CoinGecko');
-        throw new Error('1inch API failed');
+        console.log('ℹ️ 1inch API unavailable, falling back to CoinGecko');
+        throw new Error('1inch API unavailable');
       }
     } catch (oneInchError) {
-      console.log('⚠️ 1inch API error, using CoinGecko fallback:', oneInchError.message);
+      console.log('ℹ️ 1inch API unavailable (expected without API key), using CoinGecko fallback');
 
       // Fallback to CoinGecko
       const cryptoIds = 'ethereum,usd-coin,chainlink,uniswap';
