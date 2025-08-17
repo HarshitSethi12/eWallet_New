@@ -14,12 +14,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 // Icons from Lucide React icon library
-import { 
-  Send, 
-  ArrowDownLeft, 
-  Wallet as WalletIcon, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  Send,
+  ArrowDownLeft,
+  Wallet as WalletIcon,
+  TrendingUp,
+  TrendingDown,
   Eye,
   EyeOff,
   BarChart3,
@@ -59,6 +59,21 @@ interface CryptoAsset {
   price: number;        // Current price per unit
   change24h: number;    // 24-hour price change percentage
   icon: string;         // URL or path to asset icon
+}
+
+// Define TypeScript interface for token prices from APIs
+interface TokenPrice {
+  symbol: string;       // Asset symbol
+  name: string;         // Asset name
+  price: number;        // Current price in USD
+  change24h: number;    // 24-hour price change percentage
+  address: string;      // Contract address of the token
+}
+
+// Define TypeScript interface for the data returned by the token price query
+interface TokenPriceData {
+  tokens: TokenPrice[];  // Array of token price information
+  source: string;        // Source of the data ('1inch' or 'coingecko')
 }
 
 // ===== ADDITIONAL IMPORTS FOR DASHBOARD =====
@@ -112,7 +127,7 @@ function WalletTabs() {
 
   // ===== DATA SELECTION LOGIC =====
   // Use real API data when available, fallback to mock data during loading
-  const portfolioTokens = tokenData?.tokens || mockTokens; 
+  const portfolioTokens = tokenData?.tokens || mockTokens;
 
   // ===== PORTFOLIO CALCULATIONS =====
   // Calculate total portfolio value by summing all token values
@@ -199,7 +214,7 @@ function WalletTabs() {
                 <CardTitle className="text-sm font-semibold text-amber-700">Top Holdings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {portfolioTokens.slice(0, 3).map((token, index) => (
+                {portfolioTokens.slice(0, 3).map((token) => (
                   <div key={token.symbol} className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-2">
                       <img src={token.logoURI} alt={token.name} className="w-6 h-6 rounded-full" />
@@ -344,7 +359,7 @@ function WalletTabs() {
                 <div key={tx.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={`p-1.5 rounded-full ${
-                      tx.type === 'receive' ? 'bg-green-100' : 
+                      tx.type === 'receive' ? 'bg-green-100' :
                       tx.type === 'send' ? 'bg-red-100' : 'bg-blue-100'
                     }`}>
                       {tx.type === 'receive' ? (
@@ -367,7 +382,7 @@ function WalletTabs() {
 
                   <div className="text-right">
                     <p className={`text-sm font-semibold ${
-                      tx.type === 'receive' ? 'text-green-600' : 
+                      tx.type === 'receive' ? 'text-green-600' :
                       tx.type === 'send' ? 'text-red-600' : 'text-blue-600'
                     }`}>
                       {tx.type === 'send' ? '-' : tx.type === 'receive' ? '+' : ''}{tx.amount} {tx.token}
@@ -513,9 +528,9 @@ export default function Dashboard() {
                     <CardTitle className="flex items-center justify-between">
                       <div className="flex items-center gap-3 sm:gap-4">
                         {user?.picture ? (
-                          <img 
-                            src={user.picture} 
-                            alt={user.name} 
+                          <img
+                            src={user.picture}
+                            alt={user.name}
                             className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-white shadow-lg"
                           />
                         ) : (
@@ -526,8 +541,8 @@ export default function Dashboard() {
                         <div>
                           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">MetaMask Wallet</h1>
                           <p className="text-sm sm:text-base text-gray-600">
-                            {user?.provider === 'metamask' ? 
-                              `${user.walletAddress?.slice(0, 6)}...${user.walletAddress?.slice(-4)}` : 
+                            {user?.provider === 'metamask' ?
+                              `${user.walletAddress?.slice(0, 6)}...${user.walletAddress?.slice(-4)}` :
                               user?.name
                             }
                           </p>
