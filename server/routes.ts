@@ -331,6 +331,24 @@ router.post('/auth/metamask', async (req, res) => {
         picture: null
       };
 
+      // Track login session if storage is available
+      try {
+        const sessionData = {
+          userId: address,
+          email: null,
+          name: displayName,
+          ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+          userAgent: req.get('User-Agent') || 'unknown',
+          sessionId: req.sessionID,
+        };
+
+        const sessionDbId = await storage.createUserSession(sessionData);
+        req.session.sessionDbId = sessionDbId;
+      } catch (dbError) {
+        console.warn('Warning: Could not create database session:', dbError);
+      }
+      };
+
       console.log('✅ MetaMask user authenticated successfully');
 
       // Return success response
@@ -372,7 +390,20 @@ router.post('/ai/gemini-chat', async (req, res) => {
     const { message, context } = req.body;
 
     // Validate that a message was provided
-    if (!message) {
+    if (!message || message.trim() === '') {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // For now, return a simple response since we don't have Gemini API setup
+    res.json({
+      response: "I'm a BitWallet AI assistant. I can help you with cryptocurrency questions and wallet management.",
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Gemini AI chat error:', error);
+    res.status(500).json({ error: 'AI chat service unavailable' });
+  }
+});age) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
