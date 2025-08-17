@@ -1,5 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { Server } from "http";
+import { createServer } from "http";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -22,6 +22,7 @@ if (!process.env.NODE_ENV) {
 }
 
 const app = express();
+const server = createServer(app);
 
 // Configure app environment
 if (isProduction) {
