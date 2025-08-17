@@ -61,37 +61,20 @@ interface CryptoAsset {
   icon: string;         // URL or path to asset icon
 }
 
-// ===== IMPORT SECTION =====
-// React Query for server state management and data fetching
-import { useQuery } from "@tanstack/react-query";
+// ===== ADDITIONAL IMPORTS FOR DASHBOARD =====
 // Wouter for client-side routing
 import { Link } from "wouter";
-// UI components from our component library
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-// Custom components for wallet functionality
+// Additional UI components for dashboard functionality
 import { AddressCard } from "@/components/address-card";
 import { TransactionList } from "@/components/transaction-list";
-import { AiChat } from "@/components/ai-chat";
-// Icons from Lucide React
-import { Send, ArrowDownLeft, Wallet as WalletIcon, ShieldCheck, LogOut, TrendingUp, TrendingDown, Eye, Coins, Clock, BarChart3 } from "lucide-react";
 // Mock blockchain utilities for development
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
-// API request helper
-import { apiRequest } from "@/lib/queryClient";
 // TypeScript types for data structures
 import type { Wallet, Transaction } from "@shared/schema";
 // React Icons for additional icons
 import { RiExchangeFundsFill } from "react-icons/ri";
-// Custom hooks for authentication and MetaMask
-import { useAuth } from "@/hooks/use-auth";
+// Custom hooks for MetaMask wallet connection
 import { useMetaMask } from "@/hooks/use-metamask";
-// Price ticker component
-import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
-// React core library
-import React from "react";
 
 // ===== MOCK DATA FOR DEVELOPMENT =====
 // Mock token portfolio data to show while developing/testing
