@@ -530,4 +530,5 @@ router.get('/ai/gemini-health', async (req, res) => {
 
 // ===== EXPORT ROUTER =====
 // Export the router so it can be used in the main server file
+export { router };
 export default router;
