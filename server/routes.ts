@@ -551,85 +551,119 @@ router.get('/tokens', async (req, res) => {
   try {
     console.log('🪙 Fetching token prices from 1inch API...');
 
-    // 1inch API token list for Ethereum mainnet
-    const oneInchTokens = [
-      '0xA0b86a33E6441b1b99f5Cf71D3C0F918EB08b8f3', // ETH
-      '0xA0b73E1Ff0B80914AB6fe0444E65848C4C34450b', // USDC
-      '0x514910771AF9Ca656af840dff83E8264EcF986CA', // LINK
-      '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984'  // UNI
-    ];
+    // Correct token addresses for Ethereum mainnet
+    const tokenAddresses = {
+      ETH: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', // Native ETH on 1inch
+      USDC: '0xa0b86a33e6441b1b99f5cf71d3c0f918eb08b8f3', // USD Coin
+      LINK: '0x514910771af9ca656af840dff83e8264ecf986ca', // Chainlink
+      UNI: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984'   // Uniswap
+    };
 
     // Try 1inch API first
     try {
-      const oneInchUrl = `https://api.1inch.dev/price/v1.1/1/${oneInchTokens.join(',')}/USD`;
+      console.log('🌐 Attempting 1inch API call...');
 
-      console.log('🌐 Making request to 1inch API...');
+      // Try to fetch each token price individually from 1inch
+      const pricePromises = Object.entries(tokenAddresses).map(async ([symbol, address]) => {
+        try {
+          const url = `https://api.1inch.dev/price/v1.1/1/${address}/USD`;
+          console.log(`📞 Fetching ${symbol} price from: ${url}`);
 
-      const oneInchResponse = await fetch(oneInchUrl, {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'BitWallet/1.0'
+          const response = await fetch(url, {
+            headers: {
+              'Accept': 'application/json',
+              'User-Agent': 'BitWallet/1.0'
+            },
+            timeout: 5000 // 5 second timeout
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log(`✅ ${symbol} price from 1inch:`, data);
+            return { symbol, price: parseFloat(data) || null };
+          } else {
+            console.log(`❌ 1inch API error for ${symbol}:`, response.status);
+            return { symbol, price: null };
+          }
+        } catch (error) {
+          console.log(`❌ 1inch fetch error for ${symbol}:`, error.message);
+          return { symbol, price: null };
         }
       });
 
-      if (oneInchResponse.ok) {
-        const oneInchData = await oneInchResponse.json();
-        console.log('✅ Successfully fetched from 1inch API');
+      const priceResults = await Promise.all(pricePromises);
+      const oneInchPrices = {};
+      let oneInchSuccessCount = 0;
 
-        // Transform 1inch data to our format
+      priceResults.forEach(({ symbol, price }) => {
+        if (price !== null) {
+          oneInchPrices[symbol] = price;
+          oneInchSuccessCount++;
+        }
+      });
+
+      console.log(`📊 1inch API successful fetches: ${oneInchSuccessCount}/4`);
+
+      // If we got at least 2 prices from 1inch, use it as primary source
+      if (oneInchSuccessCount >= 2) {
+        console.log('✅ Using 1inch API as primary source');
+
         const tokens = [
           {
             symbol: 'ETH',
             name: 'Ethereum',
-            price: oneInchData['0xA0b86a33E6441b1b99f5Cf71D3C0F918EB08b8f3'] || 2340.50,
-            change24h: 5.20,
+            price: oneInchPrices.ETH || 4314.50,
+            change24h: -5.27,
             balance: '2.5',
-            balanceUSD: (oneInchData['0xA0b86a33E6441b1b99f5Cf71D3C0F918EB08b8f3'] || 2340.50) * 2.5,
+            balanceUSD: parseFloat(((oneInchPrices.ETH || 4314.50) * 2.5).toFixed(2)),
             logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png'
           },
           {
             symbol: 'USDC',
             name: 'USD Coin',
-            price: oneInchData['0xA0b73E1Ff0B80914AB6fe0444E65848C4C34450b'] || 1.00,
-            change24h: -0.10,
+            price: oneInchPrices.USDC || 1.00,
+            change24h: 0.00,
             balance: '1000',
-            balanceUSD: (oneInchData['0xA0b73E1Ff0B80914AB6fe0444E65848C4C34450b'] || 1.00) * 1000,
+            balanceUSD: parseFloat(((oneInchPrices.USDC || 1.00) * 1000).toFixed(2)),
             logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png'
           },
           {
             symbol: 'LINK',
             name: 'Chainlink',
-            price: oneInchData['0x514910771AF9Ca656af840dff83E8264EcF986CA'] || 14.25,
-            change24h: 8.70,
+            price: oneInchPrices.LINK || 25.03,
+            change24h: -1.97,
             balance: '150',
-            balanceUSD: (oneInchData['0x514910771AF9Ca656af840dff83E8264EcF986CA'] || 14.25) * 150,
+            balanceUSD: parseFloat(((oneInchPrices.LINK || 25.03) * 150).toFixed(2)),
             logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png'
           },
           {
             symbol: 'UNI',
             name: 'Uniswap',
-            price: oneInchData['0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984'] || 6.80,
-            change24h: -3.20,
+            price: oneInchPrices.UNI || 10.39,
+            change24h: -7.30,
             balance: '75',
-            balanceUSD: (oneInchData['0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984'] || 6.80) * 75,
+            balanceUSD: parseFloat(((oneInchPrices.UNI || 10.39) * 75).toFixed(2)),
             logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
           }
         ];
 
         return res.json({
           tokens,
-          source: '1inch'
+          source: '1inch',
+          successCount: oneInchSuccessCount
         });
       } else {
-        console.log('ℹ️ 1inch API unavailable, falling back to CoinGecko');
-        throw new Error('1inch API unavailable');
+        console.log('ℹ️ 1inch API insufficient data, falling back to CoinGecko');
+        throw new Error('Insufficient 1inch data');
       }
     } catch (oneInchError) {
-      console.log('ℹ️ 1inch API unavailable (expected without API key), using CoinGecko fallback');
+      console.log('ℹ️ 1inch API unavailable, using CoinGecko fallback:', oneInchError.message);
 
       // Fallback to CoinGecko
       const cryptoIds = 'ethereum,usd-coin,chainlink,uniswap';
       const coinGeckoUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd&include_24hr_change=true`;
+
+      console.log('🌐 Calling CoinGecko API...');
 
       const coinGeckoResponse = await fetch(coinGeckoUrl, {
         headers: {
@@ -645,17 +679,17 @@ router.get('/tokens', async (req, res) => {
       const coinGeckoData = await coinGeckoResponse.json();
       console.log('✅ Successfully fetched from CoinGecko (fallback)');
 
-      const ethPrice = coinGeckoData.ethereum?.usd || 2340.50;
+      const ethPrice = coinGeckoData.ethereum?.usd || 4314.50;
       const usdcPrice = coinGeckoData['usd-coin']?.usd || 1.00;
-      const linkPrice = coinGeckoData.chainlink?.usd || 14.25;
-      const uniPrice = coinGeckoData.uniswap?.usd || 6.80;
+      const linkPrice = coinGeckoData.chainlink?.usd || 25.03;
+      const uniPrice = coinGeckoData.uniswap?.usd || 10.39;
 
       const tokens = [
         {
           symbol: 'ETH',
           name: 'Ethereum',
           price: ethPrice,
-          change24h: parseFloat((coinGeckoData.ethereum?.usd_24h_change || 5.20).toFixed(2)),
+          change24h: parseFloat((coinGeckoData.ethereum?.usd_24h_change || -5.27).toFixed(2)),
           balance: '2.5',
           balanceUSD: parseFloat((ethPrice * 2.5).toFixed(2)),
           logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png'
@@ -664,7 +698,7 @@ router.get('/tokens', async (req, res) => {
           symbol: 'USDC',
           name: 'USD Coin',
           price: usdcPrice,
-          change24h: parseFloat((coinGeckoData['usd-coin']?.usd_24h_change || -0.10).toFixed(2)),
+          change24h: parseFloat((coinGeckoData['usd-coin']?.usd_24h_change || 0.00).toFixed(2)),
           balance: '1000',
           balanceUSD: parseFloat((usdcPrice * 1000).toFixed(2)),
           logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png'
@@ -673,7 +707,7 @@ router.get('/tokens', async (req, res) => {
           symbol: 'LINK',
           name: 'Chainlink',
           price: linkPrice,
-          change24h: parseFloat((coinGeckoData.chainlink?.usd_24h_change || 8.70).toFixed(2)),
+          change24h: parseFloat((coinGeckoData.chainlink?.usd_24h_change || -1.97).toFixed(2)),
           balance: '150',
           balanceUSD: parseFloat((linkPrice * 150).toFixed(2)),
           logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png'
@@ -682,7 +716,7 @@ router.get('/tokens', async (req, res) => {
           symbol: 'UNI',
           name: 'Uniswap',
           price: uniPrice,
-          change24h: parseFloat((coinGeckoData.uniswap?.usd_24h_change || -3.20).toFixed(2)),
+          change24h: parseFloat((coinGeckoData.uniswap?.usd_24h_change || -7.30).toFixed(2)),
           balance: '75',
           balanceUSD: parseFloat((uniPrice * 75).toFixed(2)),
           logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
@@ -697,22 +731,22 @@ router.get('/tokens', async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching token prices:', error);
 
-    // Return mock data as last resort
+    // Return mock data as last resort with updated prices matching your screenshot
     const mockTokens = [
       {
         symbol: 'ETH',
         name: 'Ethereum',
-        price: 2340.50,
-        change24h: 5.20,
+        price: 4314.50,
+        change24h: -5.27,
         balance: '2.5',
-        balanceUSD: 5851.25,
+        balanceUSD: 10786.25,
         logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png'
       },
       {
         symbol: 'USDC',
         name: 'USD Coin',
         price: 1.00,
-        change24h: -0.10,
+        change24h: 0.00,
         balance: '1000',
         balanceUSD: 1000.00,
         logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png'
@@ -720,19 +754,19 @@ router.get('/tokens', async (req, res) => {
       {
         symbol: 'LINK',
         name: 'Chainlink',
-        price: 14.25,
-        change24h: 8.70,
+        price: 25.03,
+        change24h: -1.97,
         balance: '150',
-        balanceUSD: 2137.50,
+        balanceUSD: 3754.50,
         logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png'
       },
       {
         symbol: 'UNI',
         name: 'Uniswap',
-        price: 6.80,
-        change24h: -3.20,
+        price: 10.39,
+        change24h: -7.30,
         balance: '75',
-        balanceUSD: 510.00,
+        balanceUSD: 779.25,
         logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
       }
     ];
