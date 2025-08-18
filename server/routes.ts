@@ -554,94 +554,127 @@ router.get('/tokens', async (req, res) => {
     // Correct token addresses for Ethereum mainnet
     const tokenAddresses = {
       ETH: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', // Native ETH on 1inch
-      USDC: '0xA0b86A33E6441b1b99f5Cf71d3C0f918eB08B8f3', // USD Coin (correct address)
-      LINK: '0x514910771AF9cA656af840dff83E8264EcF986CA', // Chainlink
+      USDC: '0xA0b86a33E6441b1b99f5Cf71d3C0f918eb08B8f3', // USD Coin (correct address)
+      LINK: '0x514910771AF9Ca656af840dff83E8264EcF986CA', // Chainlink
       UNI: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984'   // Uniswap
     };
 
     try {
       console.log('🌐 Attempting 1inch price API call...');
 
-      // Use 1inch price API - simpler and more reliable endpoint
-      const tokenAddressList = Object.values(tokenAddresses).join(',');
-      const oneInchUrl = `https://api.1inch.dev/price/v1.1/1/${tokenAddressList}`;
-      
-      console.log('📞 1inch URL:', oneInchUrl);
+      // Try multiple 1inch API approaches
+      let oneInchData = null;
+      let responseSource = '1inch';
 
-      const oneInchResponse = await fetch(oneInchUrl, {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'BitWallet/1.0'
-        }
-      });
+      // Method 1: Try individual token calls
+      try {
+        console.log('📞 Trying individual 1inch token price calls...');
+        
+        const pricePromises = Object.entries(tokenAddresses).map(async ([symbol, address]) => {
+          try {
+            const url = `https://api.1inch.dev/price/v1.1/1/${address}`;
+            console.log(`🔍 Fetching ${symbol} from: ${url}`);
+            
+            const response = await fetch(url, {
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'BitWallet/1.0'
+              },
+              timeout: 5000
+            });
 
-      if (oneInchResponse.ok) {
-        const oneInchData = await oneInchResponse.json();
-        console.log('✅ 1inch API response:', oneInchData);
+            if (response.ok) {
+              const data = await response.json();
+              console.log(`✅ ${symbol} price from 1inch:`, data);
+              return { symbol, address, price: data[address] || data };
+            } else {
+              console.log(`❌ ${symbol} API error:`, response.status);
+              return { symbol, address, price: null };
+            }
+          } catch (error) {
+            console.log(`❌ ${symbol} fetch error:`, error.message);
+            return { symbol, address, price: null };
+          }
+        });
 
-        // Extract prices from 1inch response
-        const ethPrice = oneInchData[tokenAddresses.ETH] || null;
-        const usdcPrice = oneInchData[tokenAddresses.USDC] || null;
-        const linkPrice = oneInchData[tokenAddresses.LINK] || null;
-        const uniPrice = oneInchData[tokenAddresses.UNI] || null;
+        const priceResults = await Promise.all(pricePromises);
+        console.log('📊 All price results:', priceResults);
 
-        console.log('💰 1inch prices:', { ethPrice, usdcPrice, linkPrice, uniPrice });
+        // Extract prices
+        const prices = {};
+        let validPriceCount = 0;
+        
+        priceResults.forEach(result => {
+          if (result.price && typeof result.price === 'number' && result.price > 0) {
+            prices[result.symbol] = result.price;
+            validPriceCount++;
+          }
+        });
 
-        // If we got valid prices from 1inch, use them
-        if (ethPrice && linkPrice && uniPrice) {
+        console.log('💰 Extracted prices:', prices);
+        console.log('📈 Valid price count:', validPriceCount);
+
+        // If we got at least 3 valid prices, use 1inch
+        if (validPriceCount >= 3) {
           const tokens = [
             {
               symbol: 'ETH',
               name: 'Ethereum',
-              price: ethPrice,
+              price: prices.ETH || 4324.02,
               change24h: -5.16,
               balance: '2.5',
-              balanceUSD: parseFloat((ethPrice * 2.5).toFixed(2)),
+              balanceUSD: parseFloat(((prices.ETH || 4324.02) * 2.5).toFixed(2)),
               logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png'
             },
             {
               symbol: 'USDC',
               name: 'USD Coin',
-              price: usdcPrice || 1.00,
+              price: prices.USDC || 1.00,
               change24h: 0.00,
               balance: '1000',
-              balanceUSD: parseFloat(((usdcPrice || 1.00) * 1000).toFixed(2)),
+              balanceUSD: parseFloat(((prices.USDC || 1.00) * 1000).toFixed(2)),
               logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png'
             },
             {
               symbol: 'LINK',
               name: 'Chainlink',
-              price: linkPrice,
+              price: prices.LINK || 25.25,
               change24h: -1.80,
               balance: '150',
-              balanceUSD: parseFloat((linkPrice * 150).toFixed(2)),
+              balanceUSD: parseFloat(((prices.LINK || 25.25) * 150).toFixed(2)),
               logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png'
             },
             {
               symbol: 'UNI',
               name: 'Uniswap',
-              price: uniPrice,
+              price: prices.UNI || 10.44,
               change24h: -6.99,
               balance: '75',
-              balanceUSD: parseFloat((uniPrice * 75).toFixed(2)),
+              balanceUSD: parseFloat(((prices.UNI || 10.44) * 75).toFixed(2)),
               logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
             }
           ];
 
-          console.log('✅ Using 1inch prices successfully');
+          console.log('✅ Using 1inch prices successfully!');
           return res.json({
             tokens,
-            source: '1inch'
+            source: '1inch',
+            debug: {
+              validPriceCount,
+              prices,
+              method: 'individual_calls'
+            }
           });
         } else {
-          console.log('⚠️ 1inch returned incomplete data, falling back to CoinGecko');
-          throw new Error('Incomplete 1inch data');
+          console.log('⚠️ Not enough valid 1inch prices, falling back to CoinGecko');
+          throw new Error(`Only ${validPriceCount} valid prices from 1inch`);
         }
-      } else {
-        const errorText = await oneInchResponse.text();
-        console.log('❌ 1inch API error:', oneInchResponse.status, errorText);
-        throw new Error(`1inch API error: ${oneInchResponse.status}`);
+
+      } catch (oneInchError) {
+        console.log('❌ 1inch individual calls failed:', oneInchError.message);
+        throw oneInchError;
       }
+
     } catch (oneInchError) {
       console.log('ℹ️ 1inch API failed, using CoinGecko fallback:', oneInchError.message);
 
@@ -711,7 +744,11 @@ router.get('/tokens', async (req, res) => {
 
       return res.json({
         tokens,
-        source: 'coingecko'
+        source: 'coingecko',
+        debug: {
+          oneInchError: oneInchError.message,
+          fallbackReason: '1inch API failed'
+        }
       });
     }
   } catch (error) {
@@ -760,7 +797,10 @@ router.get('/tokens', async (req, res) => {
     res.json({
       tokens: fallbackTokens,
       source: 'fallback',
-      error: 'Failed to fetch real-time prices'
+      error: 'Failed to fetch real-time prices',
+      debug: {
+        errorMessage: error.message
+      }
     });
   }
 });
@@ -769,3 +809,57 @@ router.get('/tokens', async (req, res) => {
 // Export the router so it can be used in the main server file
 export { router };
 export default router;
+
+// ===== 1INCH API DEBUG ENDPOINT =====
+// Debug endpoint to test 1inch API connectivity
+router.get('/debug/1inch', async (req, res) => {
+  try {
+    console.log('🔍 Testing 1inch API connectivity...');
+
+    const testAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'; // ETH
+    const testUrl = `https://api.1inch.dev/price/v1.1/1/${testAddress}`;
+
+    console.log('📞 Test URL:', testUrl);
+
+    const response = await fetch(testUrl, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'BitWallet/1.0'
+      }
+    });
+
+    console.log('📊 Response status:', response.status);
+    console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()));
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ 1inch API test successful:', data);
+      
+      res.json({
+        success: true,
+        status: response.status,
+        data,
+        message: '1inch API is working'
+      });
+    } else {
+      const errorText = await response.text();
+      console.log('❌ 1inch API test failed:', errorText);
+      
+      res.json({
+        success: false,
+        status: response.status,
+        error: errorText,
+        message: '1inch API returned an error'
+      });
+    }
+  } catch (error) {
+    console.error('❌ 1inch API test error:', error);
+    
+    res.json({
+      success: false,
+      error: error.message,
+      message: 'Failed to connect to 1inch API'
+    });
+  }
+});
+
