@@ -594,6 +594,8 @@ router.get('/tokens', async (req, res) => {
 
     console.log('✅ Returning 1inch simulated token prices');
 
+    console.log('✅ Returning 1inch token prices with source: 1inch');
+    
     return res.json({
       tokens: oneInchTokens,
       source: '1inch',

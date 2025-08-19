@@ -331,12 +331,12 @@ function WalletTabs() {
                   {tokenData?.source && (
                     <span className={`text-xs font-normal px-2 py-1 rounded ${
                       tokenData.source === '1inch' 
-                        ? 'text-green-700 bg-green-100' 
+                        ? 'text-orange-700 bg-orange-100' 
                         : tokenData.source === 'coingecko' 
                         ? 'text-blue-700 bg-blue-100' 
                         : 'text-gray-500 bg-gray-100'
                     }`}>
-                      {tokenData.source === '1inch' ? '🔸 1inch' : tokenData.source === 'coingecko' ? 'CoinGecko' : 'Mock Data'}
+                      {tokenData.source === '1inch' ? '1inch' : tokenData.source === 'coingecko' ? 'CoinGecko' : 'Mock Data'}
                     </span>
                   )}
                   {tokensError && (
