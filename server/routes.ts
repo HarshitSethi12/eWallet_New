@@ -558,13 +558,15 @@ router.get('/tokens', async (req, res) => {
       throw new Error('1inch API key not configured');
     }
 
-    // Define token addresses for 1inch API calls
+    // Define token addresses for 1inch API calls (corrected addresses)
     const tokenAddresses = {
       'ETH': '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', // ETH native token
       'USDC': '0xa0b86a33e6441b15d93d2c248c2c4e48d5e7f4bb', // USDC on Ethereum
       'LINK': '0x514910771af9ca656af840dff83e8264ecf986ca', // LINK on Ethereum
       'UNI': '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984'   // UNI on Ethereum
     };
+
+    console.log('🔑 Using 1inch API Key:', oneInchApiKey ? 'Present' : 'Missing');
 
     // Fetch prices from 1inch API for each token
     const tokenPrices = await Promise.allSettled(
@@ -573,6 +575,8 @@ router.get('/tokens', async (req, res) => {
           console.log(`📞 Fetching ${symbol} price from 1inch...`);
           
           const url = `https://api.1inch.dev/price/v1.1/1/${address}`;
+          console.log(`🌐 Request URL: ${url}`);
+          
           const response = await fetch(url, {
             headers: {
               'Authorization': `Bearer ${oneInchApiKey}`,
@@ -581,13 +585,17 @@ router.get('/tokens', async (req, res) => {
             }
           });
 
+          console.log(`📊 Response status for ${symbol}:`, response.status);
+          console.log(`📊 Response headers for ${symbol}:`, Object.fromEntries(response.headers.entries()));
+
           if (!response.ok) {
-            console.error(`❌ 1inch API error for ${symbol}:`, response.status, response.statusText);
-            throw new Error(`1inch API error: ${response.status}`);
+            const errorText = await response.text();
+            console.error(`❌ 1inch API error for ${symbol}:`, response.status, response.statusText, errorText);
+            throw new Error(`1inch API error: ${response.status} - ${errorText}`);
           }
 
           const priceData = await response.json();
-          console.log(`✅ ${symbol} price from 1inch:`, priceData);
+          console.log(`✅ Raw ${symbol} price response from 1inch:`, priceData);
 
           // Calculate 24h change (using mock data since 1inch doesn't provide this directly)
           const mockChange24h = {
@@ -597,7 +605,19 @@ router.get('/tokens', async (req, res) => {
             'UNI': -0.89
           };
 
-          const price = parseFloat(priceData) || 0;
+          // Parse price from 1inch response - it might be a string or number
+          let price = 0;
+          if (typeof priceData === 'string') {
+            price = parseFloat(priceData);
+          } else if (typeof priceData === 'number') {
+            price = priceData;
+          } else if (priceData && typeof priceData === 'object') {
+            // Check if it's an object with price property
+            price = parseFloat(priceData.price || priceData.value || priceData.usd || 0);
+          }
+          
+          console.log(`🔢 Parsed ${symbol} price:`, price);
+          
           const balance = symbol === 'ETH' ? '2.5' : symbol === 'USDC' ? '1000' : symbol === 'LINK' ? '150' : '75';
           const balanceNum = parseFloat(balance);
           
@@ -723,17 +743,26 @@ router.get('/debug/1inch', async (req, res) => {
   try {
     console.log('🔍 Testing 1inch API connectivity...');
 
+    const oneInchApiKey = process.env.ONEINCH_API_KEY;
+    console.log('🔑 API Key available:', !!oneInchApiKey);
+
     const testAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'; // ETH
     const testUrl = `https://api.1inch.dev/price/v1.1/1/${testAddress}`;
 
     console.log('📞 Test URL:', testUrl);
 
-    const response = await fetch(testUrl, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'BitWallet/1.0'
-      }
-    });
+    const headers = {
+      'Accept': 'application/json',
+      'User-Agent': 'BitWallet/1.0'
+    };
+
+    if (oneInchApiKey) {
+      headers['Authorization'] = `Bearer ${oneInchApiKey}`;
+    }
+
+    console.log('📋 Request headers:', headers);
+
+    const response = await fetch(testUrl, { headers });
 
     console.log('📊 Response status:', response.status);
     console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()));
@@ -746,7 +775,8 @@ router.get('/debug/1inch', async (req, res) => {
         success: true,
         status: response.status,
         data,
-        message: '1inch API is working'
+        message: '1inch API is working',
+        hasApiKey: !!oneInchApiKey
       });
     } else {
       const errorText = await response.text();
@@ -756,7 +786,8 @@ router.get('/debug/1inch', async (req, res) => {
         success: false,
         status: response.status,
         error: errorText,
-        message: '1inch API returned an error'
+        message: '1inch API returned an error',
+        hasApiKey: !!oneInchApiKey
       });
     }
   } catch (error) {
@@ -765,7 +796,8 @@ router.get('/debug/1inch', async (req, res) => {
     res.json({
       success: false,
       error: error.message,
-      message: 'Failed to connect to 1inch API'
+      message: 'Failed to connect to 1inch API',
+      hasApiKey: !!process.env.ONEINCH_API_KEY
     });
   }
 });
