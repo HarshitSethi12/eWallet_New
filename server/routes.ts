@@ -561,49 +561,21 @@ router.get('/tokens', async (req, res) => {
     // Define token addresses for 1inch API calls (corrected addresses)
     const tokenAddresses = {
       'ETH': '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', // ETH native token
-      'USDC': '0xa0b86a33e6441b15d93d2c248c2c4e48d5e7f4bb', // USDC on Ethereum
+      'USDC': '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD', // USDC on Ethereum (correct address)
       'LINK': '0x514910771af9ca656af840dff83e8264ecf986ca', // LINK on Ethereum
       'UNI': '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984'   // UNI on Ethereum
     };
 
     console.log('🔑 Using 1inch API Key:', oneInchApiKey ? 'Present' : 'Missing');
 
-    // Fetch prices from 1inch API using quote endpoint with USDC as base
-    const usdcAddress = '0xa0b86a33e6441b15d93d2c248c2c4e48d5e7f4bb'; // USDC address
-    
+    // Use the price endpoint directly instead of quote endpoint
     const tokenPrices = await Promise.allSettled(
       Object.entries(tokenAddresses).map(async ([symbol, address]) => {
         try {
           console.log(`📞 Fetching ${symbol} price from 1inch...`);
           
-          // For ETH, get price by quoting 1 ETH to USDC
-          // For other tokens, quote 1000 tokens to USDC (to get better precision)
-          const amount = symbol === 'ETH' ? '1000000000000000000' : // 1 ETH in wei
-                        symbol === 'USDC' ? '1000000' : // 1 USDC (already in correct decimals)
-                        '1000000000000000000000'; // 1000 tokens (assuming 18 decimals)
-          
-          let url;
-          if (symbol === 'USDC') {
-            // USDC price is always $1
-            const priceData = { price: 1 };
-            console.log(`✅ USDC price set to $1.00`);
-            
-            const balance = '1000';
-            const balanceNum = parseFloat(balance);
-            
-            return {
-              symbol,
-              name: 'USD Coin',
-              price: 1.00,
-              change24h: -0.02,
-              balance,
-              balanceUSD: parseFloat((1.00 * balanceNum).toFixed(2)),
-              logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png'
-            };
-          } else {
-            // For other tokens, get quote from token to USDC
-            url = `https://api.1inch.dev/swap/v5.0/1/quote?fromTokenAddress=${address}&toTokenAddress=${usdcAddress}&amount=${amount}`;
-          }
+          // Use 1inch price endpoint
+          const url = `https://api.1inch.dev/price/v1.1/1/${address}`;
           
           console.log(`🌐 Request URL: ${url}`);
           
@@ -623,45 +595,46 @@ router.get('/tokens', async (req, res) => {
             throw new Error(`1inch API error: ${response.status} - ${errorText}`);
           }
 
-          const quoteData = await response.json();
-          console.log(`✅ Raw ${symbol} quote response from 1inch:`, quoteData);
+          const priceData = await response.json();
+          console.log(`✅ Raw ${symbol} price response from 1inch:`, priceData);
 
-          // Calculate 24h change (using realistic mock data)
+          // Extract price from 1inch response
+          let price = 0;
+          if (typeof priceData === 'object' && priceData !== null) {
+            // 1inch price API returns price in USD
+            price = parseFloat(priceData[address]) || 0;
+          } else if (typeof priceData === 'number') {
+            price = priceData;
+          } else if (typeof priceData === 'string') {
+            price = parseFloat(priceData) || 0;
+          }
+          
+          console.log(`🔢 Extracted ${symbol} price: $${price.toFixed(2)}`);
+
+          // Calculate 24h change (using realistic mock data for now)
           const mockChange24h = {
             'ETH': -1.84,
+            'USDC': -0.02,
             'LINK': -2.15,
             'UNI': -0.89
           };
-
-          // Calculate price from the quote
-          let price = 0;
-          if (quoteData && quoteData.toTokenAmount) {
-            const fromAmount = parseFloat(amount);
-            const toAmount = parseFloat(quoteData.toTokenAmount);
-            
-            if (symbol === 'ETH') {
-              // 1 ETH = toAmount USDC (USDC has 6 decimals)
-              price = toAmount / 1000000; // Convert from USDC wei to actual USDC
-            } else {
-              // 1000 tokens = toAmount USDC
-              price = (toAmount / 1000000) / 1000; // Price per single token
-            }
-          }
           
-          console.log(`🔢 Calculated ${symbol} price: $${price.toFixed(2)}`);
-          
-          const balance = symbol === 'ETH' ? '2.5' : symbol === 'LINK' ? '150' : '75';
+          const balance = symbol === 'ETH' ? '2.5' : 
+                          symbol === 'USDC' ? '1000' :
+                          symbol === 'LINK' ? '150' : '75';
           const balanceNum = parseFloat(balance);
           
           return {
             symbol,
             name: symbol === 'ETH' ? 'Ethereum' : 
+                  symbol === 'USDC' ? 'USD Coin' :
                   symbol === 'LINK' ? 'Chainlink' : 'Uniswap',
-            price: parseFloat(price.toFixed(2)),
+            price: parseFloat(price.toFixed(4)),
             change24h: mockChange24h[symbol] || 0,
             balance,
             balanceUSD: parseFloat((price * balanceNum).toFixed(2)),
             logoURI: symbol === 'ETH' ? 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' :
+                     symbol === 'USDC' ? 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png' :
                      symbol === 'LINK' ? 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png' :
                      'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
           };
@@ -699,8 +672,8 @@ router.get('/tokens', async (req, res) => {
       debug: {
         tokensFound: successfulTokens.length,
         failedTokens: failedTokens.length > 0 ? failedTokens : undefined,
-        method: '1inch_api_real_prices',
-        message: 'Real-time prices from 1inch DEX API'
+        method: '1inch_price_api_direct',
+        message: 'Real-time prices from 1inch Price API'
       }
     });
 
