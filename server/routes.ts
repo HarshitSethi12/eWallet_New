@@ -912,6 +912,183 @@ router.get('/tokens', async (req, res) => {
 
     
 
+// ===== 1INCH API DEBUG ENDPOINT =====
+// Debug endpoint to test 1inch API connectivity and diagnose issues
+router.get('/debug/1inch-status', async (req, res) => {
+  try {
+    console.log('🔍 Running comprehensive 1inch API diagnostic...');
+
+    const oneInchApiKey = process.env.ONEINCH_API_KEY;
+    
+    // Check 1: API Key Configuration
+    const hasApiKey = !!oneInchApiKey;
+    const apiKeyLength = oneInchApiKey ? oneInchApiKey.length : 0;
+    const apiKeyPreview = oneInchApiKey ? `${oneInchApiKey.slice(0, 8)}...${oneInchApiKey.slice(-4)}` : 'none';
+
+    console.log('🔑 API Key Status:');
+    console.log('   - Configured:', hasApiKey);
+    console.log('   - Length:', apiKeyLength);
+    console.log('   - Preview:', apiKeyPreview);
+
+    const diagnostics = {
+      apiKey: {
+        configured: hasApiKey,
+        length: apiKeyLength,
+        preview: apiKeyPreview
+      },
+      tests: [],
+      summary: {
+        status: 'unknown',
+        workingEndpoints: 0,
+        failedEndpoints: 0
+      }
+    };
+
+    if (!hasApiKey) {
+      diagnostics.summary.status = 'no_api_key';
+      return res.json({
+        success: false,
+        message: '1inch API key not found in environment variables',
+        diagnostics,
+        recommendation: 'Please add ONEINCH_API_KEY to your Replit secrets'
+      });
+    }
+
+    // Test URLs and tokens
+    const tests = [
+      {
+        name: 'ETH to USDC Quote',
+        src: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+        dst: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD',
+        amount: '1000000000000000000',
+        expectedSymbol: 'ETH'
+      },
+      {
+        name: 'LINK to USDC Quote', 
+        src: '0x514910771AF9Ca656af840dff83E8264EcF986CA',
+        dst: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD',
+        amount: '1000000000000000000',
+        expectedSymbol: 'LINK'
+      }
+    ];
+
+    // Run tests
+    for (const test of tests) {
+      console.log(`🧪 Testing: ${test.name}`);
+      
+      const testUrl = `https://api.1inch.dev/swap/v6.0/1/quote?src=${test.src}&dst=${test.dst}&amount=${test.amount}`;
+      
+      const testResult = {
+        name: test.name,
+        url: testUrl,
+        success: false,
+        status: null,
+        price: null,
+        error: null,
+        responseTime: 0
+      };
+
+      const startTime = Date.now();
+      
+      try {
+        const response = await fetch(testUrl, {
+          headers: {
+            'Authorization': `Bearer ${oneInchApiKey}`,
+            'Accept': 'application/json',
+            'User-Agent': 'BitWallet/1.0'
+          },
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        });
+
+        testResult.responseTime = Date.now() - startTime;
+        testResult.status = response.status;
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.dstAmount) {
+            const price = parseFloat(data.dstAmount) / 1000000; // USDC has 6 decimals
+            testResult.price = parseFloat(price.toFixed(2));
+            testResult.success = true;
+            diagnostics.summary.workingEndpoints++;
+            console.log(`   ✅ Success: $${testResult.price}`);
+          } else {
+            testResult.error = 'No dstAmount in response';
+            diagnostics.summary.failedEndpoints++;
+            console.log(`   ❌ No price data`);
+          }
+        } else {
+          const errorText = await response.text();
+          testResult.error = `HTTP ${response.status}: ${errorText}`;
+          diagnostics.summary.failedEndpoints++;
+          console.log(`   ❌ HTTP Error: ${response.status}`);
+        }
+      } catch (error) {
+        testResult.responseTime = Date.now() - startTime;
+        testResult.error = error.message;
+        diagnostics.summary.failedEndpoints++;
+        console.log(`   ❌ Request Failed: ${error.message}`);
+      }
+
+      diagnostics.tests.push(testResult);
+    }
+
+    // Determine overall status
+    if (diagnostics.summary.workingEndpoints === tests.length) {
+      diagnostics.summary.status = 'healthy';
+    } else if (diagnostics.summary.workingEndpoints > 0) {
+      diagnostics.summary.status = 'partial';
+    } else {
+      diagnostics.summary.status = 'failed';
+    }
+
+    console.log('📊 Diagnostic Summary:');
+    console.log(`   - Status: ${diagnostics.summary.status}`);
+    console.log(`   - Working: ${diagnostics.summary.workingEndpoints}/${tests.length}`);
+
+    // Provide recommendations
+    let recommendation = '';
+    let troubleshooting = [];
+
+    if (diagnostics.summary.status === 'failed') {
+      recommendation = 'All API calls failed. Check your API key and network connection.';
+      troubleshooting = [
+        'Verify your 1inch API key is valid',
+        'Check if your API key has proper permissions',
+        'Ensure you have not exceeded rate limits',
+        'Try regenerating your API key from 1inch dashboard'
+      ];
+    } else if (diagnostics.summary.status === 'partial') {
+      recommendation = 'Some API calls are working. There may be intermittent issues.';
+      troubleshooting = [
+        'Check rate limiting on your API key',
+        'Some token pairs might not be supported',
+        'Network connectivity issues'
+      ];
+    } else {
+      recommendation = '1inch API is working correctly!';
+      troubleshooting = ['No issues detected'];
+    }
+
+    res.json({
+      success: diagnostics.summary.status !== 'failed',
+      message: `1inch API diagnostic complete - Status: ${diagnostics.summary.status}`,
+      diagnostics,
+      recommendation,
+      troubleshooting,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Diagnostic error:', error);
+    res.json({
+      success: false,
+      error: error.message,
+      message: 'Failed to run 1inch API diagnostics',
+      recommendation: 'Check server logs for detailed error information'
+    });
+  }
+});
+
 // ===== EXPORT ROUTER =====
 // Export the router so it can be used in the main server file
 export { router };
