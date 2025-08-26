@@ -1,3 +1,4 @@
+
 // ===== IMPORT SECTION =====
 // Import necessary modules and dependencies for the API routes
 
@@ -821,8 +822,6 @@ router.get('/tokens', async (req, res) => {
   }
 });
 
-    
-
 // ===== 1INCH API DEBUG ENDPOINT =====
 // Debug endpoint to test 1inch API connectivity and diagnose issues
 router.get('/debug/1inch-status', async (req, res) => {
@@ -897,48 +896,6 @@ router.get('/debug/1inch-status', async (req, res) => {
         price: null,
         error: null,
         responseTime: 0
-
-
-// ===== API KEY STATUS CHECK ENDPOINT =====
-// Endpoint to check if the 1inch API key is properly configured
-router.get('/debug/api-keys', async (req, res) => {
-  try {
-    console.log('🔍 Checking API key configuration...');
-    
-    const oneInchApiKey = process.env.ONEINCH_API_KEY;
-    
-    const status = {
-      oneinch: {
-        configured: !!oneInchApiKey,
-        length: oneInchApiKey ? oneInchApiKey.length : 0,
-        preview: oneInchApiKey ? `${oneInchApiKey.slice(0, 8)}...${oneInchApiKey.slice(-4)}` : 'none'
-      },
-      recommendations: []
-    };
-    
-    if (!oneInchApiKey) {
-      status.recommendations.push('Add ONEINCH_API_KEY to your Replit secrets');
-      status.recommendations.push('Get your API key from https://portal.1inch.dev/');
-    }
-    
-    console.log('📊 API Key Status:', status);
-    
-    res.json({
-      success: true,
-      status,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('❌ API key check error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      message: 'Failed to check API key configuration'
-    });
-  }
-});
-
       };
 
       const startTime = Date.now();
@@ -1042,10 +999,45 @@ router.get('/debug/api-keys', async (req, res) => {
   }
 });
 
-// ===== EXPORT ROUTER =====
-// Export the router so it can be used in the main server file
-export { router };
-export default router;
+// ===== API KEY STATUS CHECK ENDPOINT =====
+// Endpoint to check if the 1inch API key is properly configured
+router.get('/debug/api-keys', async (req, res) => {
+  try {
+    console.log('🔍 Checking API key configuration...');
+    
+    const oneInchApiKey = process.env.ONEINCH_API_KEY;
+    
+    const status = {
+      oneinch: {
+        configured: !!oneInchApiKey,
+        length: oneInchApiKey ? oneInchApiKey.length : 0,
+        preview: oneInchApiKey ? `${oneInchApiKey.slice(0, 8)}...${oneInchApiKey.slice(-4)}` : 'none'
+      },
+      recommendations: []
+    };
+    
+    if (!oneInchApiKey) {
+      status.recommendations.push('Add ONEINCH_API_KEY to your Replit secrets');
+      status.recommendations.push('Get your API key from https://portal.1inch.dev/');
+    }
+    
+    console.log('📊 API Key Status:', status);
+    
+    res.json({
+      success: true,
+      status,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ API key check error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Failed to check API key configuration'
+    });
+  }
+});
 
 // ===== 1INCH API DEBUG ENDPOINT =====
 // Debug endpoint to test 1inch API connectivity
@@ -1147,3 +1139,7 @@ router.get('/debug/1inch', async (req, res) => {
   }
 });
 
+// ===== EXPORT ROUTER =====
+// Export the router so it can be used in the main server file
+export { router };
+export default router;
