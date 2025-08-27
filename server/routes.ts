@@ -1,7 +1,7 @@
 import express from "express";
 import { eq, and, or } from "drizzle-orm";
 import { db } from "./db";
-import { insertUserSchema, users, wallets, transactions, selectUserSchema } from "@shared/schema";
+import { users, wallets, transactions, selectUserSchema } from "@shared/schema";
 import type { User } from "@shared/schema";
 import { BlockchainService } from "./blockchain";
 import fetch from 'node-fetch';
@@ -483,17 +483,23 @@ router.get("/api/transactions", authenticateUser, async (req, res) => {
 // POST /api/register - Register a new user
 router.post("/api/register", async (req, res) => {
   try {
-    const userData = insertUserSchema.parse(req.body);
+    const { username, email, password } = req.body;
+    
+    // Basic validation
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "Username, email, and password are required" });
+    }
+    
     // Check if username or email already exists
     const existingUser = await db.select()
       .from(users)
-      .where(or(eq(users.username, userData.username), eq(users.email, userData.email)));
+      .where(or(eq(users.username, username), eq(users.email, email)));
 
     if (existingUser.length > 0) {
       return res.status(409).json({ message: "Username or email already exists" });
     }
 
-    const [user] = await db.insert(users).values(userData).returning();
+    const [user] = await db.insert(users).values({ username, email, password }).returning();
     res.status(201).json({ message: "User registered successfully", user: { id: user.id, username: user.username, email: user.email } });
   } catch (error: any) {
     console.error("Registration error:", error);
