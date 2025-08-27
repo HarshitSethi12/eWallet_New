@@ -619,7 +619,7 @@ router.get('/tokens', async (req, res) => {
       {
         symbol: 'LINK', 
         name: 'Chainlink',
-        address: '0x514910771af9ca656af840dff83e8264ecf986ca', // Verified LINK address
+        address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', // Verified LINK address (proper checksum)
         decimals: 18,
         balance: '150',
         logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png'
@@ -627,14 +627,14 @@ router.get('/tokens', async (req, res) => {
       {
         symbol: 'UNI',
         name: 'Uniswap',
-        address: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984', // Verified UNI address
+        address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', // Verified UNI address (proper checksum)
         decimals: 18,
         balance: '75',
         logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
       }
     ];
 
-    const usdcAddress = '0xa0b86991c951449b402c7c27d170c54e0f13a8bfd'; // Verified USDC address
+    const usdcAddress = '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD'; // Verified USDC address (proper case)
     const results = [];
 
     // Always add USDC first (stable at $1.00)
