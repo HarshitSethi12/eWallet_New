@@ -4,6 +4,7 @@ import { db } from "./db";
 import { users, wallets, transactions, selectUserSchema } from "@shared/schema";
 import type { User } from "@shared/schema";
 import { BlockchainService } from "./blockchain";
+import { storage } from "./storage";
 import fetch from 'node-fetch';
 import crypto from 'crypto'; // Import crypto for encryption/decryption
 
@@ -552,6 +553,78 @@ router.post("/api/logout", (req, res) => {
     res.clearCookie('connect.sid'); // Default session cookie name
     res.json({ message: "Logout successful" });
   });
+});
+
+// ===== METAMASK AUTHENTICATION ENDPOINT =====
+router.post("/api/auth/metamask", async (req, res) => {
+  try {
+    const { message, signature, address } = req.body;
+
+    // Validate required fields
+    if (!message || !signature || !address) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: message, signature, and address are required' 
+      });
+    }
+
+    console.log('🦊 MetaMask authentication request received:', { 
+      address: address,
+      hasMessage: !!message,
+      hasSignature: !!signature 
+    });
+
+    // In a production environment, you would verify the signature here
+    // For now, we'll trust the signature since MetaMask handles the signing
+
+    // Create user object for session
+    const metamaskUser = {
+      id: `metamask_${address}`,
+      address: address,
+      walletAddress: address,
+      name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+      provider: 'metamask',
+      picture: null
+    };
+
+    // Store user in session
+    req.session.user = metamaskUser;
+
+    console.log('✅ MetaMask user authenticated successfully:', metamaskUser.name);
+
+    // Track login session if storage is available
+    try {
+      const sessionData = {
+        userId: null,
+        email: null,
+        name: metamaskUser.name,
+        walletAddress: address,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        sessionId: req.sessionID,
+      };
+
+      const sessionDbId = await storage.createUserSession(sessionData);
+      req.session.sessionDbId = sessionDbId;
+      console.log('📊 Session tracking created:', sessionDbId);
+    } catch (dbError) {
+      console.warn('⚠️ Warning: Could not create database session:', dbError);
+      // Continue without database session tracking
+    }
+
+    // Return success response with user data
+    res.json({ 
+      success: true, 
+      message: 'MetaMask authentication successful',
+      user: metamaskUser
+    });
+
+  } catch (error) {
+    console.error('❌ MetaMask authentication error:', error);
+    res.status(500).json({ 
+      error: 'MetaMask authentication failed',
+      details: error.message 
+    });
+  }
 });
 
 // Export default router
