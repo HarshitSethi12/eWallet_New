@@ -126,6 +126,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Function that sends MetaMask signature to backend for verification
     mutationFn: async (data: { message: string; signature: string; address: string }) => {
       console.log('🔵 Sending MetaMask auth data to backend...');
+      console.log('🔵 Request URL: /api/auth/metamask');
+      console.log('🔵 Request data:', { address: data.address, hasMessage: !!data.message, hasSignature: !!data.signature });
+      
       const response = await fetch('/api/auth/metamask', {
         method: 'POST',
         headers: {
@@ -135,10 +138,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(data),   // Send signature data
       });
 
+      console.log('🔵 Response status:', response.status);
+      console.log('🔵 Response headers:', response.headers.get('content-type'));
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ MetaMask auth failed:', errorText);
-        throw new Error(`Authentication failed: ${response.status}`);
+        throw new Error(`Authentication failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
@@ -178,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Function that calls the logout endpoint
     mutationFn: async () => {
       console.log('🔵 Calling logout endpoint...');
-      const response = await fetch('/auth/logout', {
+      const response = await fetch('/api/logout', {
         method: 'POST',
         credentials: 'include',      // Include cookies for session
       });
