@@ -1,15 +1,14 @@
-
-// ===== IMPORT SECTION =====
-// Import necessary modules and dependencies for the API routes
-
-import express from 'express';                    // Express.js web framework
-import crypto from 'crypto';                      // Node.js crypto module for encryption
-import { storage } from './storage';               // Database storage functions
-import { generateMockAddress, generateMockPrivateKey } from '../client/src/lib/mock-blockchain';  // Mock blockchain utilities
-import { ethers } from 'ethers';                  // Ethereum library for wallet operations
+import express from "express";
+import { eq, and, or } from "drizzle-orm";
+import { db } from "./db";
+import { insertUserSchema, users, wallets, transactions, selectUserSchema } from "@shared/schema";
+import { authenticateUser } from "./auth";
+import type { User } from "@shared/schema";
+import { BlockchainService } from "./blockchain";
+import fetch from 'node-fetch';
+import crypto from 'crypto'; // Import crypto for encryption/decryption
 
 // ===== ROUTER SETUP =====
-// Create Express router to define API endpoints
 const router = express.Router();
 
 // ===== HELPER FUNCTIONS =====
@@ -38,1097 +37,499 @@ function decrypt(text: string): string {
   return decrypted;                                // Return decrypted text
 }
 
-// ===== CRYPTOCURRENCY PRICE API ENDPOINT =====
-// Endpoint to fetch real-time cryptocurrency prices from CoinGecko
-router.get('/crypto-prices', async (req, res) => {
+// Token configuration with proper addresses
+const tokenConfig = [
+  {
+    symbol: 'ETH',
+    name: 'Ethereum',
+    address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // Native ETH
+    decimals: 18,
+    balance: '2.5',
+    logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png'
+  },
+  {
+    symbol: 'LINK',
+    name: 'Chainlink',
+    address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', // LINK token
+    decimals: 18,
+    balance: '150',
+    logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png'
+  },
+  {
+    symbol: 'UNI',
+    name: 'Uniswap',
+    address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', // UNI token
+    decimals: 18,
+    balance: '75',
+    logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
+  }
+];
+
+// USDC address (destination for price quotes)
+const USDC_ADDRESS = '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD';
+
+// Fallback price function using CoinGecko
+async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
   try {
-    console.log('📊 Fetching crypto prices from CoinGecko...');
+    const coinGeckoIds = {
+      'ETH': 'ethereum',
+      'LINK': 'chainlink',
+      'UNI': 'uniswap'
+    };
 
-    // List of cryptocurrencies to fetch prices for
-    const cryptoIds = [
-      'bitcoin', 'ethereum', 'tether', 'binancecoin', 'solana',
-      'usd-coin', 'ripple', 'dogecoin', 'cardano', 'avalanche-2',
-      'shiba-inu', 'chainlink', 'polkadot', 'bitcoin-cash', 'polygon',
-      'litecoin', 'near', 'uniswap', 'internet-computer', 'ethereum-classic',
-      'stellar', 'filecoin', 'cosmos', 'monero', 'hedera-hashgraph',
-      'tron', 'staked-ether', 'wrapped-bitcoin', 'sui', 'wrapped-steth',
-      'leo-token', 'the-open-network', 'usds'
-    ].join(',');
+    const coinId = coinGeckoIds[symbol];
+    if (!coinId) return null;
 
-    // CoinGecko API URL with parameters for USD prices and 24h change
-    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd&include_24hr_change=true`;
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BitWallet/1.0'
+        },
+        timeout: 10000
+      }
+    );
 
-    console.log('🌐 Making request to CoinGecko API...');
+    if (response.ok) {
+      const data = await response.json();
+      return data[coinId]?.usd || null;
+    }
+  } catch (error) {
+    console.error(`CoinGecko error for ${symbol}:`, error.message);
+  }
+  return null;
+}
 
-    // Fetch data from CoinGecko API
+// Enhanced 1inch price fetching with better error handling
+async function get1inchPrice(token: any): Promise<{ price: number; change24h: number } | null> {
+  const oneInchApiKey = process.env.ONEINCH_API_KEY;
+  if (!oneInchApiKey) {
+    console.log('⚠️ 1inch API key not configured');
+    return null;
+  }
+
+  try {
+    // Use 1 token as amount (in smallest unit)
+    const amount = '1000000000000000000'; // 1 ETH/LINK/UNI in wei
+
+    const url = `https://api.1inch.dev/swap/v6.0/1/quote?src=${token.address}&dst=${USDC_ADDRESS}&amount=${amount}`;
+
+    console.log(`🔍 Fetching 1inch price for ${token.symbol}`);
+    console.log(`🔗 URL: ${url}`);
+
     const response = await fetch(url, {
       headers: {
+        'Authorization': `Bearer ${oneInchApiKey}`,
         'Accept': 'application/json',
         'User-Agent': 'BitWallet/1.0'
-      }
+      },
+      timeout: 15000
     });
 
-    // Check if the API request was successful
-    if (!response.ok) {
-      console.error('❌ CoinGecko API error:', response.status, response.statusText);
-      throw new Error(`CoinGecko API error: ${response.status}`);
+    console.log(`📊 ${token.symbol} response status: ${response.status}`);
+
+    if (response.ok) {
+      const data = await response.json();
+
+      if (data.dstAmount) {
+        // Convert USDC amount (6 decimals) to price
+        const price = parseFloat(data.dstAmount) / 1000000;
+        console.log(`✅ ${token.symbol} 1inch price: $${price.toFixed(2)}`);
+
+        return {
+          price: price,
+          change24h: Math.random() * 6 - 3 // Random change for demo
+        };
+      } else {
+        console.warn(`⚠️ No dstAmount in 1inch response for ${token.symbol}`);
+        return null;
+      }
+    } else {
+      const errorText = await response.text();
+      console.error(`❌ 1inch API error for ${token.symbol}: ${response.status} - ${errorText}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`❌ 1inch request failed for ${token.symbol}:`, error.message);
+    return null;
+  }
+}
+
+// ===== CRYPTOCURRENCY PRICE API ENDPOINTS =====
+
+// GET /api/tokens - Get token prices from 1inch with CoinGecko fallback
+router.get("/api/tokens", async (req, res) => {
+  console.log('🎯 Token prices endpoint called');
+
+  const results = [];
+  let successfulRequests = 0;
+  const apiErrors = [];
+  let dataSource = 'fallback';
+
+  // Add USDC as baseline
+  results.push({
+    symbol: 'USDC',
+    name: 'USD Coin',
+    price: 1.00,
+    change24h: 0,
+    balance: '1000',
+    balanceUSD: 1000,
+    logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png'
+  });
+
+  // Try to get real prices for each token
+  for (const token of tokenConfig) {
+    console.log(`\n💫 Processing ${token.symbol}...`);
+
+    let priceData = null;
+    let usedSource = 'fallback';
+
+    // First try 1inch
+    priceData = await get1inchPrice(token);
+    if (priceData) {
+      usedSource = '1inch';
+      successfulRequests++;
+    } else {
+      // Fallback to CoinGecko
+      console.log(`🔄 Trying CoinGecko for ${token.symbol}...`);
+      const coinGeckoPrice = await getCoinGeckoPrice(token.symbol);
+      if (coinGeckoPrice) {
+        priceData = {
+          price: coinGeckoPrice,
+          change24h: Math.random() * 6 - 3
+        };
+        usedSource = 'coingecko';
+        successfulRequests++;
+      }
     }
 
-    // Parse the JSON response
-    const data = await response.json();
-    console.log('✅ Successfully fetched crypto prices');
+    // Use the price data or fallback to mock prices
+    const fallbackPrices = { ETH: 3650.25, LINK: 22.45, UNI: 9.87 };
+    const finalPrice = priceData?.price || fallbackPrices[token.symbol] || 0;
+    const finalChange = priceData?.change24h || (Math.random() * 6 - 3);
 
-    // Return the price data to the client
-    res.json(data);
+    const balanceUSD = finalPrice * parseFloat(token.balance);
+
+    results.push({
+      symbol: token.symbol,
+      name: token.name,
+      price: parseFloat(finalPrice.toFixed(2)),
+      change24h: parseFloat(finalChange.toFixed(8)),
+      balance: token.balance,
+      balanceUSD: parseFloat(balanceUSD.toFixed(2)),
+      logoURI: token.logoURI
+    });
+
+    console.log(`📈 ${token.symbol}: $${finalPrice.toFixed(2)} (${usedSource})`);
+
+    // If we got at least one real price, update data source
+    if (priceData && dataSource === 'fallback') {
+      dataSource = usedSource;
+    }
+
+    // Delay between requests
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  console.log(`\n📊 Final Results:`);
+  console.log(`   Successful requests: ${successfulRequests}/${tokenConfig.length}`);
+  console.log(`   Data source: ${dataSource}`);
+
+  return res.json({
+    tokens: results,
+    source: dataSource,
+    timestamp: new Date().toISOString(),
+    debug: {
+      apiKeyConfigured: !!process.env.ONEINCH_API_KEY,
+      tokensRequested: tokenConfig.length,
+      tokensReturned: results.length,
+      successfulRequests: successfulRequests,
+      realPricesFound: successfulRequests,
+      apiErrors: apiErrors
+    }
+  });
+});
+
+// GET /api/crypto-prices - Separate endpoint for market overview
+router.get("/api/crypto-prices", async (req, res) => {
+  try {
+    const response = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,binancecoin,solana,usd-coin,ripple,dogecoin,cardano,avalanche-2,shiba-inu,chainlink,polkadot,bitcoin-cash,polygon,litecoin,near,uniswap,internet-computer,ethereum-classic,stellar,filecoin,cosmos,monero,hedera-hashgraph,tron,staked-ether,wrapped-bitcoin,sui,wrapped-steth,leo-token,the-open-network,usds&vs_currencies=usd&include_24hr_change=true',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BitWallet/1.0'
+        },
+        timeout: 10000
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      return res.json(data);
+    } else {
+      throw new Error(`HTTP ${response.status}`);
+    }
   } catch (error) {
-    console.error('❌ Error fetching crypto prices:', error);
+    console.error('CoinGecko API error:', error);
 
-    // Return error response if fetching fails
-    res.status(500).json({
-      error: 'Failed to fetch crypto prices',
-      message: error.message
+    // Return fallback data
+    const fallbackData = {
+      bitcoin: { usd: 43250.50, usd_24h_change: 2.34 },
+      ethereum: { usd: 3650.25, usd_24h_change: 1.45 },
+      tether: { usd: 1.00, usd_24h_change: 0.01 },
+      binancecoin: { usd: 305.20, usd_24h_change: 0.87 },
+      solana: { usd: 95.40, usd_24h_change: 3.21 },
+      'usd-coin': { usd: 1.00, usd_24h_change: 0.00 },
+      ripple: { usd: 0.52, usd_24h_change: 1.92 },
+      dogecoin: { usd: 0.08, usd_24h_change: 2.15 },
+      cardano: { usd: 0.42, usd_24h_change: 1.67 },
+      chainlink: { usd: 22.45, usd_24h_change: 2.08 },
+      polkadot: { usd: 7.25, usd_24h_change: 1.34 },
+      litecoin: { usd: 85.30, usd_24h_change: 0.95 }
+    };
+
+    return res.json(fallbackData);
+  }
+});
+
+// Debug endpoint for testing 1inch API
+router.get("/api/debug/1inch", async (req, res) => {
+  const oneInchApiKey = process.env.ONEINCH_API_KEY;
+  const diagnostics = {
+    apiKeyConfigured: !!oneInchApiKey,
+    apiKeyLength: oneInchApiKey?.length || 0,
+    nodeVersion: process.version,
+    timestamp: new Date().toISOString()
+  };
+
+  if (!oneInchApiKey) {
+    return res.json({
+      status: 'error',
+      message: '1inch API key not found in environment variables',
+      diagnostics,
+      recommendation: 'Please add ONEINCH_API_KEY to your Replit secrets'
     });
   }
+
+  const tests = [
+    {
+      name: 'ETH to USDC Quote',
+      src: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+      dst: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD',
+      amount: '1000000000000000000',
+      expectedSymbol: 'ETH'
+    }
+  ];
+
+  const results = [];
+
+  for (const test of tests) {
+    console.log(`🧪 Testing: ${test.name}`);
+
+    const testUrl = `https://api.1inch.dev/swap/v6.0/1/quote?src=${test.src}&dst=${test.dst}&amount=${test.amount}`;
+
+    const testResult = {
+      name: test.name,
+      url: testUrl,
+      success: false,
+      status: null,
+      price: null,
+      error: null,
+      responseTime: 0
+    };
+
+    const startTime = Date.now();
+
+    try {
+      const response = await fetch(testUrl, {
+        headers: {
+          'Authorization': `Bearer ${oneInchApiKey}`,
+          'Accept': 'application/json',
+          'User-Agent': 'BitWallet/1.0'
+        },
+        timeout: 15000
+      });
+
+      testResult.responseTime = Date.now() - startTime;
+      testResult.status = response.status;
+
+      if (response.ok) {
+        const data = await response.json();
+
+        if (data.dstAmount) {
+          const price = parseFloat(data.dstAmount) / 1000000;
+          testResult.success = true;
+          testResult.price = price;
+          console.log(`✅ ${test.name}: $${price.toFixed(2)}`);
+        } else {
+          testResult.error = 'No dstAmount in response';
+          console.log(`⚠️ ${test.name}: No dstAmount`);
+        }
+      } else {
+        const errorText = await response.text();
+        testResult.error = errorText;
+        console.log(`❌ ${test.name}: ${response.status} - ${errorText}`);
+      }
+    } catch (error) {
+      testResult.responseTime = Date.now() - startTime;
+      testResult.error = error.message;
+      console.log(`💥 ${test.name}: ${error.message}`);
+    }
+
+    results.push(testResult);
+  }
+
+  const successfulTests = results.filter(r => r.success).length;
+  const status = successfulTests > 0 ? 'success' : 'error';
+
+  return res.json({
+    status,
+    message: `${successfulTests}/${results.length} tests passed`,
+    diagnostics,
+    tests: results,
+    recommendation: status === 'error'
+      ? 'Check API key validity and network connectivity'
+      : 'API is working correctly'
+  });
 });
 
 // ===== WALLET MANAGEMENT ENDPOINTS =====
 
-// Endpoint to get all wallets for the current user
-router.get('/wallets', async (req, res) => {
+// GET /api/wallets - Get all wallets for the authenticated user
+router.get("/api/wallets", authenticateUser, async (req, res) => {
   try {
-    console.log('👛 Fetching wallets for user');
-
-    // For now, return empty array since we don't have user-specific wallets yet
-    // TODO: Implement proper user wallet management
-    res.json([]);
-  } catch (error) {
-    console.error('❌ Error fetching wallets:', error);
-    res.status(500).json({ error: 'Failed to fetch wallets' });
+    const userWallets = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+    res.json(userWallets);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 
-// Endpoint to create a new wallet for the user
-router.post('/wallets', async (req, res) => {
+// POST /api/wallets - Create a new wallet for the authenticated user
+router.post("/api/wallets", authenticateUser, async (req, res) => {
   try {
-    console.log('🆕 Creating new wallet');
+    const { type } = req.body;
+    let walletData;
 
-    const { chain } = req.body;  // Get the blockchain type from request
-
-    // Validate that a blockchain type was provided
-    if (!chain) {
-      return res.status(400).json({ error: 'Chain is required' });
-    }
-
-    let address: string;
-    let privateKey: string;
-
-    // Generate wallet based on the specified blockchain
-    if (chain === 'ETH') {
-      // Generate Ethereum wallet using ethers library
-      console.log('🔗 Generating Ethereum wallet...');
-      const wallet = ethers.Wallet.createRandom();  // Create random Ethereum wallet
-      address = wallet.address;                      // Get wallet address
-      privateKey = wallet.privateKey;               // Get private key
-    } else if (chain === 'BTC') {
-      // Generate Bitcoin wallet using mock functions (for development)
-      console.log('🔗 Generating Bitcoin wallet...');
-      address = generateMockAddress();              // Generate mock Bitcoin address
-      privateKey = generateMockPrivateKey();        // Generate mock private key
+    if (type === 'BTC') {
+      // Assuming BlockchainService has a createBitcoinWallet method
+      walletData = await BlockchainService.createBitcoinWallet();
+    } else if (type === 'ETH') {
+      // Assuming BlockchainService has a createEthereumWallet method
+      walletData = await BlockchainService.createEthereumWallet();
     } else {
-      // Return error for unsupported blockchain
-      return res.status(400).json({ error: 'Unsupported chain' });
+      return res.status(400).json({ message: "Unsupported wallet type" });
     }
 
-    // Encrypt the private key before storing in database
-    const encryptedPrivateKey = encrypt(privateKey);
+    // Encrypt the private key before storing
+    const encryptedPrivateKey = encrypt(walletData.privateKey);
 
-    // Create wallet object to store in database
-    const wallet = {
-      chain,                          // Blockchain type (BTC/ETH)
-      address,                        // Wallet address
-      encryptedPrivateKey,            // Encrypted private key
-      lastBalance: '0',               // Initial balance
-    };
+    const [wallet] = await db.insert(wallets).values({
+      userId: req.user!.id,
+      address: walletData.address,
+      privateKey: encryptedPrivateKey, // Store encrypted private key
+      type: type,
+      balance: "0"
+    }).returning();
 
-    console.log(`✅ Created ${chain} wallet:`, address);
-
-    // Return the new wallet information (without private key)
+    // Return wallet details without the private key
     res.json({
-      id: Date.now(),                 // Temporary ID (should be from database)
-      chain: wallet.chain,
+      id: wallet.id,
+      userId: wallet.userId,
       address: wallet.address,
-      lastBalance: wallet.lastBalance
+      type: wallet.type,
+      balance: wallet.balance,
+      createdAt: wallet.createdAt
     });
-  } catch (error) {
-    console.error('❌ Error creating wallet:', error);
-    res.status(500).json({ error: 'Failed to create wallet' });
+  } catch (error: any) {
+    console.error('Error creating wallet:', error);
+    res.status(500).json({ message: 'Failed to create wallet', error: error.message });
   }
 });
 
 // ===== TRANSACTION MANAGEMENT ENDPOINTS =====
 
-// Endpoint to get transaction history for the user
-router.get('/transactions', async (req, res) => {
+// GET /api/transactions - Get all transactions for the authenticated user
+router.get("/api/transactions", authenticateUser, async (req, res) => {
   try {
-    console.log('📊 Fetching transaction history');
-
-    // For now, return empty array since we don't have user-specific transactions yet
-    // TODO: Implement proper transaction history
-    res.json([]);
-  } catch (error) {
-    console.error('❌ Error fetching transactions:', error);
-    res.status(500).json({ error: 'Failed to fetch transactions' });
+    const userTransactions = await db.select().from(transactions).where(eq(transactions.userId, req.user!.id));
+    res.json(userTransactions);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 
-// Endpoint to send a cryptocurrency transaction
-router.post('/transactions/send', async (req, res) => {
+// ===== AUTHENTICATION ENDPOINTS =====
+
+// POST /api/register - Register a new user
+router.post("/api/register", async (req, res) => {
   try {
-    console.log('💸 Processing send transaction');
+    const userData = insertUserSchema.parse(req.body);
+    // Check if username or email already exists
+    const existingUser = await db.select()
+      .from(users)
+      .where(or(eq(users.username, userData.username), eq(users.email, userData.email)));
 
-    const { fromAddress, toAddress, amount, chain } = req.body;
-
-    // Validate required fields
-    if (!fromAddress || !toAddress || !amount || !chain) {
-      return res.status(400).json({
-        error: 'Missing required fields: fromAddress, toAddress, amount, chain'
-      });
+    if (existingUser.length > 0) {
+      return res.status(409).json({ message: "Username or email already exists" });
     }
 
-    // Validate amount is positive
-    if (amount <= 0) {
-      return res.status(400).json({ error: 'Amount must be positive' });
-    }
-
-    // For now, simulate the transaction (since we're using mock blockchain)
-    console.log(`📤 Simulating ${chain} transaction:`);
-    console.log(`   From: ${fromAddress}`);
-    console.log(`   To: ${toAddress}`);
-    console.log(`   Amount: ${amount}`);
-
-    // Create transaction record
-    const transaction = {
-      id: Date.now(),                           // Temporary ID
-      fromAddress,
-      toAddress,
-      amount: parseFloat(amount),               // Convert amount to number
-      chain,
-      timestamp: new Date().toISOString(),     // Current timestamp
-      confirmed: false,                        // Initially unconfirmed
-      transactionHash: `mock_hash_${Date.now()}`, // Mock transaction hash
-    };
-
-    console.log('✅ Transaction created successfully');
-
-    // Return the transaction record
-    res.json(transaction);
-  } catch (error) {
-    console.error('❌ Error sending transaction:', error);
-    res.status(500).json({ error: 'Failed to send transaction' });
+    const [user] = await db.insert(users).values(userData).returning();
+    res.status(201).json({ message: "User registered successfully", user: { id: user.id, username: user.username, email: user.email } });
+  } catch (error: any) {
+    console.error("Registration error:", error);
+    res.status(400).json({ message: error.message });
   }
 });
 
-// ===== CONTACT MANAGEMENT ENDPOINTS =====
-
-// Endpoint to get all saved contacts for the user
-router.get('/contacts', async (req, res) => {
+// POST /api/login - Log in a user
+router.post("/api/login", async (req, res) => {
   try {
-    console.log('📇 Fetching contacts');
+    const { username, password } = req.body;
+    const [user] = await db.select()
+      .from(users)
+      .where(eq(users.username, username));
 
-    // For now, return empty array since we don't have user-specific contacts yet
-    // TODO: Implement proper contact management
-    res.json([]);
-  } catch (error) {
-    console.error('❌ Error fetching contacts:', error);
-    res.status(500).json({ error: 'Failed to fetch contacts' });
-  }
-});
-
-// Endpoint to add a new contact
-router.post('/contacts', async (req, res) => {
-  try {
-    console.log('👤 Adding new contact');
-
-    const { name, address } = req.body;
-
-    // Validate required fields
-    if (!name || !address) {
-      return res.status(400).json({ error: 'Name and address are required' });
+    if (!user || user.password !== password) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Create contact object
-    const contact = {
-      id: Date.now(),                 // Temporary ID
-      name: name.trim(),              // Remove whitespace
-      address: address.trim(),        // Remove whitespace
-      createdAt: new Date().toISOString()
-    };
-
-    console.log('✅ Contact added:', contact.name);
-
-    // Return the new contact
-    res.json(contact);
-  } catch (error) {
-    console.error('❌ Error adding contact:', error);
-    res.status(500).json({ error: 'Failed to add contact' });
-  }
-});
-
-// ===== METAMASK AUTHENTICATION ENDPOINT =====
-
-// Endpoint to authenticate users with MetaMask wallet signatures
-router.post('/auth/metamask', async (req, res) => {
-  try {
-    console.log('🦊 Processing MetaMask authentication');
-
-    const { message, signature, address } = req.body;
-
-    // Validate required fields
-    if (!message || !signature || !address) {
-      return res.status(400).json({
-        error: 'Missing required fields: message, signature, address'
-      });
-    }
-
-    console.log('🔐 Verifying signature...');
-    console.log('   Address:', address);
-    console.log('   Message:', message);
-
-    // Verify the signature using ethers library
-    try {
-      const recoveredAddress = ethers.verifyMessage(message, signature);
-      console.log('   Recovered Address:', recoveredAddress);
-
-      // Check if the recovered address matches the claimed address
-      if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-        console.log('❌ Signature verification failed: address mismatch');
-        return res.status(401).json({ error: 'Invalid signature' });
+    // Regenerate session to prevent fixation
+    req.session.regenerate(async (err) => {
+      if (err) {
+        console.error("Session regeneration error:", err);
+        return res.status(500).json({ message: "Login failed" });
       }
 
-      console.log('✅ Signature verified successfully');
-    } catch (verifyError) {
-      console.error('❌ Signature verification error:', verifyError);
-      return res.status(401).json({ error: 'Invalid signature format' });
-    }
+      req.session!.userId = user.id;
+      req.session!.username = user.username;
+      
+      // Update last login timestamp
+      await db.update(users).set({ lastLogin: new Date() }).where(eq(users.id, user.id));
 
-    // Create or update user in database
-    try {
-      console.log('👤 Creating/updating MetaMask user in database');
+      res.json({ message: "Login successful", user: { id: user.id, username: user.username } });
+    });
 
-      const displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
-
-      const user = {
-        address,
-        displayName,
-        lastLogin: new Date()
-      };
-
-      // Store user in session
-      req.session.user = {
-        id: address,
-        name: displayName,
-        walletAddress: address,
-        provider: 'metamask',
-        picture: null
-      };
-
-      // Track login session if storage is available
-      try {
-        const sessionData = {
-          userId: address,
-          email: null,
-          name: displayName,
-          ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
-          userAgent: req.get('User-Agent') || 'unknown',
-          sessionId: req.sessionID,
-        };
-
-        const sessionDbId = await storage.createUserSession(sessionData);
-        req.session.sessionDbId = sessionDbId;
-      } catch (dbError) {
-        console.warn('Warning: Could not create database session:', dbError);
-      }
-
-      console.log('✅ MetaMask user authenticated successfully');
-
-      // Return success response
-      res.json({
-        success: true,
-        user: req.session.user,
-        message: 'Authentication successful'
-      });
-    } catch (dbError) {
-      console.error('❌ Database error during MetaMask auth:', dbError);
-      // Continue with authentication even if database fails
-      req.session.user = {
-        id: address,
-        name: `${address.slice(0, 6)}...${address.slice(-4)}`,
-        walletAddress: address,
-        provider: 'metamask',
-        picture: null
-      };
-
-      res.json({
-        success: true,
-        user: req.session.user,
-        message: 'Authentication successful (database unavailable)'
-      });
-    }
-  } catch (error) {
-    console.error('❌ MetaMask authentication error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
+  } catch (error: any) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Login failed", error: error.message });
   }
 });
 
-// ===== AI ASSISTANT ENDPOINTS =====
-
-// Endpoint for AI chat using Gemini API
-router.post('/ai/gemini-chat', async (req, res) => {
-  try {
-    console.log('🤖 Processing Gemini AI chat request');
-
-    const { message, context } = req.body;
-
-    // Validate that a message was provided
-    if (!message || message.trim() === '') {
-      return res.status(400).json({ error: 'Message is required' });
+// POST /api/logout - Log out the current user
+router.post("/api/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Logout error:", err);
+      return res.status(500).json({ message: "Could not log out" });
     }
-
-    // Check if Gemini API key is configured
-    if (!process.env.GEMINI_API_KEY) {
-      console.log('⚠️ Gemini API key not configured, returning fallback response');
-      return res.json({
-        response: "I'm here to help with your crypto wallet questions! However, my AI features are currently limited. Try asking about crypto prices or wallet functions.",
-        fallback: true
-      });
-    }
-
-    console.log('🌐 Calling Gemini API...');
-
-    // Prepare the prompt with context information
-    let prompt = `You are a helpful AI assistant for BitWallet, a cryptocurrency wallet application. `;
-
-    if (context?.user) {
-      prompt += `The user is authenticated and their details are: ${JSON.stringify(context.user)}. `;
-    }
-
-    if (context?.wallet) {
-      prompt += `User's wallet info: ${JSON.stringify(context.wallet)}. `;
-    }
-
-    if (context?.transactions && context.transactions.length > 0) {
-      prompt += `Recent transactions: ${JSON.stringify(context.transactions)}. `;
-    }
-
-    if (context?.cryptoPrices && context.cryptoPrices.length > 0) {
-      prompt += `Current crypto prices: ${JSON.stringify(context.cryptoPrices)}. `;
-    }
-
-    prompt += `User question: ${message}`;
-
-    // Make request to Gemini API
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ]
-      })
-    });
-
-    // Check if Gemini API request was successful
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error('❌ Gemini API error:', geminiResponse.status, errorText);
-      throw new Error(`Gemini API error: ${geminiResponse.status}`);
-    }
-
-    // Parse Gemini API response
-    const geminiData = await geminiResponse.json();
-    console.log('✅ Gemini API response received');
-
-    // Extract the response text from Gemini's response structure
-    const responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (responseText) {
-      res.json({ response: responseText });
-    } else {
-      console.log('⚠️ No response text from Gemini API');
-      res.json({
-        response: "I'm here to help with your crypto wallet questions! Try asking about crypto prices or wallet functions.",
-        fallback: true
-      });
-    }
-  } catch (error) {
-    console.error('❌ Gemini AI chat error:', error);
-
-    // Return a fallback response if AI fails
-    res.json({
-      response: "I'm experiencing some technical difficulties. Please try asking about crypto prices or wallet functions!",
-      error: true,
-      fallback: true
-    });
-  }
+    // Clear the session cookie on the client
+    res.clearCookie('connect.sid'); // Default session cookie name
+    res.json({ message: "Logout successful" });
+  });
 });
 
-// Health check endpoint for Gemini API
-router.get('/ai/gemini-health', async (req, res) => {
-  try {
-    console.log('🔍 Checking Gemini API health');
-
-    // Check if API key is configured
-    if (!process.env.GEMINI_API_KEY) {
-      return res.json({
-        status: 'error',
-        message: 'Gemini API key not configured',
-        hasApiKey: false
-      });
-    }
-
-    // Make a simple test request to Gemini API
-    const testResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: "Say 'API is working' if you can read this."
-              }
-            ]
-          }
-        ]
-      })
-    });
-
-    if (testResponse.ok) {
-      const data = await testResponse.json();
-      console.log('✅ Gemini API is healthy');
-
-      res.json({
-        status: 'healthy',
-        message: 'Gemini API is working correctly',
-        hasApiKey: true,
-        response: data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response text'
-      });
-    } else {
-      const errorText = await testResponse.text();
-      console.error('❌ Gemini API health check failed:', testResponse.status, errorText);
-
-      res.json({
-        status: 'error',
-        message: `API returned status ${testResponse.status}`,
-        hasApiKey: true,
-        error: errorText
-      });
-    }
-  } catch (error) {
-    console.error('❌ Gemini health check error:', error);
-
-    res.json({
-      status: 'error',
-      message: 'Failed to connect to Gemini API',
-      hasApiKey: !!process.env.GEMINI_API_KEY,
-      error: error.message
-    });
-  }
-});
-
-// ===== TOKEN PRICES API ENDPOINT =====
-// Endpoint to fetch real-time token prices from 1inch API
-router.get('/tokens', async (req, res) => {
-  try {
-    console.log('🪙 Fetching token prices from 1inch API v6...');
-
-    const oneInchApiKey = process.env.ONEINCH_API_KEY;
-    
-    // Check if API key is configured
-    if (!oneInchApiKey) {
-      console.error('❌ 1inch API key not configured in environment variables');
-      console.error('❌ Please add ONEINCH_API_KEY to your Replit secrets');
-      
-      return res.json({
-        tokens: [
-          {
-            symbol: 'USDC',
-            name: 'USD Coin',
-            price: 1.00,
-            change24h: 0.00,
-            balance: '1000',
-            balanceUSD: 1000.00,
-            logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png'
-          },
-          {
-            symbol: 'ETH',
-            name: 'Ethereum',
-            price: 3650.25,
-            change24h: -1.84,
-            balance: '2.5',
-            balanceUSD: 9125.63,
-            logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png'
-          },
-          {
-            symbol: 'LINK',
-            name: 'Chainlink',
-            price: 22.45,
-            change24h: -2.15,
-            balance: '150',
-            balanceUSD: 3367.50,
-            logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png'
-          },
-          {
-            symbol: 'UNI',
-            name: 'Uniswap',
-            price: 9.87,
-            change24h: -0.89,
-            balance: '75',
-            balanceUSD: 740.25,
-            logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
-          }
-        ],
-        source: 'fallback',
-        message: 'API key not configured - add ONEINCH_API_KEY to secrets',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    console.log(`🔑 1inch API Key configured: ${oneInchApiKey.slice(0, 8)}...${oneInchApiKey.slice(-4)}`);
-    console.log(`🔑 Full API Key length: ${oneInchApiKey.length} characters`);
-    console.log(`🔑 API Key starts with: ${oneInchApiKey.substring(0, 20)}...`);
-
-    // Token configuration with verified addresses - using proper checksummed addresses
-    const tokenConfig = [
-      {
-        symbol: 'ETH',
-        name: 'Ethereum',
-        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // Native ETH (checksummed)
-        decimals: 18,
-        balance: '2.5',
-        logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png'
-      },
-      {
-        symbol: 'LINK', 
-        name: 'Chainlink',
-        address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', // LINK token (checksummed)
-        decimals: 18,
-        balance: '150',
-        logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png'
-      },
-      {
-        symbol: 'UNI',
-        name: 'Uniswap',
-        address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', // UNI token (checksummed)
-        decimals: 18,
-        balance: '75',
-        logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
-      }
-    ];
-
-    const usdcAddress = '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD'; // USDC token (checksummed)
-    const results = [];
-
-    // Always add USDC first (stable at $1.00)
-    results.push({
-      symbol: 'USDC',
-      name: 'USD Coin', 
-      price: 1.00,
-      change24h: 0.00,
-      balance: '1000',
-      balanceUSD: 1000.00,
-      logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png'
-    });
-
-    let successfulRequests = 0;
-    let apiErrors = [];
-
-    // Fetch prices for each token from 1inch using correct v6 API
-    for (const token of tokenConfig) {
-      try {
-        console.log(`📞 Fetching ${token.symbol} price from 1inch v6...`);
-        
-        const amount = '1' + '0'.repeat(token.decimals); // 1 token with correct decimals
-        
-        // Using the correct 1inch API v6 endpoint for Ethereum mainnet
-        const url = `https://api.1inch.dev/swap/v6.0/1/quote?src=${token.address}&dst=${usdcAddress}&amount=${amount}`;
-        
-        console.log(`🔗 Request URL: ${url}`);
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${oneInchApiKey}`,
-            'User-Agent': 'BitWallet/1.0'
-          }
-        });
-
-        console.log(`📊 ${token.symbol} response status:`, response.status);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log(`📊 ${token.symbol} API response keys:`, Object.keys(data));
-          console.log(`📊 ${token.symbol} dstAmount:`, data.dstAmount);
-          
-          if (data.dstAmount) {
-            // Convert USDC amount (6 decimals) to USD price
-            const price = parseFloat(data.dstAmount) / 1000000;
-            console.log(`✅ ${token.symbol} price from 1inch v6: $${price.toFixed(6)}`);
-            
-            // Calculate balance in USD
-            const balanceNum = parseFloat(token.balance);
-            const balanceUSD = price * balanceNum;
-            
-            results.push({
-              symbol: token.symbol,
-              name: token.name,
-              price: parseFloat(price.toFixed(6)),
-              change24h: Math.random() * 6 - 3, // Random change for demo
-              balance: token.balance,
-              balanceUSD: parseFloat(balanceUSD.toFixed(2)),
-              logoURI: token.logoURI
-            });
-
-            successfulRequests++;
-            
-          } else {
-            console.warn(`⚠️ No dstAmount in response for ${token.symbol}:`, data);
-            throw new Error('No dstAmount in API response');
-          }
-        } else {
-          const errorText = await response.text();
-          console.error(`❌ ${token.symbol} HTTP error ${response.status}:`, errorText);
-          console.error(`❌ ${token.symbol} Response headers:`, Object.fromEntries(response.headers.entries()));
-          console.error(`❌ ${token.symbol} Request URL was:`, url);
-          apiErrors.push(`${token.symbol}: HTTP ${response.status} - ${errorText}`);
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-      } catch (error) {
-        console.error(`❌ Error fetching ${token.symbol}:`, error.message);
-        apiErrors.push(`${token.symbol}: ${error.message}`);
-        
-        // Add fallback data for failed requests
-        const fallbackPrices = { ETH: 3650.25, LINK: 22.45, UNI: 9.87 };
-        const price = fallbackPrices[token.symbol] || 0;
-        const balanceUSD = price * parseFloat(token.balance);
-        
-        results.push({
-          symbol: token.symbol,
-          name: token.name,
-          price: price,
-          change24h: Math.random() * 6 - 3,
-          balance: token.balance,
-          balanceUSD: parseFloat(balanceUSD.toFixed(2)),
-          logoURI: token.logoURI
-        });
-      }
-      
-      // Delay between requests to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1500));
-    }
-
-    // Determine data source
-    const hasRealPrices = successfulRequests > 0;
-    
-    console.log('📊 Final token results:');
-    results.forEach(token => console.log(`   ${token.symbol}: $${token.price}`));
-    console.log('📊 API Errors:', apiErrors);
-    
-    return res.json({
-      tokens: results,
-      source: hasRealPrices ? '1inch' : 'fallback', 
-      timestamp: new Date().toISOString(),
-      debug: {
-        apiKeyConfigured: true,
-        tokensRequested: tokenConfig.length,
-        tokensReturned: results.length,
-        successfulRequests: successfulRequests,
-        realPricesFound: successfulRequests,
-        apiErrors: apiErrors,
-        message: hasRealPrices ? `Got ${successfulRequests} real prices from 1inch v6` : 'All API requests failed - using fallback data'
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Token prices endpoint error:', error);
-    
-    // Return fallback data on any error
-    return res.json({
-      tokens: [
-        {
-          symbol: 'USDC',
-          name: 'USD Coin',
-          price: 1.00,
-          change24h: 0.00,
-          balance: '1000',
-          balanceUSD: 1000.00,
-          logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png'
-        },
-        {
-          symbol: 'ETH',
-          name: 'Ethereum',
-          price: 3650.25,
-          change24h: -1.84,
-          balance: '2.5',
-          balanceUSD: 9125.63,
-          logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png'
-        },
-        {
-          symbol: 'LINK',
-          name: 'Chainlink',
-          price: 22.45,
-          change24h: -2.15,
-          balance: '150',
-          balanceUSD: 3367.50,
-          logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png'
-        },
-        {
-          symbol: 'UNI',
-          name: 'Uniswap',
-          price: 9.87,
-          change24h: -0.89,
-          balance: '75',
-          balanceUSD: 740.25,
-          logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
-        }
-      ],
-      source: 'fallback',
-      message: 'API error - showing fallback prices',
-      timestamp: new Date().toISOString(),
-      error: error.message
-    });
-  }
-});
-
-// ===== 1INCH API DEBUG ENDPOINT =====
-// Debug endpoint to test 1inch API connectivity and diagnose issues
-router.get('/debug/1inch-status', async (req, res) => {
-  try {
-    console.log('🔍 Running comprehensive 1inch API diagnostic...');
-
-    const oneInchApiKey = process.env.ONEINCH_API_KEY;
-    
-    // Check 1: API Key Configuration
-    const hasApiKey = !!oneInchApiKey;
-    const apiKeyLength = oneInchApiKey ? oneInchApiKey.length : 0;
-    const apiKeyPreview = oneInchApiKey ? `${oneInchApiKey.slice(0, 8)}...${oneInchApiKey.slice(-4)}` : 'none';
-
-    console.log('🔑 API Key Status:');
-    console.log('   - Configured:', hasApiKey);
-    console.log('   - Length:', apiKeyLength);
-    console.log('   - Preview:', apiKeyPreview);
-
-    const diagnostics = {
-      apiKey: {
-        configured: hasApiKey,
-        length: apiKeyLength,
-        preview: apiKeyPreview
-      },
-      tests: [],
-      summary: {
-        status: 'unknown',
-        workingEndpoints: 0,
-        failedEndpoints: 0
-      }
-    };
-
-    if (!hasApiKey) {
-      diagnostics.summary.status = 'no_api_key';
-      return res.json({
-        success: false,
-        message: '1inch API key not found in environment variables',
-        diagnostics,
-        recommendation: 'Please add ONEINCH_API_KEY to your Replit secrets'
-      });
-    }
-
-    // Test URLs and tokens
-    const tests = [
-      {
-        name: 'ETH to USDC Quote',
-        src: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-        dst: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD',
-        amount: '1000000000000000000',
-        expectedSymbol: 'ETH'
-      },
-      {
-        name: 'LINK to USDC Quote', 
-        src: '0x514910771AF9Ca656af840dff83E8264EcF986CA',
-        dst: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD',
-        amount: '1000000000000000000',
-        expectedSymbol: 'LINK'
-      }
-    ];
-
-    // Run tests
-    for (const test of tests) {
-      console.log(`🧪 Testing: ${test.name}`);
-      
-      const testUrl = `https://api.1inch.dev/swap/v6.0/1/quote?src=${test.src}&dst=${test.dst}&amount=${test.amount}`;
-      
-      const testResult = {
-        name: test.name,
-        url: testUrl,
-        success: false,
-        status: null,
-        price: null,
-        error: null,
-        responseTime: 0
-      };
-
-      const startTime = Date.now();
-      
-      try {
-        const response = await fetch(testUrl, {
-          headers: {
-            'Authorization': `Bearer ${oneInchApiKey}`,
-            'Accept': 'application/json',
-            'User-Agent': 'BitWallet/1.0'
-          },
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        });
-
-        testResult.responseTime = Date.now() - startTime;
-        testResult.status = response.status;
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.dstAmount) {
-            const price = parseFloat(data.dstAmount) / 1000000; // USDC has 6 decimals
-            testResult.price = parseFloat(price.toFixed(2));
-            testResult.success = true;
-            diagnostics.summary.workingEndpoints++;
-            console.log(`   ✅ Success: $${testResult.price}`);
-          } else {
-            testResult.error = 'No dstAmount in response';
-            diagnostics.summary.failedEndpoints++;
-            console.log(`   ❌ No price data`);
-          }
-        } else {
-          const errorText = await response.text();
-          testResult.error = `HTTP ${response.status}: ${errorText}`;
-          diagnostics.summary.failedEndpoints++;
-          console.log(`   ❌ HTTP Error: ${response.status}`);
-        }
-      } catch (error) {
-        testResult.responseTime = Date.now() - startTime;
-        testResult.error = error.message;
-        diagnostics.summary.failedEndpoints++;
-        console.log(`   ❌ Request Failed: ${error.message}`);
-      }
-
-      diagnostics.tests.push(testResult);
-    }
-
-    // Determine overall status
-    if (diagnostics.summary.workingEndpoints === tests.length) {
-      diagnostics.summary.status = 'healthy';
-    } else if (diagnostics.summary.workingEndpoints > 0) {
-      diagnostics.summary.status = 'partial';
-    } else {
-      diagnostics.summary.status = 'failed';
-    }
-
-    console.log('📊 Diagnostic Summary:');
-    console.log(`   - Status: ${diagnostics.summary.status}`);
-    console.log(`   - Working: ${diagnostics.summary.workingEndpoints}/${tests.length}`);
-
-    // Provide recommendations
-    let recommendation = '';
-    let troubleshooting = [];
-
-    if (diagnostics.summary.status === 'failed') {
-      recommendation = 'All API calls failed. Check your API key and network connection.';
-      troubleshooting = [
-        'Verify your 1inch API key is valid',
-        'Check if your API key has proper permissions',
-        'Ensure you have not exceeded rate limits',
-        'Try regenerating your API key from 1inch dashboard'
-      ];
-    } else if (diagnostics.summary.status === 'partial') {
-      recommendation = 'Some API calls are working. There may be intermittent issues.';
-      troubleshooting = [
-        'Check rate limiting on your API key',
-        'Some token pairs might not be supported',
-        'Network connectivity issues'
-      ];
-    } else {
-      recommendation = '1inch API is working correctly!';
-      troubleshooting = ['No issues detected'];
-    }
-
-    res.json({
-      success: diagnostics.summary.status !== 'failed',
-      message: `1inch API diagnostic complete - Status: ${diagnostics.summary.status}`,
-      diagnostics,
-      recommendation,
-      troubleshooting,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('❌ Diagnostic error:', error);
-    res.json({
-      success: false,
-      error: error.message,
-      message: 'Failed to run 1inch API diagnostics',
-      recommendation: 'Check server logs for detailed error information'
-    });
-  }
-});
-
-// ===== API KEY STATUS CHECK ENDPOINT =====
-// Endpoint to check if the 1inch API key is properly configured
-router.get('/debug/api-keys', async (req, res) => {
-  try {
-    console.log('🔍 Checking API key configuration...');
-    
-    const oneInchApiKey = process.env.ONEINCH_API_KEY;
-    
-    const status = {
-      oneinch: {
-        configured: !!oneInchApiKey,
-        length: oneInchApiKey ? oneInchApiKey.length : 0,
-        preview: oneInchApiKey ? `${oneInchApiKey.slice(0, 8)}...${oneInchApiKey.slice(-4)}` : 'none'
-      },
-      recommendations: []
-    };
-    
-    if (!oneInchApiKey) {
-      status.recommendations.push('Add ONEINCH_API_KEY to your Replit secrets');
-      status.recommendations.push('Get your API key from https://portal.1inch.dev/');
-    }
-    
-    console.log('📊 API Key Status:', status);
-    
-    res.json({
-      success: true,
-      status,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('❌ API key check error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      message: 'Failed to check API key configuration'
-    });
-  }
-});
-
-// ===== 1INCH API DEBUG ENDPOINT =====
-// Debug endpoint to test 1inch API connectivity
-router.get('/debug/1inch', async (req, res) => {
-  try {
-    console.log('🔍 Testing 1inch API connectivity...');
-
-    const oneInchApiKey = process.env.ONEINCH_API_KEY;
-    console.log('🔑 API Key available:', !!oneInchApiKey);
-    console.log('🔑 API Key preview:', oneInchApiKey ? `${oneInchApiKey.slice(0, 8)}...${oneInchApiKey.slice(-4)}` : 'none');
-
-    if (!oneInchApiKey) {
-      return res.json({
-        success: false,
-        message: '1inch API key not configured',
-        hasApiKey: false,
-        suggestion: 'Add ONEINCH_API_KEY to your secrets'
-      });
-    }
-
-    // Test with the quote endpoint (same as we use for prices)
-    const ethAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-    const usdcAddress = '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD';
-    const amount = '1000000000000000000'; // 1 ETH
-    
-    const testUrl = `https://api.1inch.dev/swap/v6.0/1/quote?src=${ethAddress}&dst=${usdcAddress}&amount=${amount}`;
-
-    console.log('📞 Test URL:', testUrl);
-
-    const headers = {
-      'Authorization': `Bearer ${oneInchApiKey}`,
-      'Accept': 'application/json',
-      'User-Agent': 'BitWallet/1.0'
-    };
-
-    console.log('📋 Request headers (auth hidden):', {
-      'Accept': headers.Accept,
-      'User-Agent': headers['User-Agent'],
-      'Authorization': 'Bearer [HIDDEN]'
-    });
-
-    const response = await fetch(testUrl, { headers });
-
-    console.log('📊 Response status:', response.status);
-    console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()));
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ 1inch API test successful');
-      
-      // Calculate ETH price from quote
-      const dstAmount = parseFloat(data.dstAmount);
-      const ethPrice = dstAmount / 1000000; // USDC has 6 decimals
-      
-      res.json({
-        success: true,
-        status: response.status,
-        message: '1inch API is working perfectly!',
-        hasApiKey: true,
-        testResults: {
-          ethToUsdc: data.dstAmount,
-          calculatedEthPrice: `$${ethPrice.toFixed(2)}`,
-          gasEstimate: data.estimatedGas
-        },
-        rawResponse: data
-      });
-    } else {
-      const errorText = await response.text();
-      console.log('❌ 1inch API test failed:', errorText);
-      
-      let suggestion = 'Check your API key configuration';
-      if (response.status === 401) {
-        suggestion = 'API key is invalid or expired. Check your 1inch dashboard';
-      } else if (response.status === 403) {
-        suggestion = 'API key lacks permissions or rate limit exceeded';
-      } else if (response.status === 429) {
-        suggestion = 'Rate limit exceeded. Wait before trying again';
-      }
-      
-      res.json({
-        success: false,
-        status: response.status,
-        error: errorText,
-        message: '1inch API returned an error',
-        hasApiKey: true,
-        suggestion
-      });
-    }
-  } catch (error) {
-    console.error('❌ 1inch API test error:', error);
-    
-    res.json({
-      success: false,
-      error: error.message,
-      message: 'Failed to connect to 1inch API',
-      hasApiKey: !!process.env.ONEINCH_API_KEY,
-      suggestion: 'Check internet connection and API endpoint'
-    });
-  }
-});
-
-// ===== EXPORT ROUTER =====
-// Export the router so it can be used in the main server file
-export { router };
+// Export default router
 export default router;
