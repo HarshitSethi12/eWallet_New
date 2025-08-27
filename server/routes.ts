@@ -608,12 +608,12 @@ router.get('/tokens', async (req, res) => {
     console.log(`🔑 Full API Key length: ${oneInchApiKey.length} characters`);
     console.log(`🔑 API Key starts with: ${oneInchApiKey.substring(0, 20)}...`);
 
-    // Token configuration with verified addresses
+    // Token configuration with verified addresses - using proper checksummed addresses
     const tokenConfig = [
       {
         symbol: 'ETH',
         name: 'Ethereum',
-        address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', // Native ETH
+        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // Native ETH (checksummed)
         decimals: 18,
         balance: '2.5',
         logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png'
@@ -621,7 +621,7 @@ router.get('/tokens', async (req, res) => {
       {
         symbol: 'LINK', 
         name: 'Chainlink',
-        address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', // Verified LINK address (proper checksum)
+        address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', // LINK token (checksummed)
         decimals: 18,
         balance: '150',
         logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png'
@@ -629,14 +629,14 @@ router.get('/tokens', async (req, res) => {
       {
         symbol: 'UNI',
         name: 'Uniswap',
-        address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', // Verified UNI address (proper checksum)
+        address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', // UNI token (checksummed)
         decimals: 18,
         balance: '75',
         logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
       }
     ];
 
-    const usdcAddress = '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD'; // Verified USDC address (proper case)
+    const usdcAddress = '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD'; // USDC token (checksummed)
     const results = [];
 
     // Always add USDC first (stable at $1.00)
