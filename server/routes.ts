@@ -2,11 +2,28 @@ import express from "express";
 import { eq, and, or } from "drizzle-orm";
 import { db } from "./db";
 import { insertUserSchema, users, wallets, transactions, selectUserSchema } from "@shared/schema";
-import { authenticateUser } from "./auth";
 import type { User } from "@shared/schema";
 import { BlockchainService } from "./blockchain";
 import fetch from 'node-fetch';
 import crypto from 'crypto'; // Import crypto for encryption/decryption
+
+// Authentication middleware
+const authenticateUser = (req: any, res: any, next: any) => {
+  try {
+    // Check if session exists and has user
+    if (req.session && req.session.user) {
+      // Add user to request object for use in route handlers
+      req.user = { id: req.session.user.id || req.session.user.sub };
+      next();
+    } else {
+      // User is not authenticated
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+  } catch (error) {
+    console.error('Authentication middleware error:', error);
+    return res.status(500).json({ error: 'Authentication failed' });
+  }
+};
 
 // ===== ROUTER SETUP =====
 const router = express.Router();
