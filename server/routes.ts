@@ -550,7 +550,7 @@ router.get('/ai/gemini-health', async (req, res) => {
 // Endpoint to fetch real-time token prices from 1inch API
 router.get('/tokens', async (req, res) => {
   try {
-    console.log('🪙 Fetching token prices from 1inch API...');
+    console.log('🪙 Fetching token prices from 1inch API v6...');
 
     const oneInchApiKey = process.env.ONEINCH_API_KEY;
     
@@ -649,16 +649,17 @@ router.get('/tokens', async (req, res) => {
     });
 
     let successfulRequests = 0;
+    let apiErrors = [];
 
-    // Fetch prices for each token from 1inch using latest API
+    // Fetch prices for each token from 1inch using correct v6 API
     for (const token of tokenConfig) {
       try {
-        console.log(`📞 Fetching ${token.symbol} price from 1inch...`);
+        console.log(`📞 Fetching ${token.symbol} price from 1inch v6...`);
         
         const amount = '1' + '0'.repeat(token.decimals); // 1 token with correct decimals
         
-        // Using the correct 1inch API v5 endpoint for Ethereum mainnet
-        const url = `https://api.1inch.io/v5.0/1/quote?fromTokenAddress=${token.address}&toTokenAddress=${usdcAddress}&amount=${amount}`;
+        // Using the correct 1inch API v6 endpoint for Ethereum mainnet
+        const url = `https://api.1inch.dev/swap/v6.0/1/quote?src=${token.address}&dst=${usdcAddress}&amount=${amount}`;
         
         console.log(`🔗 Request URL: ${url}`);
         
@@ -666,8 +667,8 @@ router.get('/tokens', async (req, res) => {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
-            'User-Agent': 'BitWallet/1.0',
-            ...(oneInchApiKey && { 'Authorization': `Bearer ${oneInchApiKey}` })
+            'Authorization': `Bearer ${oneInchApiKey}`,
+            'User-Agent': 'BitWallet/1.0'
           }
         });
 
@@ -675,12 +676,13 @@ router.get('/tokens', async (req, res) => {
 
         if (response.ok) {
           const data = await response.json();
-          console.log(`📊 ${token.symbol} API response:`, JSON.stringify(data, null, 2));
+          console.log(`📊 ${token.symbol} API response keys:`, Object.keys(data));
+          console.log(`📊 ${token.symbol} dstAmount:`, data.dstAmount);
           
-          if (data.toTokenAmount) {
+          if (data.dstAmount) {
             // Convert USDC amount (6 decimals) to USD price
-            const price = parseFloat(data.toTokenAmount) / 1000000;
-            console.log(`✅ ${token.symbol} price from 1inch: $${price.toFixed(2)}`);
+            const price = parseFloat(data.dstAmount) / 1000000;
+            console.log(`✅ ${token.symbol} price from 1inch v6: $${price.toFixed(6)}`);
             
             // Calculate balance in USD
             const balanceNum = parseFloat(token.balance);
@@ -689,7 +691,7 @@ router.get('/tokens', async (req, res) => {
             results.push({
               symbol: token.symbol,
               name: token.name,
-              price: parseFloat(price.toFixed(2)),
+              price: parseFloat(price.toFixed(6)),
               change24h: Math.random() * 6 - 3, // Random change for demo
               balance: token.balance,
               balanceUSD: parseFloat(balanceUSD.toFixed(2)),
@@ -698,20 +700,19 @@ router.get('/tokens', async (req, res) => {
 
             successfulRequests++;
             
-          } else if (data.error) {
-            console.error(`❌ ${token.symbol} API error:`, data.error);
-            throw new Error(data.error);
           } else {
-            console.warn(`⚠️ Unexpected response format for ${token.symbol}`);
-            throw new Error('Unexpected response format');
+            console.warn(`⚠️ No dstAmount in response for ${token.symbol}:`, data);
+            throw new Error('No dstAmount in API response');
           }
         } else {
           const errorText = await response.text();
           console.error(`❌ ${token.symbol} HTTP error ${response.status}:`, errorText);
+          apiErrors.push(`${token.symbol}: HTTP ${response.status} - ${errorText}`);
           throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
       } catch (error) {
         console.error(`❌ Error fetching ${token.symbol}:`, error.message);
+        apiErrors.push(`${token.symbol}: ${error.message}`);
         
         // Add fallback data for failed requests
         const fallbackPrices = { ETH: 3650.25, LINK: 22.45, UNI: 9.87 };
@@ -730,7 +731,7 @@ router.get('/tokens', async (req, res) => {
       }
       
       // Delay between requests to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
 
     // Determine data source
@@ -738,6 +739,7 @@ router.get('/tokens', async (req, res) => {
     
     console.log('📊 Final token results:');
     results.forEach(token => console.log(`   ${token.symbol}: $${token.price}`));
+    console.log('📊 API Errors:', apiErrors);
     
     return res.json({
       tokens: results,
@@ -749,7 +751,8 @@ router.get('/tokens', async (req, res) => {
         tokensReturned: results.length,
         successfulRequests: successfulRequests,
         realPricesFound: successfulRequests,
-        message: hasRealPrices ? `Got ${successfulRequests} real prices from 1inch` : 'All requests failed - using fallback data'
+        apiErrors: apiErrors,
+        message: hasRealPrices ? `Got ${successfulRequests} real prices from 1inch v6` : 'All API requests failed - using fallback data'
       }
     });
 
