@@ -605,6 +605,8 @@ router.get('/tokens', async (req, res) => {
     }
 
     console.log(`🔑 1inch API Key configured: ${oneInchApiKey.slice(0, 8)}...${oneInchApiKey.slice(-4)}`);
+    console.log(`🔑 Full API Key length: ${oneInchApiKey.length} characters`);
+    console.log(`🔑 API Key starts with: ${oneInchApiKey.substring(0, 20)}...`);
 
     // Token configuration with verified addresses
     const tokenConfig = [
@@ -707,6 +709,8 @@ router.get('/tokens', async (req, res) => {
         } else {
           const errorText = await response.text();
           console.error(`❌ ${token.symbol} HTTP error ${response.status}:`, errorText);
+          console.error(`❌ ${token.symbol} Response headers:`, Object.fromEntries(response.headers.entries()));
+          console.error(`❌ ${token.symbol} Request URL was:`, url);
           apiErrors.push(`${token.symbol}: HTTP ${response.status} - ${errorText}`);
           throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
