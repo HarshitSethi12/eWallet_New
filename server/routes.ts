@@ -176,97 +176,215 @@ async function get1inchPrice(token: any): Promise<{ price: number; change24h: nu
 
 // ===== CRYPTOCURRENCY PRICE API ENDPOINTS =====
 
-// GET /api/tokens - Get token prices from 1inch with CoinGecko fallback
+// GET /api/tokens - Get token prices from multiple APIs with fallback
 router.get("/api/tokens", async (req, res) => {
-  console.log('🎯 Token prices endpoint called');
+  console.log('🔵 /api/tokens endpoint called');
 
-  const results = [];
-  let successfulRequests = 0;
-  const apiErrors = [];
-  let dataSource = 'fallback';
+  // Popular cryptocurrencies across multiple blockchains
+  const cryptocurrencies = [
+    // Major cryptocurrencies
+    { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin' },
+    { id: 'ethereum', symbol: 'ETH', name: 'Ethereum' },
+    { id: 'tether', symbol: 'USDT', name: 'Tether USD' },
+    { id: 'binancecoin', symbol: 'BNB', name: 'BNB' },
+    { id: 'solana', symbol: 'SOL', name: 'Solana' },
+    { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin' },
+    { id: 'ripple', symbol: 'XRP', name: 'XRP' },
+    { id: 'cardano', symbol: 'ADA', name: 'Cardano' },
+    { id: 'dogecoin', symbol: 'DOGE', name: 'Dogecoin' },
+    { id: 'avalanche-2', symbol: 'AVAX', name: 'Avalanche' },
+    { id: 'shiba-inu', symbol: 'SHIB', name: 'Shiba Inu' },
+    { id: 'chainlink', symbol: 'LINK', name: 'Chainlink' },
+    { id: 'polkadot', symbol: 'DOT', name: 'Polkadot' },
+    { id: 'polygon', symbol: 'MATIC', name: 'Polygon' },
+    { id: 'litecoin', symbol: 'LTC', name: 'Litecoin' },
+    { id: 'uniswap', symbol: 'UNI', name: 'Uniswap' },
+    { id: 'internet-computer', symbol: 'ICP', name: 'Internet Computer' },
+    { id: 'ethereum-classic', symbol: 'ETC', name: 'Ethereum Classic' },
+    { id: 'stellar', symbol: 'XLM', name: 'Stellar' },
+    { id: 'filecoin', symbol: 'FIL', name: 'Filecoin' },
+    { id: 'cosmos', symbol: 'ATOM', name: 'Cosmos' },
+    { id: 'monero', symbol: 'XMR', name: 'Monero' },
+    { id: 'hedera-hashgraph', symbol: 'HBAR', name: 'Hedera' },
+    { id: 'tron', symbol: 'TRX', name: 'TRON' },
+    { id: 'algorand', symbol: 'ALGO', name: 'Algorand' }
+  ];
 
-  // Add USDC as baseline
-  results.push({
-    symbol: 'USDC',
-    name: 'USD Coin',
-    price: 1.00,
-    change24h: 0,
-    balance: '1000',
-    balanceUSD: 1000,
-    logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png'
-  });
+  try {
+    console.log('🔵 Fetching cryptocurrency prices from CoinGecko API...');
 
-  // Try to get real prices for each token
-  for (const token of tokenConfig) {
-    console.log(`\n💫 Processing ${token.symbol}...`);
+    // Build the API URL for CoinGecko
+    const cryptoIds = cryptocurrencies.map(crypto => crypto.id).join(',');
+    const apiUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`;
 
-    let priceData = null;
-    let usedSource = 'fallback';
+    console.log('🔵 CoinGecko API URL:', apiUrl);
 
-    // First try 1inch
-    priceData = await get1inchPrice(token);
-    if (priceData) {
-      usedSource = '1inch';
-      successfulRequests++;
-    } else {
-      // Fallback to CoinGecko
-      console.log(`🔄 Trying CoinGecko for ${token.symbol}...`);
-      const coinGeckoPrice = await getCoinGeckoPrice(token.symbol);
-      if (coinGeckoPrice) {
-        priceData = {
-          price: coinGeckoPrice,
-          change24h: Math.random() * 6 - 3
-        };
-        usedSource = 'coingecko';
-        successfulRequests++;
-      }
-    }
-
-    // Use the price data or fallback to mock prices
-    const fallbackPrices = { ETH: 3650.25, LINK: 22.45, UNI: 9.87 };
-    const finalPrice = priceData?.price || fallbackPrices[token.symbol] || 0;
-    const finalChange = priceData?.change24h || (Math.random() * 6 - 3);
-
-    const balanceUSD = finalPrice * parseFloat(token.balance);
-
-    results.push({
-      symbol: token.symbol,
-      name: token.name,
-      price: parseFloat(finalPrice.toFixed(2)),
-      change24h: parseFloat(finalChange.toFixed(8)),
-      balance: token.balance,
-      balanceUSD: parseFloat(balanceUSD.toFixed(2)),
-      logoURI: token.logoURI
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'BitWallet/1.0'
+      },
+      timeout: 15000 // 15 second timeout
     });
 
-    console.log(`📈 ${token.symbol}: $${finalPrice.toFixed(2)} (${usedSource})`);
+    console.log('🔵 CoinGecko Response:', response.status, response.statusText);
 
-    // If we got at least one real price, update data source
-    if (priceData && dataSource === 'fallback') {
-      dataSource = usedSource;
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ CoinGecko data received:', Object.keys(data).length, 'cryptocurrencies');
+
+      // Transform the data to our expected format
+      const tokenPrices = cryptocurrencies.map(crypto => {
+        const priceData = data[crypto.id];
+        if (priceData) {
+          return {
+            symbol: crypto.symbol,
+            name: crypto.name,
+            address: crypto.id, // Use CoinGecko ID as address
+            price: priceData.usd || 0,
+            change24h: priceData.usd_24h_change || 0,
+            marketCap: priceData.usd_market_cap || 0,
+            volume24h: priceData.usd_24h_vol || 0,
+            lastUpdated: new Date().toISOString()
+          };
+        } else {
+          return {
+            symbol: crypto.symbol,
+            name: crypto.name,
+            address: crypto.id,
+            price: 0,
+            change24h: 0,
+            marketCap: 0,
+            volume24h: 0,
+            lastUpdated: new Date().toISOString(),
+            error: 'Data not available'
+          };
+        }
+      });
+
+      // Filter successful vs failed tokens
+      const validTokens = tokenPrices.filter(token => token.price > 0);
+      const errorTokens = tokenPrices.filter(token => token.price === 0);
+
+      console.log('✅ Successfully fetched prices for:', validTokens.map(t => t.symbol).join(', '));
+      if (errorTokens.length > 0) {
+        console.log('❌ Failed to fetch prices for:', errorTokens.map(t => t.symbol).join(', '));
+      }
+
+      const responseData = {
+        success: true,
+        message: `Successfully fetched ${validTokens.length} cryptocurrency prices`,
+        tokens: tokenPrices,
+        validCount: validTokens.length,
+        errorCount: errorTokens.length,
+        source: 'CoinGecko API',
+        timestamp: new Date().toISOString(),
+        totalSupported: cryptocurrencies.length
+      };
+
+      console.log('✅ Final API response:', {
+        tokenCount: responseData.tokens.length,
+        validCount: responseData.validCount,
+        errorCount: responseData.errorCount,
+        source: responseData.source
+      });
+
+      res.json(responseData);
+
+    } else {
+      throw new Error(`CoinGecko API error: ${response.status} ${response.statusText}`);
     }
 
-    // Delay between requests
-    await new Promise(resolve => setTimeout(resolve, 500));
+  } catch (error) {
+    console.error('❌ Error fetching from CoinGecko, trying CoinMarketCap fallback:', error);
+
+    // Fallback to CoinMarketCap API
+    try {
+      console.log('🔄 Trying CoinMarketCap API as fallback...');
+
+      const cmcApiKey = process.env.COINMARKETCAP_API_KEY;
+      if (cmcApiKey) {
+        const cmcResponse = await fetch('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=25', {
+          headers: {
+            'X-CMC_PRO_API_KEY': cmcApiKey,
+            'Accept': 'application/json'
+          },
+          timeout: 15000
+        });
+
+        if (cmcResponse.ok) {
+          const cmcData = await cmcResponse.json();
+          console.log('✅ CoinMarketCap fallback successful');
+
+          const tokenPrices = cryptocurrencies.map(crypto => {
+            const cmcCoin = cmcData.data.find(coin => 
+              coin.symbol.toLowerCase() === crypto.symbol.toLowerCase()
+            );
+
+            if (cmcCoin) {
+              return {
+                symbol: crypto.symbol,
+                name: crypto.name,
+                address: crypto.id,
+                price: cmcCoin.quote.USD.price || 0,
+                change24h: cmcCoin.quote.USD.percent_change_24h || 0,
+                marketCap: cmcCoin.quote.USD.market_cap || 0,
+                volume24h: cmcCoin.quote.USD.volume_24h || 0,
+                lastUpdated: new Date().toISOString()
+              };
+            } else {
+              return {
+                symbol: crypto.symbol,
+                name: crypto.name,
+                address: crypto.id,
+                price: 0,
+                change24h: 0,
+                marketCap: 0,
+                volume24h: 0,
+                lastUpdated: new Date().toISOString(),
+                error: 'Not found in CoinMarketCap'
+              };
+            }
+          });
+
+          return res.json({
+            success: true,
+            message: 'Successfully fetched prices from CoinMarketCap fallback',
+            tokens: tokenPrices,
+            validCount: tokenPrices.filter(t => t.price > 0).length,
+            errorCount: tokenPrices.filter(t => t.price === 0).length,
+            source: 'CoinMarketCap API (fallback)',
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    } catch (fallbackError) {
+      console.error('❌ CoinMarketCap fallback also failed:', fallbackError);
+    }
+
+    // If both CoinGecko and CoinMarketCap fail, return mock data
+    console.error('❌ Both CoinGecko and CoinMarketCap failed. Returning mock data.');
+    const mockTokens = cryptocurrencies.map(crypto => ({
+      symbol: crypto.symbol,
+      name: crypto.name,
+      address: crypto.id,
+      price: Math.random() * 1000 + 100, // Random price between 100-1100
+      change24h: (Math.random() - 0.5) * 20, // Random change between -10% to +10%
+      marketCap: Math.random() * 1000000000,
+      volume24h: Math.random() * 100000000,
+      lastUpdated: new Date().toISOString(),
+      error: 'Using mock data due to API error'
+    }));
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch cryptocurrency prices from all sources, using mock data',
+      tokens: mockTokens,
+      source: 'mock data (all APIs failed)',
+      timestamp: new Date().toISOString(),
+      error: error.message || 'Unknown error'
+    });
   }
-
-  console.log(`\n📊 Final Results:`);
-  console.log(`   Successful requests: ${successfulRequests}/${tokenConfig.length}`);
-  console.log(`   Data source: ${dataSource}`);
-
-  return res.json({
-    tokens: results,
-    source: dataSource,
-    timestamp: new Date().toISOString(),
-    debug: {
-      apiKeyConfigured: !!process.env.ONEINCH_API_KEY,
-      tokensRequested: tokenConfig.length,
-      tokensReturned: results.length,
-      successfulRequests: successfulRequests,
-      realPricesFound: successfulRequests,
-      apiErrors: apiErrors
-    }
-  });
 });
 
 // GET /api/crypto-prices - Separate endpoint for market overview
@@ -312,8 +430,160 @@ router.get("/api/crypto-prices", async (req, res) => {
   }
 });
 
-// Debug endpoint for testing 1inch API
-router.get("/api/debug/1inch", async (req, res) => {
+// ===== API TESTING ENDPOINTS =====
+
+// GET /api/debug/test-apis - Test multiple cryptocurrency APIs
+router.get("/api/debug/test-apis", async (req, res) => {
+  console.log('🧪 Testing multiple cryptocurrency APIs...');
+
+  const apiResults = {
+    coinGecko: { status: 'testing', data: null, error: null },
+    coinMarketCap: { status: 'testing', data: null, error: null },
+    oneInch: { status: 'testing', data: null, error: null }
+  };
+
+  // Test CoinGecko API
+  try {
+    console.log('🧪 Testing CoinGecko API...');
+    const geckoResponse = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether&vs_currencies=usd&include_24hr_change=true',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BitWallet/1.0'
+        },
+        timeout: 10000
+      }
+    );
+
+    if (geckoResponse.ok) {
+      const geckoData = await geckoResponse.json();
+      apiResults.coinGecko = {
+        status: 'success',
+        data: geckoData,
+        error: null
+      };
+      console.log('✅ CoinGecko API working');
+    } else {
+      apiResults.coinGecko = {
+        status: 'failed',
+        data: null,
+        error: `HTTP ${geckoResponse.status}`
+      };
+    }
+  } catch (error) {
+    apiResults.coinGecko = {
+      status: 'failed',
+      data: null,
+      error: error.message
+    };
+  }
+
+  // Test CoinMarketCap API (if API key is available)
+  const cmcApiKey = process.env.COINMARKETCAP_API_KEY;
+  if (cmcApiKey) {
+    try {
+      console.log('🧪 Testing CoinMarketCap API...');
+      const cmcResponse = await fetch(
+        'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=5',
+        {
+          headers: {
+            'X-CMC_PRO_API_KEY': cmcApiKey,
+            'Accept': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+
+      if (cmcResponse.ok) {
+        const cmcData = await cmcResponse.json();
+        apiResults.coinMarketCap = {
+          status: 'success',
+          data: { count: cmcData.data?.length || 0 },
+          error: null
+        };
+        console.log('✅ CoinMarketCap API working');
+      } else {
+        apiResults.coinMarketCap = {
+          status: 'failed',
+          data: null,
+          error: `HTTP ${cmcResponse.status}`
+        };
+      }
+    } catch (error) {
+      apiResults.coinMarketCap = {
+        status: 'failed',
+        data: null,
+        error: error.message
+      };
+    }
+  } else {
+    apiResults.coinMarketCap = {
+      status: 'skipped',
+      data: null,
+      error: 'No API key configured'
+    };
+  }
+
+  // Test 1inch API (if API key is available)
+  const oneInchApiKey = process.env.ONEINCH_API_KEY;
+  if (oneInchApiKey) {
+    try {
+      console.log('🧪 Testing 1inch API...');
+      const oneInchResponse = await fetch(
+        'https://api.1inch.dev/price/v1.1/1/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+        {
+          headers: {
+            'Authorization': `Bearer ${oneInchApiKey}`,
+            'Accept': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+
+      if (oneInchResponse.ok) {
+        const oneInchData = await oneInchResponse.text();
+        apiResults.oneInch = {
+          status: 'success',
+          data: { price: oneInchData },
+          error: null
+        };
+        console.log('✅ 1inch API working');
+      } else {
+        apiResults.oneInch = {
+          status: 'failed',
+          data: null,
+          error: `HTTP ${oneInchResponse.status}`
+        };
+      }
+    } catch (error) {
+      apiResults.oneInch = {
+        status: 'failed',
+        data: null,
+        error: error.message
+      };
+    }
+  } else {
+    apiResults.oneInch = {
+      status: 'skipped',
+      data: null,
+      error: 'No API key configured'
+    };
+  }
+
+  res.json({
+    timestamp: new Date().toISOString(),
+    apis: apiResults,
+    recommendations: {
+      primary: 'CoinGecko (free, no API key required)',
+      fallback: 'CoinMarketCap (requires API key)',
+      swap: '1inch (requires API key, Ethereum only)'
+    }
+  });
+});
+
+// GET /api/debug/test-1inch - Test 1inch API connectivity and authentication  
+router.get("/api/debug/test-1inch", async (req, res) => {
   const oneInchApiKey = process.env.ONEINCH_API_KEY;
   const diagnostics = {
     apiKeyConfigured: !!oneInchApiKey,
@@ -485,12 +755,12 @@ router.get("/api/transactions", authenticateUser, async (req, res) => {
 router.post("/api/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    
+
     // Basic validation
     if (!username || !email || !password) {
       return res.status(400).json({ message: "Username, email, and password are required" });
     }
-    
+
     // Check if username or email already exists
     const existingUser = await db.select()
       .from(users)
@@ -529,7 +799,7 @@ router.post("/api/login", async (req, res) => {
 
       req.session!.userId = user.id;
       req.session!.username = user.username;
-      
+
       // Update last login timestamp
       await db.update(users).set({ lastLogin: new Date() }).where(eq(users.id, user.id));
 
