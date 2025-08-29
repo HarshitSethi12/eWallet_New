@@ -897,5 +897,294 @@ router.post("/api/auth/metamask", async (req, res) => {
   }
 });
 
+// ===== SWAP ENDPOINTS =====
+
+// GET /api/swap/tokens - Get supported tokens for swapping
+router.get("/api/swap/tokens", async (req, res) => {
+  const { network = 'ethereum' } = req.query;
+  
+  try {
+    // Define tokens by network
+    const tokensByNetwork = {
+      ethereum: [
+        { symbol: 'ETH', name: 'Ethereum', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18 },
+        { symbol: 'USDC', name: 'USD Coin', address: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD', decimals: 6 },
+        { symbol: 'USDT', name: 'Tether USD', address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
+        { symbol: 'WBTC', name: 'Wrapped Bitcoin', address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', decimals: 8 },
+        { symbol: 'LINK', name: 'Chainlink', address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', decimals: 18 },
+        { symbol: 'UNI', name: 'Uniswap', address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', decimals: 18 },
+      ],
+      bsc: [
+        { symbol: 'BNB', name: 'BNB', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18 },
+        { symbol: 'BUSD', name: 'Binance USD', address: '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56', decimals: 18 },
+        { symbol: 'CAKE', name: 'PancakeSwap', address: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82', decimals: 18 },
+      ],
+      polygon: [
+        { symbol: 'MATIC', name: 'Polygon', address: '0x0000000000000000000000000000000000001010', decimals: 18 },
+        { symbol: 'WETH', name: 'Wrapped Ether', address: '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619', decimals: 18 },
+        { symbol: 'USDC', name: 'USD Coin', address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', decimals: 6 },
+      ],
+      solana: [
+        { symbol: 'SOL', name: 'Solana', address: 'So11111111111111111111111111111111111111112', decimals: 9 },
+        { symbol: 'USDC', name: 'USD Coin', address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6 },
+        { symbol: 'RAY', name: 'Raydium', address: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R', decimals: 6 },
+      ]
+    };
+
+    const tokens = tokensByNetwork[network] || tokensByNetwork.ethereum;
+
+    res.json({
+      success: true,
+      network,
+      tokens,
+      count: tokens.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching swap tokens:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch swap tokens',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/swap/quote - Get swap quote using multiple providers
+router.post("/api/swap/quote", async (req, res) => {
+  const { fromToken, toToken, amount, network = 'ethereum' } = req.body;
+
+  if (!fromToken || !toToken || !amount) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields: fromToken, toToken, amount'
+    });
+  }
+
+  try {
+    console.log(`🔄 Getting swap quote: ${amount} ${fromToken} → ${toToken} on ${network}`);
+
+    // Try different quote providers based on network
+    let quote = null;
+
+    // 1. Try Jupiter for Solana
+    if (network === 'solana') {
+      quote = await getJupiterQuote(fromToken, toToken, amount);
+    }
+
+    // 2. Try Moralis for EVM chains
+    if (!quote && ['ethereum', 'bsc', 'polygon'].includes(network)) {
+      quote = await getMoralisQuote(fromToken, toToken, amount, network);
+    }
+
+    // 3. Fallback to CoinGecko price-based quote
+    if (!quote) {
+      quote = await getCoinGeckoSwapQuote(fromToken, toToken, amount);
+    }
+
+    // 4. Last resort: mock quote
+    if (!quote) {
+      quote = generateMockQuote(fromToken, toToken, amount);
+    }
+
+    console.log(`✅ Swap quote generated using ${quote.provider}`);
+
+    res.json({
+      success: true,
+      quote,
+      network,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error getting swap quote:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get swap quote',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/swap/execute - Execute token swap (demo implementation)
+router.post("/api/swap/execute", authenticateUser, async (req, res) => {
+  const { fromToken, toToken, amount, quote, network } = req.body;
+
+  if (!fromToken || !toToken || !amount || !quote) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields for swap execution'
+    });
+  }
+
+  try {
+    console.log(`🚀 Executing swap: ${amount} ${fromToken} → ${toToken} on ${network}`);
+
+    // In a real implementation, this would:
+    // 1. Validate the quote is still valid
+    // 2. Check user's wallet balance
+    // 3. Execute the swap transaction
+    // 4. Update user's balance in database
+    // 5. Record the transaction
+
+    // For demo purposes, we'll simulate the swap
+    const swapResult = {
+      transactionHash: `0x${crypto.randomBytes(32).toString('hex')}`,
+      fromAmount: amount,
+      toAmount: quote.toAmount,
+      fromToken,
+      toToken,
+      network,
+      status: 'completed',
+      timestamp: new Date().toISOString(),
+      gasUsed: quote.estimatedGas,
+      fee: quote.fee
+    };
+
+    // Record transaction in database (mock)
+    try {
+      await db.insert(transactions).values({
+        userId: req.user!.id,
+        type: 'swap',
+        amount: parseFloat(amount),
+        fromAddress: fromToken,
+        toAddress: toToken,
+        hash: swapResult.transactionHash,
+        confirmed: true,
+        timestamp: new Date()
+      });
+    } catch (dbError) {
+      console.warn('Warning: Could not record transaction in database:', dbError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Swap executed successfully',
+      result: swapResult
+    });
+
+  } catch (error) {
+    console.error('Error executing swap:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to execute swap',
+      error: error.message
+    });
+  }
+});
+
+// Helper function: Jupiter API quote for Solana
+async function getJupiterQuote(fromToken, toToken, amount) {
+  try {
+    const response = await fetch(
+      `https://quote-api.jup.ag/v6/quote?inputMint=${fromToken}&outputMint=${toToken}&amount=${amount}&slippageBps=50`,
+      { timeout: 10000 }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        fromToken,
+        toToken,
+        fromAmount: amount,
+        toAmount: data.outAmount,
+        price: parseFloat(data.outAmount) / parseFloat(amount),
+        priceImpact: data.priceImpactPct || 0,
+        fee: '0.25%',
+        route: data.routePlan?.map(r => r.swapInfo.outputMint) || [fromToken, toToken],
+        estimatedGas: 'N/A',
+        provider: 'Jupiter'
+      };
+    }
+  } catch (error) {
+    console.error('Jupiter API error:', error);
+  }
+  return null;
+}
+
+// Helper function: Moralis API quote for EVM chains
+async function getMoralisQuote(fromToken, toToken, amount, network) {
+  // This would use Moralis API in production
+  // For now, return null to fall back to other providers
+  return null;
+}
+
+// Helper function: CoinGecko-based swap quote
+async function getCoinGeckoSwapQuote(fromTokenSymbol, toTokenSymbol, amount) {
+  try {
+    // Map common symbols to CoinGecko IDs
+    const symbolToId = {
+      'ETH': 'ethereum',
+      'BTC': 'bitcoin',
+      'USDC': 'usd-coin',
+      'USDT': 'tether',
+      'BNB': 'binancecoin',
+      'MATIC': 'polygon',
+      'SOL': 'solana',
+      'LINK': 'chainlink',
+      'UNI': 'uniswap',
+      'AAVE': 'aave',
+      'WBTC': 'wrapped-bitcoin'
+    };
+
+    const fromId = symbolToId[fromTokenSymbol.toUpperCase()];
+    const toId = symbolToId[toTokenSymbol.toUpperCase()];
+
+    if (!fromId || !toId) return null;
+
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${fromId},${toId}&vs_currencies=usd`,
+      { timeout: 10000 }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      const fromPrice = data[fromId]?.usd;
+      const toPrice = data[toId]?.usd;
+
+      if (fromPrice && toPrice) {
+        const fromAmountNum = parseFloat(amount);
+        const toAmountNum = (fromAmountNum * fromPrice) / toPrice;
+
+        return {
+          fromToken: fromTokenSymbol,
+          toToken: toTokenSymbol,
+          fromAmount: amount,
+          toAmount: toAmountNum.toFixed(8),
+          price: fromPrice / toPrice,
+          priceImpact: 0.5,
+          fee: '0.3%',
+          route: [fromTokenSymbol, toTokenSymbol],
+          estimatedGas: '150000',
+          provider: 'CoinGecko'
+        };
+      }
+    }
+  } catch (error) {
+    console.error('CoinGecko swap quote error:', error);
+  }
+  return null;
+}
+
+// Helper function: Generate mock quote for testing
+function generateMockQuote(fromToken, toToken, amount) {
+  const fromAmountNum = parseFloat(amount);
+  const mockRate = Math.random() * 100 + 1;
+  const toAmountNum = fromAmountNum * mockRate;
+
+  return {
+    fromToken,
+    toToken,
+    fromAmount: amount,
+    toAmount: toAmountNum.toFixed(8),
+    price: mockRate,
+    priceImpact: Math.random() * 2,
+    fee: '0.3%',
+    route: [fromToken, toToken],
+    estimatedGas: '150000',
+    provider: 'Mock'
+  };
+}
+
 // Export default router
 export default router;

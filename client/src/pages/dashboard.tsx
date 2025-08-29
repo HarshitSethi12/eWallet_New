@@ -139,7 +139,7 @@ function WalletTabs() {
   // ===== DATA SELECTION LOGIC =====
   // Use real API data when available, fallback to mock data during loading/error
   const portfolioTokens = tokenData?.tokens || mockTokens;
-  
+
   // ===== DEBUG LOGGING =====
   // Log the current data source for debugging
   React.useEffect(() => {
@@ -604,6 +604,17 @@ export default function Dashboard() {
                     <WalletTabs />
                   </CardContent>
                 </Card>
+                {/* Live Market Prices */}
+                <div className="w-full">
+                  <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">Live Market Prices</h2>
+                  <HorizontalPriceTicker />
+                </div>
+
+                {/* Token Swap */}
+                <div className="w-full">
+                  <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">Swap Tokens</h2>
+                  <DexSwap />
+                </div>
               </div>
             </div>
           </div>
