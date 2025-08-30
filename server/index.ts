@@ -177,6 +177,9 @@ process.on('unhandledRejection', (reason, promise) => {
 
     // Register API routes
     app.use('/api', router);
+    
+    // Import and register auth routes
+    const { authRouter } = await import('./auth');
     app.use("/auth", authRouter);
 
     // Add catch-all error handler for API routes
