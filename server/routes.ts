@@ -601,21 +601,39 @@ router.post("/api/logout", (req, res) => {
 
 // ===== METAMASK AUTHENTICATION ENDPOINT =====
 router.post("/api/auth/metamask", async (req, res) => {
+  // Set JSON content type explicitly
+  res.setHeader('Content-Type', 'application/json');
+  
   try {
+    console.log('🦊 MetaMask authentication request received');
+    console.log('🦊 Request body:', req.body);
+    console.log('🦊 Request headers:', req.headers);
+
     const { message, signature, address } = req.body;
 
     // Validate required fields
     if (!message || !signature || !address) {
+      console.error('❌ Missing required fields:', { message: !!message, signature: !!signature, address: !!address });
       return res.status(400).json({ 
+        success: false,
         error: 'Missing required fields: message, signature, and address are required' 
       });
     }
 
-    console.log('🦊 MetaMask authentication request received:', { 
+    console.log('🦊 MetaMask authentication data:', { 
       address: address,
       hasMessage: !!message,
       hasSignature: !!signature 
     });
+
+    // Ensure session exists
+    if (!req.session) {
+      console.error('❌ No session available');
+      return res.status(500).json({
+        success: false,
+        error: 'Session not available'
+      });
+    }
 
     // In a production environment, you would verify the signature here
     // For now, we'll trust the signature since MetaMask handles the signing
@@ -656,7 +674,7 @@ router.post("/api/auth/metamask", async (req, res) => {
     }
 
     // Return success response with user data
-    res.json({ 
+    return res.status(200).json({ 
       success: true, 
       message: 'MetaMask authentication successful',
       user: metamaskUser
@@ -664,9 +682,10 @@ router.post("/api/auth/metamask", async (req, res) => {
 
   } catch (error) {
     console.error('❌ MetaMask authentication error:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
+      success: false,
       error: 'MetaMask authentication failed',
-      details: error.message 
+      details: error.message || 'Unknown error'
     });
   }
 });

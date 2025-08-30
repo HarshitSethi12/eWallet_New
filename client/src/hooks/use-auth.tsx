@@ -133,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         credentials: 'include',      // Include cookies for session
         body: JSON.stringify(data),   // Send signature data
@@ -141,15 +142,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🔵 Response status:', response.status);
       console.log('🔵 Response headers:', response.headers.get('content-type'));
 
+      // Get response text first to check if it's valid JSON
+      const responseText = await response.text();
+      console.log('🔵 Response text:', responseText.substring(0, 200));
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ MetaMask auth failed:', errorText);
-        throw new Error(`Authentication failed: ${response.status} - ${errorText}`);
+        console.error('❌ MetaMask auth failed:', responseText);
+        
+        // Try to parse as JSON if possible, otherwise use text
+        let errorMessage = `Authentication failed: ${response.status}`;
+        try {
+          const errorJson = JSON.parse(responseText);
+          errorMessage = errorJson.error || errorJson.message || errorMessage;
+        } catch (parseError) {
+          errorMessage = `Server error: ${responseText.substring(0, 100)}`;
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
-      console.log('✅ MetaMask authentication successful');
-      return result;
+      // Try to parse response as JSON
+      try {
+        const result = JSON.parse(responseText);
+        console.log('✅ MetaMask authentication successful');
+        return result;
+      } catch (parseError) {
+        console.error('❌ Failed to parse response as JSON:', parseError);
+        console.error('❌ Response text:', responseText);
+        throw new Error('Server returned invalid JSON response');
+      }
     },
     // Function called when authentication succeeds
     onSuccess: (data) => {
