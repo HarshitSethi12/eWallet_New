@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🔵 Request URL: /api/auth/metamask');
       console.log('🔵 Request data:', { address: data.address, hasMessage: !!data.message, hasSignature: !!data.signature });
       
-      const response = await fetch('/api/auth/metamask', {
+      const response = await fetch('/auth/metamask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

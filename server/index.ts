@@ -169,8 +169,36 @@ process.on('unhandledRejection', (reason, promise) => {
     });
 
     // ===== API ROUTES REGISTRATION =====
-    // Register all API routes from routes.ts file
+    // Add error handling middleware before routes
+    app.use((req, res, next) => {
+      console.log(`${req.method} ${req.path}`, req.body ? 'with body' : 'no body');
+      next();
+    });
+
+    // Register API routes
     app.use('/api', router);
+    app.use("/auth", authRouter);
+
+    // Add catch-all error handler for API routes
+    app.use('/api/*', (error: any, req: any, res: any, next: any) => {
+      console.error('API Error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        details: error.message
+      });
+    });
+
+    // Ensure we don't serve HTML for API routes
+    app.use('/api/*', (req: any, res: any) => {
+      console.error('Unhandled API route:', req.path);
+      res.status(404).json({
+        success: false,
+        error: 'API endpoint not found',
+        path: req.path
+      });
+    });
+
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;

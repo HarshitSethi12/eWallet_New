@@ -622,7 +622,17 @@ router.post("/api/logout", (req, res) => {
 });
 
 // ===== METAMASK AUTHENTICATION ENDPOINT =====
-router.post("/api/auth/metamask", async (req, res) => {
+router.post("/auth/metamask", async (req, res) => {
+  // Ensure we always respond with JSON, even on unexpected errors
+  const sendJsonError = (statusCode: number, message: string, details?: string) => {
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(statusCode).json({
+      success: false,
+      error: message,
+      details: details || undefined
+    });
+  };
+
   try {
     // Set JSON headers explicitly and early
     res.setHeader('Content-Type', 'application/json');
@@ -635,10 +645,7 @@ router.post("/api/auth/metamask", async (req, res) => {
     // Validate request body exists
     if (!req.body) {
       console.error('❌ No request body received');
-      return res.status(400).json({ 
-        success: false,
-        error: 'Request body is required' 
-      });
+      return sendJsonError(400, 'Request body is required');
     }
 
     const { message, signature, address } = req.body;
@@ -650,19 +657,13 @@ router.post("/api/auth/metamask", async (req, res) => {
         signature: !!signature, 
         address: !!address 
       });
-      return res.status(400).json({ 
-        success: false,
-        error: 'Missing required fields: message, signature, and address are required' 
-      });
+      return sendJsonError(400, 'Missing required fields: message, signature, and address are required');
     }
 
     // Validate address format (basic check)
     if (!address.startsWith('0x') || address.length !== 42) {
       console.error('❌ Invalid address format:', address);
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid Ethereum address format'
-      });
+      return sendJsonError(400, 'Invalid Ethereum address format');
     }
 
     console.log('🦊 MetaMask authentication data validated:', { 
@@ -674,10 +675,7 @@ router.post("/api/auth/metamask", async (req, res) => {
     // Ensure session exists and initialize if needed
     if (!req.session) {
       console.error('❌ No session middleware available');
-      return res.status(500).json({
-        success: false,
-        error: 'Session middleware not available'
-      });
+      return sendJsonError(500, 'Session middleware not available');
     }
 
     // Initialize session user if it doesn't exist
@@ -748,14 +746,8 @@ router.post("/api/auth/metamask", async (req, res) => {
   } catch (error) {
     console.error('❌ MetaMask authentication error:', error);
     
-    // Ensure we always return JSON even on error
-    const errorResponse = { 
-      success: false,
-      error: 'MetaMask authentication failed',
-      details: error.message || 'Unknown error'
-    };
-
-    return res.status(500).json(errorResponse);
+    // Ensure we always return JSON even on unexpected errors
+    return sendJsonError(500, 'MetaMask authentication failed', error?.message || 'Unknown error');
   }
 });
 
