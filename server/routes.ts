@@ -29,6 +29,28 @@ const authenticateUser = (req: any, res: any, next: any) => {
 // ===== ROUTER SETUP =====
 const router = express.Router();
 
+// ===== JSON ERROR HANDLING MIDDLEWARE =====
+// Ensure all API responses are properly formatted as JSON
+router.use((req, res, next) => {
+  // Override res.json to add additional safety
+  const originalJson = res.json;
+  res.json = function(body) {
+    try {
+      // Ensure content type is set
+      if (!res.get('Content-Type')) {
+        res.setHeader('Content-Type', 'application/json');
+      }
+      return originalJson.call(this, body);
+    } catch (error) {
+      console.error('JSON response error:', error);
+      // Fallback to plain text if JSON fails
+      res.setHeader('Content-Type', 'text/plain');
+      return res.send('Internal server error');
+    }
+  };
+  next();
+});
+
 // ===== HELPER FUNCTIONS =====
 
 // Function to encrypt sensitive data (like private keys) before storing in database
@@ -601,55 +623,95 @@ router.post("/api/logout", (req, res) => {
 
 // ===== METAMASK AUTHENTICATION ENDPOINT =====
 router.post("/api/auth/metamask", async (req, res) => {
-  // Set JSON content type explicitly
-  res.setHeader('Content-Type', 'application/json');
-  
   try {
+    // Set JSON headers explicitly and early
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache');
+    
     console.log('🦊 MetaMask authentication request received');
-    console.log('🦊 Request body:', req.body);
-    console.log('🦊 Request headers:', req.headers);
+    console.log('🦊 Request body keys:', Object.keys(req.body || {}));
+    console.log('🦊 Content-Type:', req.get('Content-Type'));
+
+    // Validate request body exists
+    if (!req.body) {
+      console.error('❌ No request body received');
+      return res.status(400).json({ 
+        success: false,
+        error: 'Request body is required' 
+      });
+    }
 
     const { message, signature, address } = req.body;
 
     // Validate required fields
     if (!message || !signature || !address) {
-      console.error('❌ Missing required fields:', { message: !!message, signature: !!signature, address: !!address });
+      console.error('❌ Missing required fields:', { 
+        message: !!message, 
+        signature: !!signature, 
+        address: !!address 
+      });
       return res.status(400).json({ 
         success: false,
         error: 'Missing required fields: message, signature, and address are required' 
       });
     }
 
-    console.log('🦊 MetaMask authentication data:', { 
-      address: address,
-      hasMessage: !!message,
-      hasSignature: !!signature 
-    });
-
-    // Ensure session exists
-    if (!req.session) {
-      console.error('❌ No session available');
-      return res.status(500).json({
+    // Validate address format (basic check)
+    if (!address.startsWith('0x') || address.length !== 42) {
+      console.error('❌ Invalid address format:', address);
+      return res.status(400).json({
         success: false,
-        error: 'Session not available'
+        error: 'Invalid Ethereum address format'
       });
     }
 
-    // In a production environment, you would verify the signature here
-    // For now, we'll trust the signature since MetaMask handles the signing
+    console.log('🦊 MetaMask authentication data validated:', { 
+      address: address,
+      messageLength: message.length,
+      signatureLength: signature.length 
+    });
+
+    // Ensure session exists and initialize if needed
+    if (!req.session) {
+      console.error('❌ No session middleware available');
+      return res.status(500).json({
+        success: false,
+        error: 'Session middleware not available'
+      });
+    }
+
+    // Initialize session user if it doesn't exist
+    if (req.session.user === undefined) {
+      req.session.user = null;
+    }
 
     // Create user object for session
     const metamaskUser = {
       id: `metamask_${address}`,
+      sub: `metamask_${address}`, // Add sub for compatibility
       address: address,
       walletAddress: address,
       name: `${address.slice(0, 6)}...${address.slice(-4)}`,
       provider: 'metamask',
-      picture: null
+      picture: null,
+      email: null
     };
 
     // Store user in session
     req.session.user = metamaskUser;
+
+    // Save session explicitly to ensure it's persisted
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          console.error('❌ Session save error:', err);
+          reject(err);
+        } else {
+          console.log('✅ Session saved successfully');
+          resolve(true);
+        }
+      });
+    });
 
     console.log('✅ MetaMask user authenticated successfully:', metamaskUser.name);
 
@@ -674,19 +736,26 @@ router.post("/api/auth/metamask", async (req, res) => {
     }
 
     // Return success response with user data
-    return res.status(200).json({ 
+    const responseData = { 
       success: true, 
       message: 'MetaMask authentication successful',
       user: metamaskUser
-    });
+    };
+
+    console.log('🦊 Sending response:', responseData);
+    return res.status(200).json(responseData);
 
   } catch (error) {
     console.error('❌ MetaMask authentication error:', error);
-    return res.status(500).json({ 
+    
+    // Ensure we always return JSON even on error
+    const errorResponse = { 
       success: false,
       error: 'MetaMask authentication failed',
       details: error.message || 'Unknown error'
-    });
+    };
+
+    return res.status(500).json(errorResponse);
   }
 });
 

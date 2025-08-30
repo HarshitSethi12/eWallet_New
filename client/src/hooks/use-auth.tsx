@@ -164,12 +164,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Try to parse response as JSON
       try {
         const result = JSON.parse(responseText);
-        console.log('✅ MetaMask authentication successful');
+        console.log('✅ MetaMask authentication successful:', result);
         return result;
       } catch (parseError) {
         console.error('❌ Failed to parse response as JSON:', parseError);
-        console.error('❌ Response text:', responseText);
-        throw new Error('Server returned invalid JSON response');
+        console.error('❌ Response text:', responseText.substring(0, 500));
+        console.error('❌ Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        // Check if response looks like HTML (common cause of this error)
+        if (responseText.trim().startsWith('<')) {
+          throw new Error('Server returned HTML instead of JSON. This usually indicates a routing error or server crash.');
+        } else if (responseText.trim() === '') {
+          throw new Error('Server returned empty response. The server may be offline or crashed.');
+        } else {
+          throw new Error(`Server returned invalid JSON: ${responseText.substring(0, 100)}...`);
+        }
       }
     },
     // Function called when authentication succeeds
