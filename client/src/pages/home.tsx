@@ -324,114 +324,183 @@ function DashboardPage() {
   });
 
   return (
-    <div className="container max-w-5xl mx-auto px-3 sm:px-4 space-y-6 sm:space-y-8 py-6 sm:py-8">
+    <div className="container max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-12 py-8 sm:py-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
-        <div className="flex items-center gap-3 sm:gap-4">
-          {user?.picture ? (
-            <img 
-              src={user.picture} 
-              alt={user.name} 
-              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-white shadow-lg"
-            />
-          ) : (
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-white shadow-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-              <WalletIcon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-            </div>
-          )}
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Welcome back!</h1>
-            <p className="text-sm sm:text-base text-gray-600">
-              {user?.provider === 'metamask' ? 
-                `${user.walletAddress?.slice(0, 6)}...${user.walletAddress?.slice(-4)}` : 
-                user?.name
-              }
-            </p>
-            {user?.provider === 'metamask' && (
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <p className="text-xs text-gray-500">MetaMask Connected</p>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="flex items-center gap-4 sm:gap-6">
+            {user?.picture ? (
+              <img 
+                src={user.picture} 
+                alt={user.name} 
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg"
+              />
+            ) : (
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                <WalletIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
               </div>
             )}
+            <div className="space-y-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back!</h1>
+              <p className="text-base sm:text-lg text-gray-600 font-medium">
+                {user?.provider === 'metamask' ? 
+                  `${user.walletAddress?.slice(0, 8)}...${user.walletAddress?.slice(-6)}` : 
+                  user?.name
+                }
+              </p>
+              {user?.provider === 'metamask' && (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <p className="text-sm text-green-600 font-semibold">MetaMask Connected</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2 sm:gap-3">
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={() => setLocation("/send")}
-          >
-            <Send className="h-4 w-4" />
-            Send
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={() => setLocation("/receive")}
-          >
-            <ArrowDownLeft className="h-4 w-4" />
-            Receive
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={handleCheckSession}
-          >
-            <ShieldCheck className="h-4 w-4" />
-            Check Session
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={logout}
-            disabled={isLoggingOut}
-            className="flex items-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            {isLoggingOut ? "Signing out..." : "Sign Out"}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button 
+              size="default" 
+              variant="outline"
+              className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 hover:border-blue-300"
+              onClick={() => setLocation("/send")}
+            >
+              <Send className="h-4 w-4" />
+              Send
+            </Button>
+            <Button 
+              size="default" 
+              variant="outline"
+              className="flex items-center gap-2 px-4 py-2 hover:bg-teal-50 hover:border-teal-300"
+              onClick={() => setLocation("/receive")}
+            >
+              <ArrowDownLeft className="h-4 w-4" />
+              Receive
+            </Button>
+            <Button 
+              size="default" 
+              variant="outline"
+              className="flex items-center gap-2 px-4 py-2 hover:bg-green-50 hover:border-green-300"
+              onClick={handleCheckSession}
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Check Session
+            </Button>
+            <Button 
+              size="default" 
+              variant="outline"
+              onClick={logout}
+              disabled={isLoggingOut}
+              className="flex items-center gap-2 px-4 py-2 hover:bg-red-50 hover:border-red-300"
+            >
+              <LogOut className="h-4 w-4" />
+              {isLoggingOut ? "Signing out..." : "Sign Out"}
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Session Status Display */}
       {sessionStatus && (
-        <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-2">Session Status</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${sessionStatus.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span>{sessionStatus.isActive ? 'Active' : 'Inactive'}</span>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-xl font-bold mb-4 text-gray-900">Session Status</h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className={`w-3 h-3 rounded-full ${sessionStatus.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-lg font-medium">{sessionStatus.isActive ? 'Active' : 'Inactive'}</span>
             </div>
             {sessionStatus.provider && (
-              <p><strong>Provider:</strong> {sessionStatus.provider}</p>
+              <p className="text-gray-700"><strong>Provider:</strong> {sessionStatus.provider}</p>
             )}
             {sessionStatus.user?.address && (
-              <p><strong>Address:</strong> {sessionStatus.user.address}</p>
+              <p className="text-gray-700"><strong>Address:</strong> {sessionStatus.user.address}</p>
             )}
             {sessionStatus.error && (
               <p className="text-red-600"><strong>Error:</strong> {sessionStatus.error}</p>
             )}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Live Market Prices */}
-      <div className="w-full">
-        <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">Live Market Prices</h2>
-        <HorizontalPriceTicker />
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center">
+            <span className="text-white text-sm font-bold">₿</span>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900">Live Market Prices</h2>
+          <div className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+            MetaMask Wallet
+          </div>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-4">
+          <HorizontalPriceTicker />
+        </div>
+      </div>
+
+      {/* Swap Tokens Section */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Swap Tokens</h2>
+        <div className="max-w-md mx-auto">
+          <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 border border-green-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Swap Tokens</h3>
+              <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Network</label>
+                <div className="bg-green-200 rounded-lg px-4 py-3 text-gray-800 font-medium">
+                  Ethereum ▼
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
+                <div className="flex gap-2">
+                  <div className="bg-green-200 rounded-lg px-4 py-3 text-gray-800 font-medium flex-shrink-0">
+                    ETH ▼
+                  </div>
+                  <input type="text" placeholder="0.0" className="flex-1 bg-green-100 border border-green-300 rounded-lg px-4 py-3" />
+                </div>
+              </div>
+              
+              <div className="flex justify-center">
+                <div className="w-8 h-8 bg-white border-2 border-green-300 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
+                <div className="flex gap-2">
+                  <div className="bg-green-200 rounded-lg px-4 py-3 text-gray-800 font-medium flex-shrink-0">
+                    USDC ▼
+                  </div>
+                  <input type="text" placeholder="0.0" className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-3" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Wallets */}
-      <div>
-        <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">Your Wallets</h2>
-        <div className="grid gap-4 sm:gap-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Wallets</h2>
+        <div className="grid gap-6">
           {wallets?.length === 0 ? (
-            <div className="text-center py-8 sm:py-12">
-              <WalletIcon className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 text-sm sm:text-base">No wallets found. Create your first wallet to get started!</p>
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <WalletIcon className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No wallets found</h3>
+              <p className="text-gray-500">Create your first wallet to get started!</p>
             </div>
           ) : (
             wallets?.map((wallet: Wallet) => (
@@ -442,8 +511,8 @@ function DashboardPage() {
       </div>
 
       {/* Recent Transactions */}
-      <div>
-        <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">Recent Transactions</h2>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Transactions</h2>
         <TransactionList transactions={transactions || []} />
       </div>
     </div>
