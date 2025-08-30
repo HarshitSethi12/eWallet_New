@@ -530,3 +530,137 @@ export function setupAuth(app: express.Express) {
     });
   });
 }
+
+// Create and export the auth router
+export const authRouter = express.Router();
+
+// Add MetaMask authentication route to the auth router
+authRouter.post('/metamask', async (req, res) => {
+  // Ensure we always respond with JSON, even on unexpected errors
+  const sendJsonError = (statusCode: number, message: string, details?: string) => {
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(statusCode).json({
+      success: false,
+      error: message,
+      details: details || undefined
+    });
+  };
+
+  try {
+    // Set JSON headers explicitly and early
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache');
+    
+    console.log('🦊 MetaMask authentication request received');
+    console.log('🦊 Request body keys:', Object.keys(req.body || {}));
+    console.log('🦊 Content-Type:', req.get('Content-Type'));
+
+    // Validate request body exists
+    if (!req.body) {
+      console.error('❌ No request body received');
+      return sendJsonError(400, 'Request body is required');
+    }
+
+    const { message, signature, address } = req.body;
+
+    // Validate required fields
+    if (!message || !signature || !address) {
+      console.error('❌ Missing required fields:', { 
+        message: !!message, 
+        signature: !!signature, 
+        address: !!address 
+      });
+      return sendJsonError(400, 'Missing required fields: message, signature, and address are required');
+    }
+
+    // Validate address format (basic check)
+    if (!address.startsWith('0x') || address.length !== 42) {
+      console.error('❌ Invalid address format:', address);
+      return sendJsonError(400, 'Invalid Ethereum address format');
+    }
+
+    console.log('🦊 MetaMask authentication data validated:', { 
+      address: address,
+      messageLength: message.length,
+      signatureLength: signature.length 
+    });
+
+    // Ensure session exists and initialize if needed
+    if (!req.session) {
+      console.error('❌ No session middleware available');
+      return sendJsonError(500, 'Session middleware not available');
+    }
+
+    // Initialize session user if it doesn't exist
+    if (req.session.user === undefined) {
+      req.session.user = null;
+    }
+
+    // Create user object for session
+    const metamaskUser = {
+      id: `metamask_${address}`,
+      sub: `metamask_${address}`, // Add sub for compatibility
+      address: address,
+      walletAddress: address,
+      name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+      provider: 'metamask',
+      picture: null,
+      email: null
+    };
+
+    // Store user in session
+    req.session.user = metamaskUser;
+
+    // Save session explicitly to ensure it's persisted
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          console.error('❌ Session save error:', err);
+          reject(err);
+        } else {
+          console.log('✅ Session saved successfully');
+          resolve(true);
+        }
+      });
+    });
+
+    console.log('✅ MetaMask user authenticated successfully:', metamaskUser.name);
+
+    // Track login session if storage is available
+    try {
+      const { storage } = await import('./storage');
+      const sessionData = {
+        userId: null,
+        email: null,
+        name: metamaskUser.name,
+        walletAddress: address,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        sessionId: req.sessionID,
+      };
+
+      const sessionDbId = await storage.createUserSession(sessionData);
+      req.session.sessionDbId = sessionDbId;
+      console.log('📊 Session tracking created:', sessionDbId);
+    } catch (dbError) {
+      console.warn('⚠️ Warning: Could not create database session:', dbError);
+      // Continue without database session tracking
+    }
+
+    // Return success response with user data
+    const responseData = { 
+      success: true, 
+      message: 'MetaMask authentication successful',
+      user: metamaskUser
+    };
+
+    console.log('🦊 Sending response:', responseData);
+    return res.status(200).json(responseData);
+
+  } catch (error) {
+    console.error('❌ MetaMask authentication error:', error);
+    
+    // Ensure we always return JSON even on unexpected errors
+    return sendJsonError(500, 'MetaMask authentication failed');
+  }
+});

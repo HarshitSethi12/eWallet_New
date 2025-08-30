@@ -303,7 +303,7 @@ router.get("/api/tokens", async (req, res) => {
     }
 
     // If both CoinGecko and CoinMarketCap fail, return mock data
-    console.error('❌ Both CoinGecko and CoinMarketCap failed. Returning mock data.');
+    console.log('❌ Both CoinGecko and CoinMarketCap failed. Returning mock data.');
     const mockTokens = cryptocurrencies.map(crypto => ({
       symbol: crypto.symbol,
       name: crypto.name,
@@ -637,7 +637,7 @@ router.post("/auth/metamask", async (req, res) => {
     // Set JSON headers explicitly and early
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'no-cache');
-    
+
     console.log('🦊 MetaMask authentication request received');
     console.log('🦊 Request body keys:', Object.keys(req.body || {}));
     console.log('🦊 Content-Type:', req.get('Content-Type'));
@@ -715,6 +715,7 @@ router.post("/auth/metamask", async (req, res) => {
 
     // Track login session if storage is available
     try {
+      const { storage } = await import('./storage');
       const sessionData = {
         userId: null,
         email: null,
@@ -745,9 +746,9 @@ router.post("/auth/metamask", async (req, res) => {
 
   } catch (error) {
     console.error('❌ MetaMask authentication error:', error);
-    
+
     // Ensure we always return JSON even on unexpected errors
-    return sendJsonError(500, 'MetaMask authentication failed', error?.message || 'Unknown error');
+    return sendJsonError(500, 'MetaMask authentication failed');
   }
 });
 
@@ -756,7 +757,7 @@ router.post("/auth/metamask", async (req, res) => {
 // GET /api/swap/tokens - Get supported tokens for swapping
 router.get("/api/swap/tokens", async (req, res) => {
   const { network = 'ethereum' } = req.query;
-  
+
   try {
     // Define tokens by network
     const tokensByNetwork = {

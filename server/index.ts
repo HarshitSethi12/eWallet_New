@@ -180,8 +180,7 @@ process.on('unhandledRejection', (reason, promise) => {
     
     // Import and register auth routes
     try {
-      const authModule = await import('./auth');
-      const authRouter = authModule.authRouter || authModule.default;
+      const { authRouter } = await import('./auth');
       if (authRouter) {
         app.use("/auth", authRouter);
         console.log('✅ Auth router registered successfully');
