@@ -55,36 +55,7 @@ function decrypt(text: string): string {
   return decrypted;                                // Return decrypted text
 }
 
-// Token configuration with proper addresses
-const tokenConfig = [
-  {
-    symbol: 'ETH',
-    name: 'Ethereum',
-    address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // Native ETH
-    decimals: 18,
-    balance: '2.5',
-    logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png'
-  },
-  {
-    symbol: 'LINK',
-    name: 'Chainlink',
-    address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', // LINK token
-    decimals: 18,
-    balance: '150',
-    logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png'
-  },
-  {
-    symbol: 'UNI',
-    name: 'Uniswap',
-    address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', // UNI token
-    decimals: 18,
-    balance: '75',
-    logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png'
-  }
-];
-
-// USDC address (destination for price quotes)
-const USDC_ADDRESS = '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD';
+// Removed 1inch-specific token configuration
 
 // Fallback price function using CoinGecko
 async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
@@ -119,60 +90,7 @@ async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
   return null;
 }
 
-// Enhanced 1inch price fetching with better error handling
-async function get1inchPrice(token: any): Promise<{ price: number; change24h: number } | null> {
-  const oneInchApiKey = process.env.ONEINCH_API_KEY;
-  if (!oneInchApiKey) {
-    console.log('⚠️ 1inch API key not configured');
-    return null;
-  }
-
-  try {
-    // Use 1 token as amount (in smallest unit)
-    const amount = '1000000000000000000'; // 1 ETH/LINK/UNI in wei
-
-    const url = `https://api.1inch.dev/swap/v6.0/1/quote?src=${token.address}&dst=${USDC_ADDRESS}&amount=${amount}`;
-
-    console.log(`🔍 Fetching 1inch price for ${token.symbol}`);
-    console.log(`🔗 URL: ${url}`);
-
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${oneInchApiKey}`,
-        'Accept': 'application/json',
-        'User-Agent': 'BitWallet/1.0'
-      },
-      timeout: 15000
-    });
-
-    console.log(`📊 ${token.symbol} response status: ${response.status}`);
-
-    if (response.ok) {
-      const data = await response.json();
-
-      if (data.dstAmount) {
-        // Convert USDC amount (6 decimals) to price
-        const price = parseFloat(data.dstAmount) / 1000000;
-        console.log(`✅ ${token.symbol} 1inch price: $${price.toFixed(2)}`);
-
-        return {
-          price: price,
-          change24h: Math.random() * 6 - 3 // Random change for demo
-        };
-      } else {
-        console.warn(`⚠️ No dstAmount in 1inch response for ${token.symbol}`);
-        return null;
-      }
-    } else {
-      const errorText = await response.text();
-      console.error(`❌ 1inch API error for ${token.symbol}: ${response.status} - ${errorText}`);
-      return null;
-    }
-  } catch (error) {
-    console.error(`❌ 1inch request failed for ${token.symbol}:`, error.message);
-    return null;
-  }
-}
+// Removed 1inch API functionality - using CoinGecko as primary source
 
 // ===== CRYPTOCURRENCY PRICE API ENDPOINTS =====
 
@@ -438,8 +356,7 @@ router.get("/api/debug/test-apis", async (req, res) => {
 
   const apiResults = {
     coinGecko: { status: 'testing', data: null, error: null },
-    coinMarketCap: { status: 'testing', data: null, error: null },
-    oneInch: { status: 'testing', data: null, error: null }
+    coinMarketCap: { status: 'testing', data: null, error: null }
   };
 
   // Test CoinGecko API
@@ -525,51 +442,7 @@ router.get("/api/debug/test-apis", async (req, res) => {
     };
   }
 
-  // Test 1inch API (if API key is available)
-  const oneInchApiKey = process.env.ONEINCH_API_KEY;
-  if (oneInchApiKey) {
-    try {
-      console.log('🧪 Testing 1inch API...');
-      const oneInchResponse = await fetch(
-        'https://api.1inch.dev/price/v1.1/1/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-        {
-          headers: {
-            'Authorization': `Bearer ${oneInchApiKey}`,
-            'Accept': 'application/json'
-          },
-          timeout: 10000
-        }
-      );
-
-      if (oneInchResponse.ok) {
-        const oneInchData = await oneInchResponse.text();
-        apiResults.oneInch = {
-          status: 'success',
-          data: { price: oneInchData },
-          error: null
-        };
-        console.log('✅ 1inch API working');
-      } else {
-        apiResults.oneInch = {
-          status: 'failed',
-          data: null,
-          error: `HTTP ${oneInchResponse.status}`
-        };
-      }
-    } catch (error) {
-      apiResults.oneInch = {
-        status: 'failed',
-        data: null,
-        error: error.message
-      };
-    }
-  } else {
-    apiResults.oneInch = {
-      status: 'skipped',
-      data: null,
-      error: 'No API key configured'
-    };
-  }
+  // 1inch API removed - no longer testing
 
   res.json({
     timestamp: new Date().toISOString(),
@@ -577,111 +450,12 @@ router.get("/api/debug/test-apis", async (req, res) => {
     recommendations: {
       primary: 'CoinGecko (free, no API key required)',
       fallback: 'CoinMarketCap (requires API key)',
-      swap: '1inch (requires API key, Ethereum only)'
+      swap: 'Jupiter for Solana, Moralis for multi-chain'
     }
   });
 });
 
-// GET /api/debug/test-1inch - Test 1inch API connectivity and authentication  
-router.get("/api/debug/test-1inch", async (req, res) => {
-  const oneInchApiKey = process.env.ONEINCH_API_KEY;
-  const diagnostics = {
-    apiKeyConfigured: !!oneInchApiKey,
-    apiKeyLength: oneInchApiKey?.length || 0,
-    nodeVersion: process.version,
-    timestamp: new Date().toISOString()
-  };
-
-  if (!oneInchApiKey) {
-    return res.json({
-      status: 'error',
-      message: '1inch API key not found in environment variables',
-      diagnostics,
-      recommendation: 'Please add ONEINCH_API_KEY to your Replit secrets'
-    });
-  }
-
-  const tests = [
-    {
-      name: 'ETH to USDC Quote',
-      src: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-      dst: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD',
-      amount: '1000000000000000000',
-      expectedSymbol: 'ETH'
-    }
-  ];
-
-  const results = [];
-
-  for (const test of tests) {
-    console.log(`🧪 Testing: ${test.name}`);
-
-    const testUrl = `https://api.1inch.dev/swap/v6.0/1/quote?src=${test.src}&dst=${test.dst}&amount=${test.amount}`;
-
-    const testResult = {
-      name: test.name,
-      url: testUrl,
-      success: false,
-      status: null,
-      price: null,
-      error: null,
-      responseTime: 0
-    };
-
-    const startTime = Date.now();
-
-    try {
-      const response = await fetch(testUrl, {
-        headers: {
-          'Authorization': `Bearer ${oneInchApiKey}`,
-          'Accept': 'application/json',
-          'User-Agent': 'BitWallet/1.0'
-        },
-        timeout: 15000
-      });
-
-      testResult.responseTime = Date.now() - startTime;
-      testResult.status = response.status;
-
-      if (response.ok) {
-        const data = await response.json();
-
-        if (data.dstAmount) {
-          const price = parseFloat(data.dstAmount) / 1000000;
-          testResult.success = true;
-          testResult.price = price;
-          console.log(`✅ ${test.name}: $${price.toFixed(2)}`);
-        } else {
-          testResult.error = 'No dstAmount in response';
-          console.log(`⚠️ ${test.name}: No dstAmount`);
-        }
-      } else {
-        const errorText = await response.text();
-        testResult.error = errorText;
-        console.log(`❌ ${test.name}: ${response.status} - ${errorText}`);
-      }
-    } catch (error) {
-      testResult.responseTime = Date.now() - startTime;
-      testResult.error = error.message;
-      console.log(`💥 ${test.name}: ${error.message}`);
-    }
-
-    results.push(testResult);
-  }
-
-  const successfulTests = results.filter(r => r.success).length;
-  const status = successfulTests > 0 ? 'success' : 'error';
-
-  return res.json({
-    status,
-    message: `${successfulTests}/${results.length} tests passed`,
-    diagnostics,
-    tests: results,
-    recommendation: status === 'error'
-      ? 'Check API key validity and network connectivity'
-      : 'API is working correctly'
-  });
-});
+// Removed 1inch API testing endpoint
 
 // ===== WALLET MANAGEMENT ENDPOINTS =====
 
@@ -972,7 +746,7 @@ router.post("/api/swap/quote", async (req, res) => {
       quote = await getJupiterQuote(fromToken, toToken, amount);
     }
 
-    // 2. Try Moralis for EVM chains
+    // 2. Try Moralis for EVM chains (placeholder)
     if (!quote && ['ethereum', 'bsc', 'polygon'].includes(network)) {
       quote = await getMoralisQuote(fromToken, toToken, amount, network);
     }
