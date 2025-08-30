@@ -179,8 +179,18 @@ process.on('unhandledRejection', (reason, promise) => {
     app.use('/api', router);
     
     // Import and register auth routes
-    const { authRouter } = await import('./auth');
-    app.use("/auth", authRouter);
+    try {
+      const authModule = await import('./auth');
+      const authRouter = authModule.authRouter || authModule.default;
+      if (authRouter) {
+        app.use("/auth", authRouter);
+        console.log('✅ Auth router registered successfully');
+      } else {
+        console.error('❌ Auth router not found in auth module');
+      }
+    } catch (error) {
+      console.error('❌ Failed to import auth router:', error);
+    }
 
     // Add catch-all error handler for API routes
     app.use('/api/*', (error: any, req: any, res: any, next: any) => {
