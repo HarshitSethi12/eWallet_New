@@ -527,11 +527,20 @@ export default function Home() {
   const { isAuthenticated, user } = useAuth();
   
   // ===== NAVIGATION HOOK =====
-  // Get navigation function (not used but available for future use)
+  // Get navigation function for routing
   const [, setLocation] = useLocation();
 
+  // ===== AUTO-REDIRECT EFFECT =====
+  // Automatically redirect to dashboard if user is authenticated
+  React.useEffect(() => {
+    if (isAuthenticated && user) {
+      console.log('✅ User authenticated, redirecting to dashboard...');
+      setLocation('/dashboard');
+    }
+  }, [isAuthenticated, user, setLocation]);
+
   // ===== PAGE ROUTING LOGIC =====
-  // Always show welcome page on home route
-  // Note: The welcome page itself handles showing login buttons or authenticated user info
+  // Show welcome page for unauthenticated users
+  // Authenticated users will be automatically redirected to dashboard
   return <WelcomePage />;
 }

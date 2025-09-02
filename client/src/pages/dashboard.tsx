@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 // React Query for data fetching and caching
 import { useQuery } from "@tanstack/react-query";
 // UI components from our custom component library
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,9 @@ import {
   Download,
   Upload,
   Search,
-  ChevronRight
+  ChevronRight,
+  ShieldCheck,
+  ArrowUpDown
 } from "lucide-react";
 // Authentication hook for user data
 import { useAuth } from "@/hooks/use-auth";
@@ -78,18 +80,20 @@ interface TokenPriceData {
 
 // ===== ADDITIONAL IMPORTS FOR DASHBOARD =====
 // Wouter for client-side routing
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 // Additional UI components for dashboard functionality
 import { AddressCard } from "@/components/address-card";
 import { TransactionList } from "@/components/transaction-list";
 // Mock blockchain utilities for development
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
 // TypeScript types for data structures
-import type { Wallet, Transaction } from "@shared/schema";
+import type { Wallet as WalletType, Transaction } from "@shared/schema";
 // React Icons for additional icons
 import { RiExchangeFundsFill } from "react-icons/ri";
 // Custom hooks for MetaMask wallet connection
 import { useMetaMask } from "@/hooks/use-metamask";
+// Wallet overview component for displaying portfolio summary
+import { WalletOverview } from "@/components/wallet-overview";
 
 // ===== MOCK DATA FOR DEVELOPMENT =====
 // Mock token portfolio data to show while developing/testing
@@ -449,93 +453,21 @@ function WalletTabs() {
 export default function Dashboard() {
   // ===== AUTHENTICATION STATE =====
   // Get current user data from authentication context
-  const { user } = useAuth();
-  // State to control whether portfolio balance is visible or hidden
-  const [balanceVisible, setBalanceVisible] = useState(true);
-  // State to track selected timeframe for portfolio data (7 days, 30 days, etc.)
-  const [selectedTimeframe, setSelectedTimeframe] = useState('7d');
+  const { user, logout, isLoggingOut, checkSessionStatus } = useAuth();
+  // Hook to disconnect MetaMask wallet
+  const { disconnectWallet } = useMetaMask();
+  // Hook to manage navigation
+  const [, setLocation] = useLocation();
 
-  // ===== MOCK DATA SECTION =====
-  // Mock portfolio data for demonstration purposes
-  // In a real app, this would come from API calls
-  const portfolioData = {
-    totalValue: 24567.89,        // Total USD value of user's portfolio
-    totalChange24h: 5.67,        // 24-hour percentage change
-    assets: [                    // Array of user's cryptocurrency assets
-      {
-        id: 'bitcoin',
-        symbol: 'BTC',
-        name: 'Bitcoin',
-        balance: 0.75,           // Amount of Bitcoin user owns
-        value: 19250.00,         // USD value of Bitcoin holdings
-        price: 25666.67,         // Current Bitcoin price
-        change24h: 2.3,          // 24-hour price change
-        icon: '/api/placeholder/32/32'
-      },
-      {
-        id: 'ethereum',
-        symbol: 'ETH',
-        name: 'Ethereum',
-        balance: 2.5,            // Amount of Ethereum user owns
-        value: 4125.50,          // USD value of Ethereum holdings
-        price: 1650.20,          // Current Ethereum price
-        change24h: -1.2,         // 24-hour price change (negative = decrease)
-        icon: '/api/placeholder/32/32'
-      },
-      {
-        id: 'cardano',
-        symbol: 'ADA',
-        name: 'Cardano',
-        balance: 1000,           // Amount of Cardano user owns
-        value: 1192.40,          // USD value of Cardano holdings
-        price: 1.19,             // Current Cardano price
-        change24h: 8.9,          // 24-hour price change (positive = increase)
-        icon: '/api/placeholder/32/32'
-      }
-    ] as CryptoAsset[]
+  // ===== SESSION STATUS STATE =====
+  const [sessionStatus, setSessionStatus] = React.useState(null);
+
+  // ===== SESSION CHECK HANDLER =====
+  const handleCheckSession = async () => {
+    const status = await checkSessionStatus();
+    setSessionStatus(status);
+    console.log('📊 Manual session check result:', status);
   };
-
-  // ===== MOCK TRANSACTION DATA =====
-  // Sample transaction history for the user
-  const recentTransactions = [
-    {
-      id: '1',
-      type: 'received',              // Transaction type: received cryptocurrency
-      asset: 'BTC',                  // Asset involved in transaction
-      amount: 0.025,                 // Amount of cryptocurrency
-      value: 642.50,                 // USD value at time of transaction
-      timestamp: '2 hours ago',      // When transaction occurred
-      status: 'completed',           // Transaction status
-      hash: '0x123...abc'            // Blockchain transaction hash
-    },
-    {
-      id: '2',
-      type: 'sent',                  // Transaction type: sent cryptocurrency
-      asset: 'ETH',
-      amount: 0.5,
-      value: 825.10,
-      timestamp: '1 day ago',
-      status: 'completed',
-      hash: '0x456...def'
-    },
-    {
-      id: '3',
-      type: 'swap',                  // Transaction type: swapped one crypto for another
-      asset: 'ADA',
-      amount: 500,
-      value: 595.00,
-      timestamp: '3 days ago',
-      status: 'completed',
-      hash: '0x789...ghi'
-    }
-  ];
-
-  // ===== CALCULATED VALUES =====
-  // Calculate styling and display values based on portfolio performance
-  const totalChangeColor = portfolioData.totalChange24h >= 0 ? 'text-green-600' : 'text-red-600';
-  const totalChangeIcon = portfolioData.totalChange24h >= 0 ? TrendingUp : TrendingDown;
-  const portfolioValue = portfolioData.totalValue;
-  const changePercentage = Math.abs(portfolioData.totalChange24h);
 
   // ===== API DATA FETCHING =====
   // Fetch wallet data using React Query
@@ -550,76 +482,255 @@ export default function Dashboard() {
     queryFn: () => apiRequest("/api/transactions"), // Function to fetch transaction data
   });
 
+  // Mock token data for wallet overview
+  const mockTokens = [
+    {
+      symbol: 'ETH',
+      name: 'Ethereum',
+      address: '0x0000000000000000000000000000000000000000',
+      balance: '2.5',
+      balanceUSD: 8750.25,
+      price: 3500.10,
+      change24h: 2.45,
+      logoURI: 'https://tokens.1inch.io/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png'
+    },
+    {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      address: '0xa0b86a33e6c48e46f4d8d2c6a24e8f3a8f8f6f6f',
+      balance: '1250.50',
+      balanceUSD: 1250.50,
+      price: 1.00,
+      change24h: 0.02,
+      logoURI: 'https://tokens.1inch.io/0xa0b86a33e6c48e46f4d8d2c6a24e8f3a8f8f6f6f.png'
+    }
+  ];
+
   // ===== RENDER LOGIC =====
+  // Redirect to home if user is not logged in
+  if (!user) {
+    return <div className="container max-w-4xl mx-auto px-4 py-8 text-center">
+      <p className="text-lg">Please log in to access your dashboard.</p>
+      <Button className="mt-4" onClick={() => setLocation('/')}>
+        Go Home
+      </Button>
+    </div>;
+  }
+
   // Render the main dashboard structure
   return (
-    <div className="h-full flex flex-col">
-      {/* Main content container that takes full available space */}
-      <div className="flex-1 w-full px-3 py-3 max-w-none overflow-hidden">
-        <div className="h-full max-w-none mx-auto">
-          <div className="h-full flex flex-col">
-            {/* Two column layout for AI assistant and wallet - Full height */}
-            <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-2 h-full">
-              {/* AI Assistant Section - Left Side */}
-              <div className="flex flex-col h-full min-h-0">
-                <AiChat />
+    <div className="container max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-12 py-8 sm:py-12">
+      {/* Header */}
+      <Card className="bg-white shadow-sm border border-gray-100">
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="flex items-center gap-4 sm:gap-6">
+              {user?.picture ? (
+                <img 
+                  src={user.picture} 
+                  alt={user.name} 
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg"
+                />
+              ) : (
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                  <Wallet className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                </div>
+              )}
+              <div className="space-y-1">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back!</h1>
+                <p className="text-base sm:text-lg text-gray-600 font-medium">
+                  {user?.provider === 'metamask' ? 
+                    `${user.walletAddress?.slice(0, 8)}...${user.walletAddress?.slice(-6)}` : 
+                    user?.name
+                  }
+                </p>
+                {user?.provider === 'metamask' && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <p className="text-sm text-green-600 font-semibold">MetaMask Connected</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button 
+                size="default" 
+                variant="outline"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 hover:border-blue-300"
+                onClick={() => setLocation("/send")}
+              >
+                <Send className="h-4 w-4" />
+                Send
+              </Button>
+              <Button 
+                size="default" 
+                variant="outline"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-teal-50 hover:border-teal-300"
+                onClick={() => setLocation("/receive")}
+              >
+                <ArrowDownLeft className="h-4 w-4" />
+                Receive
+              </Button>
+              <Button 
+                size="default" 
+                variant="outline"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-green-50 hover:border-green-300"
+                onClick={handleCheckSession}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Check Session
+              </Button>
+              <Button 
+                size="default" 
+                variant="outline"
+                onClick={logout}
+                disabled={isLoggingOut}
+                className="flex items-center gap-2 px-4 py-2 hover:bg-red-50 hover:border-red-300"
+              >
+                <LogOut className="h-4 w-4" />
+                {isLoggingOut ? "Signing out..." : "Sign Out"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Session Status Display */}
+      {sessionStatus && (
+        <Card className="bg-white shadow-sm border border-gray-100">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-gray-900">Session Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full ${sessionStatus.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-lg font-medium">{sessionStatus.isActive ? 'Active' : 'Inactive'}</span>
+              </div>
+              {sessionStatus.provider && (
+                <p className="text-gray-700"><strong>Provider:</strong> {sessionStatus.provider}</p>
+              )}
+              {sessionStatus.user?.address && (
+                <p className="text-gray-700"><strong>Address:</strong> {sessionStatus.user.address}</p>
+              )}
+              {sessionStatus.error && (
+                <p className="text-red-600"><strong>Error:</strong> {sessionStatus.error}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Wallet Overview */}
+      <WalletOverview tokens={mockTokens} />
+
+      {/* Live Market Prices */}
+      <Card className="bg-white shadow-sm border border-gray-100">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 text-2xl font-bold text-gray-900">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center">
+              <span className="text-white text-sm font-bold">₿</span>
+            </div>
+            Live Market Prices
+            <div className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+              MetaMask Wallet
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-gray-50 rounded-xl p-4">
+            <HorizontalPriceTicker />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Swap Tokens Section */}
+      <Card className="bg-white shadow-sm border border-gray-100">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-gray-900">Swap Tokens</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="max-w-md mx-auto">
+            <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 border border-green-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Swap Tokens</h3>
+                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                  <ArrowUpDown className="w-4 h-4 text-gray-600" />
+                </div>
               </div>
 
-              {/* MetaMask Wallet Section - Right Side */}
-              <div className="flex flex-col h-full min-h-0 space-y-2">
-                <Card className="flex-1 flex flex-col min-h-0">
-                  <CardHeader className="flex-shrink-0">
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 sm:gap-4">
-                        {user?.picture ? (
-                          <img
-                            src={user.picture}
-                            alt={user.name}
-                            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-white shadow-lg"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-white shadow-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-                            <WalletIcon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                          </div>
-                        )}
-                        <div>
-                          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">MetaMask Wallet</h1>
-                          <p className="text-sm sm:text-base text-gray-600">
-                            {user?.provider === 'metamask' ?
-                              `${user.walletAddress?.slice(0, 6)}...${user.walletAddress?.slice(-4)}` :
-                              user?.name
-                            }
-                          </p>
-                          {user?.provider === 'metamask' && (
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              <p className="text-xs text-gray-500">MetaMask Connected</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 flex flex-col min-h-0 p-0">
-                    <WalletTabs />
-                  </CardContent>
-                </Card>
-                {/* Live Market Prices */}
-                <div className="w-full">
-                  <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">Live Market Prices</h2>
-                  <HorizontalPriceTicker />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Network</label>
+                  <div className="bg-green-200 rounded-lg px-4 py-3 text-gray-800 font-medium">
+                    Ethereum ▼
+                  </div>
                 </div>
 
-                {/* Token Swap */}
-                <div className="w-full">
-                  <h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">Swap Tokens</h2>
-                  <DexSwap />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
+                  <div className="flex gap-2">
+                    <div className="bg-green-200 rounded-lg px-4 py-3 text-gray-800 font-medium flex-shrink-0">
+                      ETH ▼
+                    </div>
+                    <input type="text" placeholder="0.0" className="flex-1 bg-green-100 border border-green-300 rounded-lg px-4 py-3" />
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="w-8 h-8 bg-white border-2 border-green-300 rounded-full flex items-center justify-center">
+                    <ArrowUpDown className="w-4 h-4 text-gray-600" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
+                  <div className="flex gap-2">
+                    <div className="bg-green-200 rounded-lg px-4 py-3 text-gray-800 font-medium flex-shrink-0">
+                      USDC ▼
+                    </div>
+                    <input type="text" placeholder="0.0" className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-3" />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+
+      {/* Wallets */}
+      <Card className="bg-white shadow-sm border border-gray-100">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-gray-900">Your Wallets</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6">
+            {wallets?.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Wallet className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No wallets found</h3>
+                <p className="text-gray-500">Create your first wallet to get started!</p>
+              </div>
+            ) : (
+              wallets?.map((wallet: WalletType) => (
+                <AddressCard key={wallet.id} wallet={wallet} />
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Transactions */}
+      <Card className="bg-white shadow-sm border border-gray-100">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-gray-900">Recent Transactions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TransactionList transactions={transactions || []} walletAddress={user?.walletAddress || ""} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
