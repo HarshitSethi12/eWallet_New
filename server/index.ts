@@ -144,7 +144,7 @@ process.on('unhandledRejection', (reason, promise) => {
       }
 
       try {
-        const sessions = await storage.getAllUserSessions();
+        const sessions = await storage.getAllSessions();
         return res.json(sessions);
       } catch (error) {
         console.error('Error fetching sessions:', error);
@@ -160,7 +160,7 @@ process.on('unhandledRejection', (reason, promise) => {
       }
 
       try {
-        const sessions = await storage.getUserSessionsByEmail(req.params.email);
+        const sessions = await storage.getSessionsByEmail(req.params.email);
         return res.json(sessions);
       } catch (error) {
         console.error('Error fetching user sessions:', error);

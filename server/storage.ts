@@ -138,6 +138,28 @@ class Storage {
     }
   }
 
+  /**
+   * Gets all sessions for a specific user email
+   * Used for admin monitoring of specific users
+   */
+  async getSessionsByEmail(email: string) {
+    try {
+      console.log('📊 Fetching sessions for email:', email);
+      
+      // Get all sessions for the specified email
+      const sessions = await db.select()
+        .from(userSessions)
+        .where(eq(userSessions.email, email))
+        .orderBy(desc(userSessions.startTime));
+      
+      console.log('✅ Retrieved', sessions.length, 'sessions for email:', email);
+      return sessions;
+    } catch (error) {
+      console.error('❌ Error fetching sessions by email:', error);
+      throw error;
+    }
+  }
+
   // ===== METAMASK USER MANAGEMENT =====
 
   /**
