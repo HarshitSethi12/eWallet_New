@@ -732,6 +732,18 @@ export default function Dashboard() {
           <TransactionList transactions={transactions || []} walletAddress={user?.walletAddress || ""} />
         </CardContent>
       </Card>
+
+      {/* AI Chat Assistant */}
+      <Card className="bg-white shadow-sm border border-gray-100">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-gray-900">AI Assistant</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-96">
+            <AiChat />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
