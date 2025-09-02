@@ -214,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Function that calls the logout endpoint
     mutationFn: async () => {
       console.log('🔵 Calling logout endpoint...');
-      const response = await fetch('/api/logout', {
+      const response = await fetch('/auth/logout', {
         method: 'POST',
         credentials: 'include',      // Include cookies for session
       });
