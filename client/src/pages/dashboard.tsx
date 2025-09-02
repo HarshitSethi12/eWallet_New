@@ -38,7 +38,8 @@ import {
   Search,
   ChevronRight,
   ShieldCheck,
-  ArrowUpDown
+  ArrowUpDown,
+  LogOut
 } from "lucide-react";
 // Authentication hook for user data
 import { useAuth } from "@/hooks/use-auth";
@@ -334,10 +335,10 @@ function WalletTabs() {
                   </Button>
                   {tokenData?.source && (
                     <span className={`text-xs font-normal px-2 py-1 rounded ${
-                      tokenData.source === '1inch' 
-                        ? 'text-orange-700 bg-orange-100 border border-orange-200' 
-                        : tokenData.source === 'coingecko' 
-                        ? 'text-blue-700 bg-blue-100 border border-blue-200' 
+                      tokenData.source === '1inch'
+                        ? 'text-orange-700 bg-orange-100 border border-orange-200'
+                        : tokenData.source === 'coingecko'
+                        ? 'text-blue-700 bg-blue-100 border border-blue-200'
                         : 'text-gray-500 bg-gray-100 border border-gray-200'
                     }`}>
                       {tokenData.source === '1inch' ? '1inch DEX' : tokenData.source === 'coingecko' ? 'CoinGecko' : 'Mock Data'}
@@ -526,21 +527,21 @@ export default function Dashboard() {
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="flex items-center gap-4 sm:gap-6">
               {user?.picture ? (
-                <img 
-                  src={user.picture} 
-                  alt={user.name} 
+                <img
+                  src={user.picture}
+                  alt={user.name}
                   className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg"
                 />
               ) : (
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-                  <Wallet className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                  <WalletIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                 </div>
               )}
               <div className="space-y-1">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back!</h1>
                 <p className="text-base sm:text-lg text-gray-600 font-medium">
-                  {user?.provider === 'metamask' ? 
-                    `${user.walletAddress?.slice(0, 8)}...${user.walletAddress?.slice(-6)}` : 
+                  {user?.provider === 'metamask' ?
+                    `${user.walletAddress?.slice(0, 8)}...${user.walletAddress?.slice(-6)}` :
                     user?.name
                   }
                 </p>
@@ -553,8 +554,8 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button 
-                size="default" 
+              <Button
+                size="default"
                 variant="outline"
                 className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 hover:border-blue-300"
                 onClick={() => setLocation("/send")}
@@ -562,8 +563,8 @@ export default function Dashboard() {
                 <Send className="h-4 w-4" />
                 Send
               </Button>
-              <Button 
-                size="default" 
+              <Button
+                size="default"
                 variant="outline"
                 className="flex items-center gap-2 px-4 py-2 hover:bg-teal-50 hover:border-teal-300"
                 onClick={() => setLocation("/receive")}
@@ -571,8 +572,8 @@ export default function Dashboard() {
                 <ArrowDownLeft className="h-4 w-4" />
                 Receive
               </Button>
-              <Button 
-                size="default" 
+              <Button
+                size="default"
                 variant="outline"
                 className="flex items-center gap-2 px-4 py-2 hover:bg-green-50 hover:border-green-300"
                 onClick={handleCheckSession}
@@ -580,8 +581,8 @@ export default function Dashboard() {
                 <ShieldCheck className="h-4 w-4" />
                 Check Session
               </Button>
-              <Button 
-                size="default" 
+              <Button
+                size="default"
                 variant="outline"
                 onClick={logout}
                 disabled={isLoggingOut}
@@ -708,7 +709,7 @@ export default function Dashboard() {
             {wallets?.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Wallet className="h-8 w-8 text-gray-400" />
+                  <WalletIcon className="h-8 w-8 text-gray-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No wallets found</h3>
                 <p className="text-gray-500">Create your first wallet to get started!</p>
