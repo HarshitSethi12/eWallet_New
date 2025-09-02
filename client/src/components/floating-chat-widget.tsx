@@ -31,7 +31,7 @@ export function FloatingChatWidget() {
     <>
       {/* Floating Chat Button */}
       {!isOpen && (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className="fixed bottom-20 right-6 z-50">
           <Button
             onClick={toggleChat}
             className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border-2 border-white"
@@ -47,7 +47,7 @@ export function FloatingChatWidget() {
 
       {/* Chat Popup */}
       {isOpen && !isMinimized && (
-        <div className="fixed bottom-6 right-6 z-50 w-96 h-[500px] shadow-2xl rounded-xl overflow-hidden border border-gray-200">
+        <div className="fixed bottom-20 right-6 z-50 w-96 h-[500px] shadow-2xl rounded-xl overflow-hidden border border-gray-200">
           <Card className="h-full flex flex-col bg-white">
             <CardHeader className="flex-shrink-0 pb-2 bg-gradient-to-r from-blue-500 to-teal-500 text-white">
               <div className="flex items-center justify-between">
@@ -86,7 +86,7 @@ export function FloatingChatWidget() {
 
       {/* Minimized Chat Bar */}
       {isOpen && isMinimized && (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className="fixed bottom-20 right-6 z-50">
           <Button
             onClick={restoreChat}
             className="bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2"
