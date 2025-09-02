@@ -46,7 +46,6 @@ import { useAuth } from "@/hooks/use-auth";
 // API request helper function
 import { apiRequest } from "@/lib/queryClient";
 // Custom components for dashboard functionality
-import { AiChat } from "@/components/ai-chat";
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 import { DexSwap } from "@/components/dex-swap";
 import { NotesPanel } from "@/components/notes-panel";
@@ -733,17 +732,6 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* AI Chat Assistant */}
-      <Card className="bg-white shadow-sm border border-gray-100">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-gray-900">AI Assistant</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-96">
-            <AiChat />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      </div>
   );
 }

@@ -20,6 +20,8 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import AdminSessions from "@/pages/admin-sessions";
 import Dashboard from "@/pages/dashboard";
+// Import the FloatingChatWidget component
+import { FloatingChatWidget } from "@/components/floating-chat-widget";
 
 // ===== NAVIGATION COMPONENT =====
 // This component renders the top navigation bar of the application
@@ -197,6 +199,8 @@ function AppContent() {
       {/* ===== TOAST NOTIFICATIONS ===== */}
       {/* Global toast notification system */}
       <Toaster />
+      {/* Floating chat widget */}
+      <FloatingChatWidget />
     </div>
   );
 }
