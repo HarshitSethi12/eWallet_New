@@ -229,20 +229,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       console.log('✅ Logout successful');
 
-      // Clear user state
+      // Clear user state immediately
       setUser(null);
       setIsLoggingOut(false);
 
       // Clear all cached data
       queryClient.clear();
 
-      // Invalidate auth query to force re-fetch
-      queryClient.invalidateQueries({ queryKey: ['auth-user'] });
-
-      // Redirect to home page
-      setLocation('/');
-      
-      // Force page reload to ensure clean state
+      // Force immediate redirect to home page
       window.location.href = '/';
     },
     // Function called when logout fails
@@ -250,12 +244,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('❌ Logout failed:', error);
       setIsLoggingOut(false);
 
-      // Even if logout fails, clear local state and redirect
+      // Even if logout fails, clear local state and redirect immediately
       setUser(null);
       queryClient.clear();
-      queryClient.invalidateQueries({ queryKey: ['auth-user'] });
       
-      // Force redirect to home page
+      // Force immediate redirect to home page
       window.location.href = '/';
     },
   });
