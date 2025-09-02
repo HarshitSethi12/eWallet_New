@@ -236,8 +236,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear all cached data
       queryClient.clear();
 
+      // Invalidate auth query to force re-fetch
+      queryClient.invalidateQueries({ queryKey: ['auth-user'] });
+
       // Redirect to home page
       setLocation('/');
+      
+      // Force page reload to ensure clean state
+      window.location.href = '/';
     },
     // Function called when logout fails
     onError: (error) => {
@@ -247,7 +253,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Even if logout fails, clear local state and redirect
       setUser(null);
       queryClient.clear();
-      setLocation('/');
+      queryClient.invalidateQueries({ queryKey: ['auth-user'] });
+      
+      // Force redirect to home page
+      window.location.href = '/';
     },
   });
 
