@@ -8,7 +8,6 @@ import { useQuery } from "@tanstack/react-query";
 // UI components from our custom component library
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -112,9 +111,27 @@ const mockTransactions = [
   { id: '4', type: 'receive', token: 'UNI', amount: '10', value: '$68.00', from: '0x4f5e...2D1a', timestamp: '1 week ago', status: 'completed' }
 ];
 
-// ===== WALLET TABS COMPONENT =====
-// This component creates the tabbed interface for the wallet dashboard
-function WalletTabs() {
+// ===== MAIN DASHBOARD COMPONENT =====
+// This is the main dashboard component that displays user's cryptocurrency portfolio
+export default function Dashboard() {
+  // ===== AUTHENTICATION STATE =====
+  // Get current user data from authentication context
+  const { user, logout, isLoggingOut, checkSessionStatus } = useAuth();
+  // Hook to disconnect MetaMask wallet
+  const { disconnectWallet } = useMetaMask();
+  // Hook to manage navigation
+  const [, setLocation] = useLocation();
+
+  // ===== SESSION STATUS STATE =====
+  const [sessionStatus, setSessionStatus] = React.useState(null);
+
+  // ===== SESSION CHECK HANDLER =====
+  const handleCheckSession = async () => {
+    const status = await checkSessionStatus();
+    setSessionStatus(status);
+    console.log('📊 Manual session check result:', status);
+  };
+
   // ===== REAL-TIME TOKEN DATA FETCHING =====
   // Fetch cryptocurrency token data from our API (1inch or CoinGecko)
   const { data: tokenData, isLoading: tokensLoading, error: tokensError, refetch: refetchTokens } = useQuery({
@@ -144,331 +161,6 @@ function WalletTabs() {
   // Use real API data when available, fallback to mock data during loading/error
   const portfolioTokens = tokenData?.tokens || mockTokens;
 
-  // ===== DEBUG LOGGING =====
-  // Log the current data source for debugging
-  React.useEffect(() => {
-    if (tokenData) {
-      console.log('📊 Dashboard using token data from:', tokenData.source);
-      console.log('📊 Token data:', tokenData.tokens);
-    } else if (tokensError) {
-      console.error('❌ Token data error:', tokensError);
-    }
-  }, [tokenData, tokensError]);
-
-  // ===== PORTFOLIO CALCULATIONS =====
-  // Calculate total portfolio value by summing all token values
-  const totalPortfolioValue = portfolioTokens.reduce((sum, token) => sum + token.balanceUSD, 0);
-
-  // Mock initial investment amount for profit/loss calculation
-  const initialInvestment = 8500; // Mock initial investment
-
-  // Calculate portfolio performance percentage
-  const portfolioChange = ((totalPortfolioValue - initialInvestment) / initialInvestment) * 100;
-
-  return (
-    <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0 h-full">
-      <div className="px-3 pt-3 pb-2 flex-shrink-0">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview" className="flex items-center gap-1 text-xs px-2 py-1.5">
-            <Eye className="h-3 w-3" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="portfolio" className="flex items-center gap-1 text-xs px-2 py-1.5">
-            <BarChart3 className="h-3 w-3" />
-            Portfolio
-          </TabsTrigger>
-          <TabsTrigger value="tokens" className="flex items-center gap-1 text-xs px-2 py-1.5">
-            <Coins className="h-3 w-3" />
-            Tokens
-          </TabsTrigger>
-          <TabsTrigger value="transactions" className="flex items-center gap-1 text-xs px-2 py-1.5">
-            <Clock className="h-3 w-3" />
-            Transactions
-          </TabsTrigger>
-        </TabsList>
-      </div>
-
-      <div className="flex-1 min-h-0 px-3 pb-3 overflow-hidden">
-        <TabsContent value="overview" className="h-full m-0 overflow-y-auto">
-          <div className="space-y-3">
-            {/* Portfolio Summary */}
-            <Card className="border-green-200 bg-green-50/50">
-              <CardContent className="p-4">
-                <div className="text-center space-y-2">
-                  <p className="text-xs text-gray-500">Total Portfolio Value</p>
-                  <p className="text-2xl font-bold">${totalPortfolioValue.toFixed(2)}</p>
-                  <div className="flex items-center justify-center gap-2">
-                    {portfolioChange >= 0 ? (
-                      <TrendingUp className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-red-600" />
-                    )}
-                    <span className={`text-xs font-medium ${portfolioChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {portfolioChange >= 0 ? '+' : ''}{portfolioChange.toFixed(2)}%
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      (${(totalPortfolioValue - initialInvestment).toFixed(2)})
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-3">
-              <Card className="border-gray-200">
-                <CardContent className="p-3">
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500">Initial Investment</p>
-                    <p className="text-lg font-semibold">${initialInvestment.toFixed(2)}</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-gray-200">
-                <CardContent className="p-3">
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500">Total Tokens</p>
-                    <p className="text-lg font-semibold">{portfolioTokens.length}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Top Holdings */}
-            <Card className="border-gray-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold text-amber-700">Top Holdings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {portfolioTokens.slice(0, 3).map((token) => (
-                  <div key={token.symbol} className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-2">
-                      <img src={token.logoURI} alt={token.name} className="w-6 h-6 rounded-full" />
-                      <div>
-                        <p className="text-sm font-medium">{token.symbol}</p>
-                        <p className="text-xs text-gray-500">{token.balance} {token.symbol}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">${(token.balanceUSD || 0).toFixed(2)}</p>
-                      <p className="text-xs text-gray-500">{(((token.balanceUSD || 0) / totalPortfolioValue) * 100).toFixed(1)}%</p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="portfolio" className="h-full m-0 overflow-y-auto">
-          <Card className="border-gray-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-amber-700">Your Token Portfolio</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {tokensLoading ? (
-                <div className="space-y-3">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg animate-pulse">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                        <div className="space-y-1">
-                          <div className="w-12 h-3 bg-gray-200 rounded"></div>
-                          <div className="w-20 h-3 bg-gray-200 rounded"></div>
-                          <div className="w-16 h-2 bg-gray-200 rounded"></div>
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="w-20 h-3 bg-gray-200 rounded"></div>
-                        <div className="w-16 h-3 bg-gray-200 rounded"></div>
-                        <div className="w-12 h-2 bg-gray-200 rounded"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : portfolioTokens.map((token) => (
-                <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />
-                    <div>
-                      <p className="text-sm font-semibold">{token.symbol}</p>
-                      <p className="text-xs text-gray-500">{token.name}</p>
-                      <p className="text-xs text-gray-400">{token.balance} {token.symbol}</p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">${(token.balanceUSD || 0).toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">${(token.price || 0).toFixed(2)} per {token.symbol}</p>
-                    <div className="flex items-center gap-1 justify-end">
-                      {(token.change24h || 0) >= 0 ? (
-                        <TrendingUp className="h-2 w-2 text-green-600" />
-                      ) : (
-                        <TrendingDown className="h-2 w-2 text-red-600" />
-                      )}
-                      <span className={`text-xs ${(token.change24h || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {(token.change24h || 0) >= 0 ? '+' : ''}{(token.change24h || 0).toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="tokens" className="h-full m-0 overflow-y-auto">
-          <Card className="border-gray-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-amber-700 flex items-center justify-between">
-                <span>Token Prices</span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleRefreshPrices}
-                    disabled={tokensLoading}
-                    className="h-6 px-2 text-xs"
-                  >
-                    <RefreshCw className={`h-3 w-3 ${tokensLoading ? 'animate-spin' : ''}`} />
-                  </Button>
-                  {tokenData?.source && (
-                    <span className={`text-xs font-normal px-2 py-1 rounded ${
-                      tokenData.source === '1inch'
-                        ? 'text-orange-700 bg-orange-100 border border-orange-200'
-                        : tokenData.source === 'coingecko'
-                        ? 'text-blue-700 bg-blue-100 border border-blue-200'
-                        : 'text-gray-500 bg-gray-100 border border-gray-200'
-                    }`}>
-                      {tokenData.source === '1inch' ? '1inch DEX' : tokenData.source === 'coingecko' ? 'CoinGecko' : 'Mock Data'}
-                    </span>
-                  )}
-                  {tokensError && (
-                    <span className="text-xs font-normal text-red-500 bg-red-100 px-2 py-1 rounded">
-                      Error
-                    </span>
-                  )}
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {tokensLoading ? (
-                <div className="space-y-2">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg animate-pulse">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                        <div className="space-y-1">
-                          <div className="w-12 h-3 bg-gray-200 rounded"></div>
-                          <div className="w-20 h-2 bg-gray-200 rounded"></div>
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="w-16 h-3 bg-gray-200 rounded"></div>
-                        <div className="w-12 h-2 bg-gray-200 rounded"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : portfolioTokens.map((token) => (
-                <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />
-                    <div>
-                      <p className="text-sm font-semibold">{token.symbol}</p>
-                      <p className="text-xs text-gray-500">{token.name}</p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">${(token.price || 0).toFixed(2)}</p>
-                    <Badge variant={(token.change24h || 0) >= 0 ? "default" : "destructive"} className="text-xs">
-                      {(token.change24h || 0) >= 0 ? (
-                        <TrendingUp className="h-2 w-2 mr-1" />
-                      ) : (
-                        <TrendingDown className="h-2 w-2 mr-1" />
-                      )}
-                      {Math.abs(token.change24h || 0).toFixed(2)}%
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="transactions" className="h-full m-0 overflow-y-auto">
-          <Card className="border-gray-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-amber-700">Recent Transactions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {mockTransactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-full ${
-                      tx.type === 'receive' ? 'bg-green-100' :
-                      tx.type === 'send' ? 'bg-red-100' : 'bg-blue-100'
-                    }`}>
-                      {tx.type === 'receive' ? (
-                        <ArrowDownLeft className="h-3 w-3 text-green-600" />
-                      ) : tx.type === 'send' ? (
-                        <Send className="h-3 w-3 text-red-600" />
-                      ) : (
-                        <RiExchangeFundsFill className="h-3 w-3 text-blue-600" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold capitalize">{tx.type} {tx.token}</p>
-                      <p className="text-xs text-gray-500">
-                        {tx.from && `From: ${tx.from}`}
-                        {tx.to && `To: ${tx.to}`}
-                        {tx.type === 'swap' && 'Token swap'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p className={`text-sm font-semibold ${
-                      tx.type === 'receive' ? 'text-green-600' :
-                      tx.type === 'send' ? 'text-red-600' : 'text-blue-600'
-                    }`}>
-                      {tx.type === 'send' ? '-' : tx.type === 'receive' ? '+' : ''}{tx.amount} {tx.token}
-                    </p>
-                    <p className="text-xs text-gray-500">{tx.value}</p>
-                    <p className="text-xs text-gray-400">{tx.timestamp}</p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </div>
-    </Tabs>
-  );
-}
-
-// ===== MAIN DASHBOARD COMPONENT =====
-// This is the main dashboard component that displays user's cryptocurrency portfolio
-export default function Dashboard() {
-  // ===== AUTHENTICATION STATE =====
-  // Get current user data from authentication context
-  const { user, logout, isLoggingOut, checkSessionStatus } = useAuth();
-  // Hook to disconnect MetaMask wallet
-  const { disconnectWallet } = useMetaMask();
-  // Hook to manage navigation
-  const [, setLocation] = useLocation();
-
-  // ===== SESSION STATUS STATE =====
-  const [sessionStatus, setSessionStatus] = React.useState(null);
-
-  // ===== SESSION CHECK HANDLER =====
-  const handleCheckSession = async () => {
-    const status = await checkSessionStatus();
-    setSessionStatus(status);
-    console.log('📊 Manual session check result:', status);
-  };
-
   // ===== API DATA FETCHING =====
   // Fetch wallet data using React Query
   const { data: wallets } = useQuery({
@@ -483,7 +175,7 @@ export default function Dashboard() {
   });
 
   // Mock token data for wallet overview
-  const mockTokens = [
+  const mockTokensOverview = [
     {
       symbol: 'ETH',
       name: 'Ethereum',
@@ -506,6 +198,16 @@ export default function Dashboard() {
     }
   ];
 
+  // ===== PORTFOLIO CALCULATIONS =====
+  // Calculate total portfolio value by summing all token values
+  const totalPortfolioValue = portfolioTokens.reduce((sum, token) => sum + token.balanceUSD, 0);
+
+  // Mock initial investment amount for profit/loss calculation
+  const initialInvestment = 8500; // Mock initial investment
+
+  // Calculate portfolio performance percentage
+  const portfolioChange = ((totalPortfolioValue - initialInvestment) / initialInvestment) * 100;
+
   // ===== RENDER LOGIC =====
   // Redirect to home if user is not logged in
   if (!user) {
@@ -519,219 +221,393 @@ export default function Dashboard() {
 
   // Render the main dashboard structure
   return (
-    <div className="container max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-12 py-8 sm:py-12">
-      {/* Header */}
-      <Card className="bg-white shadow-sm border border-gray-100">
-        <CardContent className="p-6 sm:p-8">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-            <div className="flex items-center gap-4 sm:gap-6">
-              {user?.picture ? (
-                <img
-                  src={user.picture}
-                  alt={user.name}
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg"
-                />
-              ) : (
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-                  <WalletIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-                </div>
-              )}
-              <div className="space-y-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back!</h1>
-                <p className="text-base sm:text-lg text-gray-600 font-medium">
-                  {user?.provider === 'metamask' ?
-                    `${user.walletAddress?.slice(0, 8)}...${user.walletAddress?.slice(-6)}` :
-                    user?.name
-                  }
-                </p>
-                {user?.provider === 'metamask' && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <p className="text-sm text-green-600 font-semibold">MetaMask Connected</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Header */}
+        <Card className="bg-white shadow-sm border border-gray-100">
+          <CardContent className="p-6 sm:p-8">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+              <div className="flex items-center gap-4 sm:gap-6">
+                {user?.picture ? (
+                  <img
+                    src={user.picture}
+                    alt={user.name}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg"
+                  />
+                ) : (
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                    <WalletIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                   </div>
                 )}
+                <div className="space-y-1">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back!</h1>
+                  <p className="text-base sm:text-lg text-gray-600 font-medium">
+                    {user?.provider === 'metamask' ?
+                      `${user.walletAddress?.slice(0, 8)}...${user.walletAddress?.slice(-6)}` :
+                      user?.name
+                    }
+                  </p>
+                  {user?.provider === 'metamask' && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <p className="text-sm text-green-600 font-semibold">MetaMask Connected</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                size="default"
-                variant="outline"
-                className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 hover:border-blue-300"
-                onClick={() => setLocation("/send")}
-              >
-                <Send className="h-4 w-4" />
-                Send
-              </Button>
-              <Button
-                size="default"
-                variant="outline"
-                className="flex items-center gap-2 px-4 py-2 hover:bg-teal-50 hover:border-teal-300"
-                onClick={() => setLocation("/receive")}
-              >
-                <ArrowDownLeft className="h-4 w-4" />
-                Receive
-              </Button>
-              <Button
-                size="default"
-                variant="outline"
-                className="flex items-center gap-2 px-4 py-2 hover:bg-green-50 hover:border-green-300"
-                onClick={handleCheckSession}
-              >
-                <ShieldCheck className="h-4 w-4" />
-                Check Session
-              </Button>
-              <Button
-                size="default"
-                variant="outline"
-                onClick={logout}
-                disabled={isLoggingOut}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-red-50 hover:border-red-300"
-              >
-                <LogOut className="h-4 w-4" />
-                {isLoggingOut ? "Signing out..." : "Sign Out"}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Session Status Display */}
-      {sessionStatus && (
-        <Card className="bg-white shadow-sm border border-gray-100">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-gray-900">Session Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${sessionStatus.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-lg font-medium">{sessionStatus.isActive ? 'Active' : 'Inactive'}</span>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  size="default"
+                  variant="outline"
+                  className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 hover:border-blue-300"
+                  onClick={() => setLocation("/send")}
+                >
+                  <Send className="h-4 w-4" />
+                  Send
+                </Button>
+                <Button
+                  size="default"
+                  variant="outline"
+                  className="flex items-center gap-2 px-4 py-2 hover:bg-teal-50 hover:border-teal-300"
+                  onClick={() => setLocation("/receive")}
+                >
+                  <ArrowDownLeft className="h-4 w-4" />
+                  Receive
+                </Button>
+                <Button
+                  size="default"
+                  variant="outline"
+                  className="flex items-center gap-2 px-4 py-2 hover:bg-green-50 hover:border-green-300"
+                  onClick={handleCheckSession}
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Check Session
+                </Button>
+                <Button
+                  size="default"
+                  variant="outline"
+                  onClick={logout}
+                  disabled={isLoggingOut}
+                  className="flex items-center gap-2 px-4 py-2 hover:bg-red-50 hover:border-red-300"
+                >
+                  <LogOut className="h-4 w-4" />
+                  {isLoggingOut ? "Signing out..." : "Sign Out"}
+                </Button>
               </div>
-              {sessionStatus.provider && (
-                <p className="text-gray-700"><strong>Provider:</strong> {sessionStatus.provider}</p>
-              )}
-              {sessionStatus.user?.address && (
-                <p className="text-gray-700"><strong>Address:</strong> {sessionStatus.user.address}</p>
-              )}
-              {sessionStatus.error && (
-                <p className="text-red-600"><strong>Error:</strong> {sessionStatus.error}</p>
-              )}
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Wallet Overview */}
-      <WalletOverview tokens={mockTokens} />
-
-      {/* Live Market Prices */}
-      <Card className="bg-white shadow-sm border border-gray-100">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3 text-2xl font-bold text-gray-900">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center">
-              <span className="text-white text-sm font-bold">₿</span>
-            </div>
-            Live Market Prices
-            <div className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-              MetaMask Wallet
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-gray-50 rounded-xl p-4">
-            <HorizontalPriceTicker />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Swap Tokens Section */}
-      <Card className="bg-white shadow-sm border border-gray-100">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-gray-900">Swap Tokens</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="max-w-md mx-auto">
-            <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 border border-green-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Swap Tokens</h3>
-                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                  <ArrowUpDown className="w-4 h-4 text-gray-600" />
+        {/* Session Status Display */}
+        {sessionStatus && (
+          <Card className="bg-white shadow-sm border border-gray-100">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-gray-900">Session Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${sessionStatus.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <span className="text-lg font-medium">{sessionStatus.isActive ? 'Active' : 'Inactive'}</span>
                 </div>
+                {sessionStatus.provider && (
+                  <p className="text-gray-700"><strong>Provider:</strong> {sessionStatus.provider}</p>
+                )}
+                {sessionStatus.user?.address && (
+                  <p className="text-gray-700"><strong>Address:</strong> {sessionStatus.user.address}</p>
+                )}
+                {sessionStatus.error && (
+                  <p className="text-red-600"><strong>Error:</strong> {sessionStatus.error}</p>
+                )}
               </div>
+            </CardContent>
+          </Card>
+        )}
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Network</label>
-                  <div className="bg-green-200 rounded-lg px-4 py-3 text-gray-800 font-medium">
-                    Ethereum ▼
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
-                  <div className="flex gap-2">
-                    <div className="bg-green-200 rounded-lg px-4 py-3 text-gray-800 font-medium flex-shrink-0">
-                      ETH ▼
+        {/* Four Section Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-400px)] min-h-[600px]">
+          {/* Top Left: Wallet Overview */}
+          <Card className="bg-white shadow-sm border border-gray-100">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
+                <WalletIcon className="h-5 w-5" />
+                Wallet Overview
+              </CardTitle>
+              <div className="text-right">
+                <p className="text-2xl font-bold">${totalPortfolioValue.toFixed(2)}</p>
+                <p className="text-sm text-gray-500">Total Portfolio Value</p>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <ScrollArea className="h-full">
+                <div className="space-y-4">
+                  {/* Portfolio Summary */}
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div className="text-center space-y-2">
+                      <div className="flex items-center justify-center gap-2">
+                        {portfolioChange >= 0 ? (
+                          <TrendingUp className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4 text-red-600" />
+                        )}
+                        <span className={`text-sm font-medium ${portfolioChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {portfolioChange >= 0 ? '+' : ''}{portfolioChange.toFixed(2)}%
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          (${(totalPortfolioValue - initialInvestment).toFixed(2)})
+                        </span>
+                      </div>
                     </div>
-                    <input type="text" placeholder="0.0" className="flex-1 bg-green-100 border border-green-300 rounded-lg px-4 py-3" />
                   </div>
-                </div>
 
-                <div className="flex justify-center">
-                  <div className="w-8 h-8 bg-white border-2 border-green-300 rounded-full flex items-center justify-center">
-                    <ArrowUpDown className="w-4 h-4 text-gray-600" />
-                  </div>
-                </div>
+                  {/* Token Holdings */}
+                  {portfolioTokens.map((token) => (
+                    <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />
+                        <div>
+                          <p className="text-sm font-semibold">{token.symbol}</p>
+                          <p className="text-xs text-gray-500">{token.name}</p>
+                          <p className="text-xs text-gray-400">{token.balance} {token.symbol}</p>
+                        </div>
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
-                  <div className="flex gap-2">
-                    <div className="bg-green-200 rounded-lg px-4 py-3 text-gray-800 font-medium flex-shrink-0">
-                      USDC ▼
+                      <div className="text-right">
+                        <p className="text-sm font-semibold">${(token.balanceUSD || 0).toFixed(2)}</p>
+                        <p className="text-xs text-gray-500">${(token.price || 0).toFixed(2)} per {token.symbol}</p>
+                        <div className="flex items-center gap-1 justify-end">
+                          {(token.change24h || 0) >= 0 ? (
+                            <TrendingUp className="h-2 w-2 text-green-600" />
+                          ) : (
+                            <TrendingDown className="h-2 w-2 text-red-600" />
+                          )}
+                          <span className={`text-xs ${(token.change24h || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {(token.change24h || 0) >= 0 ? '+' : ''}{(token.change24h || 0).toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <input type="text" placeholder="0.0" className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-3" />
+                  ))}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          {/* Top Right: Recent Transactions */}
+          <Card className="bg-white shadow-sm border border-gray-100">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
+                <Clock className="h-5 w-5" />
+                Recent Transactions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <ScrollArea className="h-full">
+                <div className="space-y-3">
+                  {mockTransactions.map((tx) => (
+                    <div key={tx.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-1.5 rounded-full ${
+                          tx.type === 'receive' ? 'bg-green-100' :
+                          tx.type === 'send' ? 'bg-red-100' : 'bg-blue-100'
+                        }`}>
+                          {tx.type === 'receive' ? (
+                            <ArrowDownLeft className="h-3 w-3 text-green-600" />
+                          ) : tx.type === 'send' ? (
+                            <Send className="h-3 w-3 text-red-600" />
+                          ) : (
+                            <RiExchangeFundsFill className="h-3 w-3 text-blue-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold capitalize">{tx.type} {tx.token}</p>
+                          <p className="text-xs text-gray-500">
+                            {tx.from && `From: ${tx.from}`}
+                            {tx.to && `To: ${tx.to}`}
+                            {tx.type === 'swap' && 'Token swap'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p className={`text-sm font-semibold ${
+                          tx.type === 'receive' ? 'text-green-600' :
+                          tx.type === 'send' ? 'text-red-600' : 'text-blue-600'
+                        }`}>
+                          {tx.type === 'send' ? '-' : tx.type === 'receive' ? '+' : ''}{tx.amount} {tx.token}
+                        </p>
+                        <p className="text-xs text-gray-500">{tx.value}</p>
+                        <p className="text-xs text-gray-400">{tx.timestamp}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          {/* Bottom Left: Token List with Live Prices */}
+          <Card className="bg-white shadow-sm border border-gray-100">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between text-lg font-semibold text-amber-700">
+                <div className="flex items-center gap-2">
+                  <Coins className="h-5 w-5" />
+                  Token List
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRefreshPrices}
+                    disabled={tokensLoading}
+                    className="h-6 px-2 text-xs"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${tokensLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                  {tokenData?.source && (
+                    <span className={`text-xs font-normal px-2 py-1 rounded ${
+                      tokenData.source === '1inch'
+                        ? 'text-orange-700 bg-orange-100 border border-orange-200'
+                        : tokenData.source === 'coingecko'
+                        ? 'text-blue-700 bg-blue-100 border border-blue-200'
+                        : 'text-gray-500 bg-gray-100 border border-gray-200'
+                    }`}>
+                      {tokenData.source === '1inch' ? '1inch DEX' : tokenData.source === 'coingecko' ? 'CoinGecko' : 'Mock Data'}
+                    </span>
+                  )}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <ScrollArea className="h-full">
+                <div className="space-y-2">
+                  {tokensLoading ? (
+                    <div className="space-y-2">
+                      {[...Array(6)].map((_, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 border rounded-lg animate-pulse">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                            <div className="space-y-1">
+                              <div className="w-12 h-3 bg-gray-200 rounded"></div>
+                              <div className="w-20 h-2 bg-gray-200 rounded"></div>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="w-16 h-3 bg-gray-200 rounded"></div>
+                            <div className="w-12 h-2 bg-gray-200 rounded"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : portfolioTokens.map((token) => (
+                    <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />
+                        <div>
+                          <p className="text-sm font-semibold">{token.symbol}</p>
+                          <p className="text-xs text-gray-500">{token.name}</p>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-sm font-semibold">${(token.price || 0).toFixed(2)}</p>
+                        <Badge variant={(token.change24h || 0) >= 0 ? "default" : "destructive"} className="text-xs">
+                          {(token.change24h || 0) >= 0 ? (
+                            <TrendingUp className="h-2 w-2 mr-1" />
+                          ) : (
+                            <TrendingDown className="h-2 w-2 mr-1" />
+                          )}
+                          {Math.abs(token.change24h || 0).toFixed(2)}%
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          {/* Bottom Right: Portfolio Holdings */}
+          <Card className="bg-white shadow-sm border border-gray-100">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
+                <BarChart3 className="h-5 w-5" />
+                Portfolio Holdings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <ScrollArea className="h-full">
+                <div className="space-y-4">
+                  {/* Portfolio Distribution */}
+                  {portfolioTokens.map((token) => {
+                    const percentage = ((token.balanceUSD || 0) / totalPortfolioValue) * 100;
+                    return (
+                      <div key={token.symbol} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <img src={token.logoURI} alt={token.name} className="w-6 h-6 rounded-full" />
+                            <span className="text-sm font-medium">{token.symbol}</span>
+                          </div>
+                          <span className="text-sm text-gray-600">{percentage.toFixed(1)}%</span>
+                        </div>
+                        <Progress value={percentage} className="h-2" />
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>{token.balance} {token.symbol}</span>
+                          <span>${(token.balanceUSD || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <Separator className="my-4" />
+
+                  {/* Summary Stats */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Initial Investment:</span>
+                      <span className="font-medium">${initialInvestment.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Current Value:</span>
+                      <span className="font-medium">${totalPortfolioValue.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">P&L:</span>
+                      <span className={`font-medium ${portfolioChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {portfolioChange >= 0 ? '+' : ''}${(totalPortfolioValue - initialInvestment).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total Assets:</span>
+                      <span className="font-medium">{portfolioTokens.length}</span>
+                    </div>
                   </div>
                 </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Live Market Prices */}
+        <Card className="bg-white shadow-sm border border-gray-100">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3 text-2xl font-bold text-gray-900">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center">
+                <span className="text-white text-sm font-bold">₿</span>
               </div>
+              Live Market Prices
+              <div className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                MetaMask Wallet
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-50 rounded-xl p-4">
+              <HorizontalPriceTicker />
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Wallets */}
-      <Card className="bg-white shadow-sm border border-gray-100">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-gray-900">Your Wallets</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6">
-            {wallets?.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <WalletIcon className="h-8 w-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No wallets found</h3>
-                <p className="text-gray-500">Create your first wallet to get started!</p>
-              </div>
-            ) : (
-              wallets?.map((wallet: WalletType) => (
-                <AddressCard key={wallet.id} wallet={wallet} />
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Transactions */}
-      <Card className="bg-white shadow-sm border border-gray-100">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-gray-900">Recent Transactions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TransactionList transactions={transactions || []} walletAddress={user?.walletAddress || ""} />
-        </CardContent>
-      </Card>
-
+          </CardContent>
+        </Card>
       </div>
+    </div>
   );
 }
