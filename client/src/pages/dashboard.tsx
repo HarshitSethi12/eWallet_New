@@ -224,7 +224,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50">
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Header */}
-        <Card className="bg-gray-50 shadow-sm border border-gray-200">
+        <Card className="bg-white shadow-sm border border-gray-200">
           <CardContent className="p-6 sm:p-8">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
               <div className="flex items-center gap-4 sm:gap-6">
@@ -300,7 +300,7 @@ export default function Dashboard() {
 
         {/* Session Status Display */}
         {sessionStatus && (
-          <Card className="bg-gray-50 shadow-sm border border-gray-200">
+          <Card className="bg-white shadow-sm border border-gray-200">
             <CardHeader>
               <CardTitle className="text-xl font-bold text-gray-900">Session Status</CardTitle>
             </CardHeader>
@@ -327,7 +327,7 @@ export default function Dashboard() {
         {/* Four Section Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-400px)] min-h-[600px]">
           {/* Top Left: Wallet Overview */}
-          <Card className="bg-gray-50 shadow-sm border border-gray-200">
+          <Card className="bg-white shadow-sm border border-gray-200">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
                 <WalletIcon className="h-5 w-5" />
@@ -394,7 +394,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Top Right: Recent Transactions */}
-          <Card className="bg-gray-50 shadow-sm border border-gray-200">
+          <Card className="bg-white shadow-sm border border-gray-200">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
                 <Clock className="h-5 w-5" />
@@ -447,7 +447,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Bottom Left: Token List with Live Prices */}
-          <Card className="bg-gray-50 shadow-sm border border-gray-200">
+          <Card className="bg-white shadow-sm border border-gray-200">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center justify-between text-lg font-semibold text-amber-700">
                 <div className="flex items-center gap-2">
@@ -528,7 +528,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Bottom Right: Portfolio Holdings */}
-          <Card className="bg-gray-50 shadow-sm border border-gray-200">
+          <Card className="bg-white shadow-sm border border-gray-200">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
                 <BarChart3 className="h-5 w-5" />
