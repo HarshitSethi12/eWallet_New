@@ -222,7 +222,7 @@ export default function Dashboard() {
   // Render the main dashboard structure
   return (
     <div className="min-h-screen bg-white">
-      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 bg-white">
         {/* Header */}
         <Card className="bg-white shadow-sm border border-gray-200">
           <CardContent className="p-6 sm:p-8">
