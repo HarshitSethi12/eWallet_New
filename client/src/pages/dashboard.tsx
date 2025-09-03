@@ -222,7 +222,7 @@ export default function Dashboard() {
   // Render the main dashboard structure
   return (
     <div className="min-h-screen bg-white">
-      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 bg-white">
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Header */}
         <Card className="bg-white shadow-sm border border-gray-200">
           <CardContent className="p-6 sm:p-8">
@@ -325,7 +325,7 @@ export default function Dashboard() {
         )}
 
         {/* Four Section Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-400px)] min-h-[600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-400px)] min-h-[600px] bg-white">
           {/* Top Left: Wallet Overview */}
           <Card className="bg-white shadow-sm border border-gray-200">
             <CardHeader className="pb-3">
