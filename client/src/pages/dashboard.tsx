@@ -588,25 +588,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Live Market Prices */}
-        <Card className="bg-white shadow-sm border border-gray-100">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-2xl font-bold text-gray-900">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center">
-                <span className="text-white text-sm font-bold">₿</span>
-              </div>
-              Live Market Prices
-              <div className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                MetaMask Wallet
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-gray-50 rounded-xl p-4">
-              <HorizontalPriceTicker />
-            </div>
-          </CardContent>
-        </Card>
+        
       </div>
     </div>
   );
