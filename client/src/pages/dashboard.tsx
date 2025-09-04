@@ -224,12 +224,11 @@ export default function Dashboard() {
     <div className="min-h-screen bg-white relative">
       {/* Auto-hiding Header */}
       <div 
-        className="fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out transform -translate-y-full hover:translate-y-0"
+        className="fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out transform -translate-y-full"
         style={{
           background: 'linear-gradient(135deg, #4a7c59 0%, #6b8e5a 100%)',
         }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(-100%)'}
+        id="auto-header"
       >
         <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 flex items-center justify-between text-white">
           <div className="flex-1"></div>
@@ -250,7 +249,17 @@ export default function Dashboard() {
       </div>
 
       {/* Hover trigger area for header */}
-      <div className="fixed top-0 left-0 right-0 h-16 z-40"></div>
+      <div 
+        className="fixed top-0 left-0 right-0 h-20 z-40"
+        onMouseEnter={() => {
+          const header = document.getElementById('auto-header');
+          if (header) header.style.transform = 'translateY(0)';
+        }}
+        onMouseLeave={() => {
+          const header = document.getElementById('auto-header');
+          if (header) header.style.transform = 'translateY(-100%)';
+        }}
+      ></div>
 
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 bg-white">
         
@@ -565,12 +574,11 @@ export default function Dashboard() {
 
       {/* Auto-hiding Footer */}
       <div 
-        className="fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out transform translate-y-full hover:translate-y-0"
+        className="fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out transform translate-y-full"
         style={{
           background: 'linear-gradient(135deg, #4a7c59 0%, #6b8e5a 100%)',
         }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(100%)'}
+        id="auto-footer"
       >
         <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 text-center text-white">
           <p className="text-sm">© 2025 BitWallet</p>
@@ -578,7 +586,17 @@ export default function Dashboard() {
       </div>
 
       {/* Hover trigger area for footer */}
-      <div className="fixed bottom-0 left-0 right-0 h-16 z-40"></div>
+      <div 
+        className="fixed bottom-0 left-0 right-0 h-20 z-40"
+        onMouseEnter={() => {
+          const footer = document.getElementById('auto-footer');
+          if (footer) footer.style.transform = 'translateY(0)';
+        }}
+        onMouseLeave={() => {
+          const footer = document.getElementById('auto-footer');
+          if (footer) footer.style.transform = 'translateY(100%)';
+        }}
+      ></div>
     </div>
   );
 }
