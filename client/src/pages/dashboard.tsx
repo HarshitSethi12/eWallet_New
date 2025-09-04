@@ -232,17 +232,39 @@ export default function Dashboard() {
       >
         <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 flex items-center justify-between text-white">
           <div className="flex-1"></div>
-          <h1 className="text-xl font-bold text-white">BitWallet</h1>
+          <h1 className="text-xl font-bold text-white">
+            <span
+              className="font-bold"
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                letterSpacing: "-0.01em",
+                paddingRight: "2px",
+                color: "#F7F3E9"
+              }}
+            >
+              Bit
+            </span>
+            <span
+              className="font-bold"
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                letterSpacing: "-0.01em",
+                color: "#A0826D"
+              }}
+            >
+              Wallet
+            </span>
+          </h1>
           <div className="flex-1 flex justify-end">
             <Button
               size="sm"
               variant="outline"
               onClick={logout}
               disabled={isLoggingOut}
-              className="flex items-center gap-2 px-3 py-1 text-white border-white hover:bg-white hover:text-gray-800"
+              className="flex items-center gap-2 px-3 py-1 text-white border-white hover:bg-white hover:text-gray-800 text-sm"
             >
               <LogOut className="h-3 w-3" />
-              {isLoggingOut ? "Signing out..." : "Sign Out"}
+              <span className="text-xs">{isLoggingOut ? "Signing out..." : "Sign Out"}</span>
             </Button>
           </div>
         </div>
@@ -250,15 +272,35 @@ export default function Dashboard() {
 
       {/* Hover trigger area for header */}
       <div 
-        className="fixed top-0 left-0 right-0 h-20 z-40"
+        className="fixed top-0 left-0 right-0 h-24 z-40"
         onMouseEnter={() => {
           const header = document.getElementById('auto-header');
           if (header) header.style.transform = 'translateY(0)';
         }}
         onMouseLeave={() => {
-          const header = document.getElementById('auto-header');
-          if (header) header.style.transform = 'translateY(-100%)';
+          setTimeout(() => {
+            const header = document.getElementById('auto-header');
+            if (header && !header.matches(':hover')) {
+              header.style.transform = 'translateY(-100%)';
+            }
+          }, 200);
         }}
+      ></div>
+      
+      {/* Additional hover area for header element itself */}
+      <div 
+        className="fixed top-0 left-0 right-0 h-16 z-51"
+        onMouseEnter={() => {
+          const header = document.getElementById('auto-header');
+          if (header) header.style.transform = 'translateY(0)';
+        }}
+        onMouseLeave={() => {
+          setTimeout(() => {
+            const header = document.getElementById('auto-header');
+            if (header) header.style.transform = 'translateY(-100%)';
+          }, 300);
+        }}
+        style={{ pointerEvents: 'none' }}
       ></div>
 
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 bg-white">
@@ -581,21 +623,64 @@ export default function Dashboard() {
         id="auto-footer"
       >
         <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 text-center text-white">
-          <p className="text-sm">© 2025 BitWallet</p>
+          <p className="text-sm">
+            © 2025{" "}
+            <span
+              className="font-medium"
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                letterSpacing: "-0.01em",
+                paddingRight: "1px",
+                color: "#F7F3E9"
+              }}
+            >
+              Bit
+            </span>
+            <span
+              className="font-medium"
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                letterSpacing: "-0.01em",
+                color: "#A0826D"
+              }}
+            >
+              Wallet
+            </span>
+          </p>
         </div>
       </div>
 
       {/* Hover trigger area for footer */}
       <div 
-        className="fixed bottom-0 left-0 right-0 h-20 z-40"
+        className="fixed bottom-0 left-0 right-0 h-24 z-40"
         onMouseEnter={() => {
           const footer = document.getElementById('auto-footer');
           if (footer) footer.style.transform = 'translateY(0)';
         }}
         onMouseLeave={() => {
-          const footer = document.getElementById('auto-footer');
-          if (footer) footer.style.transform = 'translateY(100%)';
+          setTimeout(() => {
+            const footer = document.getElementById('auto-footer');
+            if (footer && !footer.matches(':hover')) {
+              footer.style.transform = 'translateY(100%)';
+            }
+          }, 200);
         }}
+      ></div>
+      
+      {/* Additional hover area for footer element itself */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 h-16 z-51"
+        onMouseEnter={() => {
+          const footer = document.getElementById('auto-footer');
+          if (footer) footer.style.transform = 'translateY(0)';
+        }}
+        onMouseLeave={() => {
+          setTimeout(() => {
+            const footer = document.getElementById('auto-footer');
+            if (footer) footer.style.transform = 'translateY(100%)';
+          }, 300);
+        }}
+        style={{ pointerEvents: 'none' }}
       ></div>
     </div>
   );
