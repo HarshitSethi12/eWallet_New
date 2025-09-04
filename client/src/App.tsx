@@ -2,7 +2,7 @@
 // React library for building user interfaces
 import React from "react";
 // Wouter for client-side routing (lightweight alternative to React Router)
-import { Switch, Route, Link } from "wouter";
+import { Switch, Route, Link, useLocation } from "wouter";
 // React Query for server state management and caching
 import { QueryClientProvider } from "@tanstack/react-query";
 // Our configured query client instance
@@ -54,7 +54,7 @@ function Navigation() {
         {/* Centered BitWallet title */}
         <div className="flex items-center justify-center">
           <Link href="/">
-            <Button variant="link" className="text-2xl sm:text-3xl hover:text-white/90 flex items-center py-1 sm:py-2">
+            <Button variant="link" className="text-2xl sm:text-text-3xl hover:text-white/90 flex items-center py-1 sm:py-2">
               <span className="flex items-end">
                 <span
                   className="font-bold"
@@ -207,20 +207,36 @@ function AppContent() {
 
 // ===== MAIN APP COMPONENT =====
 // This is the root component that wraps the entire application
-function App() {
+export default function App() {
+  const [currentPath, setCurrentPath] = useLocation();
+  const isDashboard = currentPath === '/dashboard';
+
   return (
     // ===== REACT QUERY PROVIDER =====
-    // Provides React Query context to all child components for data fetching
+    // Wrap app with React Query for data fetching and caching
     <QueryClientProvider client={queryClient}>
       {/* ===== AUTHENTICATION PROVIDER ===== */}
-      {/* Provides authentication context to all child components */}
+      {/* Wrap app with authentication context for user management */}
       <AuthProvider>
-        {/* ===== MAIN APP CONTENT ===== */}
-        {/* All app content wrapped with proper authentication context */}
-        <AppContent />
+        {/* ===== TOAST NOTIFICATIONS ===== */}
+        {/* Add toast notification system */}
+        <Toaster />
+
+        {/* ===== PAGE LAYOUT ===== */}
+        {/* Main page structure with navigation, content, and footer */}
+        <div className="min-h-screen flex flex-col">
+          {/* Navigation bar at the top - hidden on dashboard */}
+          {!isDashboard && <Navigation />}
+
+          {/* Main content area that grows to fill space */}
+          <main className="flex-1">
+            <Router />
+          </main>
+
+          {/* Footer at the bottom - hidden on dashboard */}
+          {!isDashboard && <Footer />}
+        </div>
       </AuthProvider>
     </QueryClientProvider>
   );
 }
-
-export default App;

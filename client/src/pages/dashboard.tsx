@@ -221,7 +221,37 @@ export default function Dashboard() {
 
   // Render the main dashboard structure
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white relative">
+      {/* Auto-hiding Header */}
+      <div 
+        className="fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out transform -translate-y-full hover:translate-y-0"
+        style={{
+          background: 'linear-gradient(135deg, #4a7c59 0%, #6b8e5a 100%)',
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(-100%)'}
+      >
+        <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 flex items-center justify-between text-white">
+          <div className="flex-1"></div>
+          <h1 className="text-xl font-bold text-white">BitWallet</h1>
+          <div className="flex-1 flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={logout}
+              disabled={isLoggingOut}
+              className="flex items-center gap-2 px-3 py-1 text-white border-white hover:bg-white hover:text-gray-800"
+            >
+              <LogOut className="h-3 w-3" />
+              {isLoggingOut ? "Signing out..." : "Sign Out"}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Hover trigger area for header */}
+      <div className="fixed top-0 left-0 right-0 h-16 z-40"></div>
+
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 bg-white">
         
 
@@ -532,6 +562,23 @@ export default function Dashboard() {
 
         
       </div>
+
+      {/* Auto-hiding Footer */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out transform translate-y-full hover:translate-y-0"
+        style={{
+          background: 'linear-gradient(135deg, #4a7c59 0%, #6b8e5a 100%)',
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(100%)'}
+      >
+        <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 text-center text-white">
+          <p className="text-sm">© 2025 BitWallet</p>
+        </div>
+      </div>
+
+      {/* Hover trigger area for footer */}
+      <div className="fixed bottom-0 left-0 right-0 h-16 z-40"></div>
     </div>
   );
 }
