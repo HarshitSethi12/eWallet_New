@@ -223,80 +223,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-white">
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 bg-white">
-        {/* Header */}
-        <Card className="bg-white shadow-sm border border-gray-200">
-          <CardContent className="p-6 sm:p-8">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-              <div className="flex items-center gap-4 sm:gap-6">
-                {user?.picture ? (
-                  <img
-                    src={user.picture}
-                    alt={user.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg"
-                  />
-                ) : (
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-                    <WalletIcon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-                  </div>
-                )}
-                <div className="space-y-1">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back!</h1>
-                  <p className="text-base sm:text-lg text-gray-600 font-medium">
-                    {user?.provider === 'metamask' ?
-                      `${user.walletAddress?.slice(0, 8)}...${user.walletAddress?.slice(-6)}` :
-                      user?.name
-                    }
-                  </p>
-                  {user?.provider === 'metamask' && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <p className="text-sm text-green-600 font-semibold">MetaMask Connected</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  size="default"
-                  variant="outline"
-                  className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 hover:border-blue-300"
-                  onClick={() => setLocation("/send")}
-                >
-                  <Send className="h-4 w-4" />
-                  Send
-                </Button>
-                <Button
-                  size="default"
-                  variant="outline"
-                  className="flex items-center gap-2 px-4 py-2 hover:bg-teal-50 hover:border-teal-300"
-                  onClick={() => setLocation("/receive")}
-                >
-                  <ArrowDownLeft className="h-4 w-4" />
-                  Receive
-                </Button>
-                <Button
-                  size="default"
-                  variant="outline"
-                  className="flex items-center gap-2 px-4 py-2 hover:bg-green-50 hover:border-green-300"
-                  onClick={handleCheckSession}
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  Check Session
-                </Button>
-                <Button
-                  size="default"
-                  variant="outline"
-                  onClick={logout}
-                  disabled={isLoggingOut}
-                  className="flex items-center gap-2 px-4 py-2 hover:bg-red-50 hover:border-red-300"
-                >
-                  <LogOut className="h-4 w-4" />
-                  {isLoggingOut ? "Signing out..." : "Sign Out"}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        
 
         {/* Session Status Display */}
         {sessionStatus && (
@@ -329,13 +256,42 @@ export default function Dashboard() {
           {/* Top Left: Wallet Overview */}
           <Card className="bg-white shadow-sm border border-gray-200 !bg-white">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
-                <WalletIcon className="h-5 w-5" />
-                Wallet Overview
-              </CardTitle>
-              <div className="text-right">
-                <p className="text-2xl font-bold">${totalPortfolioValue.toFixed(2)}</p>
-                <p className="text-sm text-gray-500">Total Portfolio Value</p>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
+                  <WalletIcon className="h-5 w-5" />
+                  Wallet Overview
+                </CardTitle>
+                <div className="flex items-center gap-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={logout}
+                    disabled={isLoggingOut}
+                    className="flex items-center gap-2 px-3 py-1 hover:bg-red-50 hover:border-red-300"
+                  >
+                    <LogOut className="h-3 w-3" />
+                    {isLoggingOut ? "Signing out..." : "Sign Out"}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-3">
+                  {user?.provider === 'metamask' && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-green-700 font-medium">MetaMask Connected</span>
+                    </div>
+                  )}
+                  {user?.provider === 'metamask' && user.walletAddress && (
+                    <span className="text-sm text-gray-600 font-mono">
+                      {user.walletAddress.slice(0, 6)}...{user.walletAddress.slice(-4)}
+                    </span>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold">${totalPortfolioValue.toFixed(2)}</p>
+                  <p className="text-sm text-gray-500">Total Portfolio Value</p>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="flex-1">
