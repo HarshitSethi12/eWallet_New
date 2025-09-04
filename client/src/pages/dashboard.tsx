@@ -256,24 +256,10 @@ export default function Dashboard() {
           {/* Top Left: Wallet Overview */}
           <Card className="bg-white shadow-sm border border-gray-200 !bg-white">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
-                  <WalletIcon className="h-5 w-5" />
-                  Wallet Overview
-                </CardTitle>
-                <div className="flex items-center gap-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={logout}
-                    disabled={isLoggingOut}
-                    className="flex items-center gap-2 px-3 py-1 hover:bg-red-50 hover:border-red-300"
-                  >
-                    <LogOut className="h-3 w-3" />
-                    {isLoggingOut ? "Signing out..." : "Sign Out"}
-                  </Button>
-                </div>
-              </div>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
+                <WalletIcon className="h-5 w-5" />
+                Wallet Overview
+              </CardTitle>
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-3">
                   {user?.provider === 'metamask' && (
