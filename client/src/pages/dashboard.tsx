@@ -261,10 +261,19 @@ export default function Dashboard() {
               variant="outline"
               onClick={logout}
               disabled={isLoggingOut}
-              className="flex items-center gap-2 px-3 py-1 text-white border-white hover:bg-white hover:text-gray-800 text-sm"
+              className="flex items-center gap-2 px-4 py-2 text-white border-white hover:bg-white hover:text-gray-800"
             >
-              <LogOut className="h-3 w-3" />
-              <span className="text-xs">{isLoggingOut ? "Signing out..." : "Sign Out"}</span>
+              <LogOut className="h-4 w-4" />
+              <span 
+                className="font-semibold text-sm"
+                style={{
+                  fontFamily: "'Poppins', sans-serif",
+                  letterSpacing: "-0.01em",
+                  color: "inherit"
+                }}
+              >
+                {isLoggingOut ? "Signing out..." : "Sign Out"}
+              </span>
             </Button>
           </div>
         </div>
