@@ -2,7 +2,7 @@
 // Import all necessary dependencies for the dashboard
 
 // React hooks for state management and lifecycle
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 // API and authentication hooks
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +13,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 
 // Custom components for different sections
 import { PriceTicker } from "@/components/price-ticker";
@@ -26,6 +29,7 @@ import { EnhancedTokenList } from "@/components/enhanced-token-list";
 import { 
   Wallet, 
   TrendingUp, 
+  TrendingDown,
   DollarSign, 
   RefreshCw, 
   ArrowUpRight, 
@@ -37,7 +41,11 @@ import {
   Settings,
   Bell,
   Menu,
-  X
+  X,
+  Clock,
+  Send,
+  LogOut,
+  WalletIcon
 } from "lucide-react";
 // ===== TYPE DEFINITIONS =====
 // Define TypeScript interfaces for cryptocurrency asset data
