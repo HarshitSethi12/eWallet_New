@@ -752,6 +752,218 @@ router.post("/auth/metamask", async (req, res) => {
   }
 });
 
+// ===== MORALIS API ENDPOINTS =====
+
+// POST /api/moralis/tokens - Get token prices using Moralis
+router.post("/api/moralis/tokens", async (req, res) => {
+  const { chain = 'ethereum', limit = 50 } = req.body;
+
+  try {
+    console.log(`🔄 Fetching Moralis tokens for chain: ${chain}`);
+
+    // In production, you would use actual Moralis SDK
+    // For demo, we'll simulate Moralis response structure
+    const mockMoralisTokens = [
+      {
+        symbol: 'ETH',
+        name: 'Ethereum',
+        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+        price: 2450.50,
+        change24h: 2.34,
+        marketCap: 294500000000,
+        volume24h: 15600000000,
+        logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+        chainId: chain === 'ethereum' ? 1 : chain === 'bsc' ? 56 : 137
+      },
+      {
+        symbol: 'USDC',
+        name: 'USD Coin',
+        address: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD',
+        price: 1.00,
+        change24h: 0.02,
+        marketCap: 32800000000,
+        volume24h: 4200000000,
+        logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png',
+        chainId: chain === 'ethereum' ? 1 : chain === 'bsc' ? 56 : 137
+      },
+      // Add more tokens based on chain
+    ];
+
+    res.json({
+      success: true,
+      source: 'moralis',
+      chain,
+      tokens: mockMoralisTokens,
+      count: mockMoralisTokens.length
+    });
+
+  } catch (error) {
+    console.error('Moralis tokens error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch tokens from Moralis',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/moralis/balances - Get user token balances
+router.post("/api/moralis/balances", async (req, res) => {
+  const { address, chain = 'ethereum' } = req.body;
+
+  if (!address) {
+    return res.status(400).json({
+      success: false,
+      message: 'Wallet address is required'
+    });
+  }
+
+  try {
+    console.log(`🔄 Fetching balances for ${address} on ${chain}`);
+
+    // Mock user balances (in production, use Moralis SDK)
+    const mockBalances = [
+      {
+        symbol: 'ETH',
+        name: 'Ethereum',
+        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+        userBalance: 1.5,
+        userBalanceUSD: 3675.75,
+        price: 2450.50
+      },
+      {
+        symbol: 'USDC',
+        name: 'USD Coin',
+        address: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD',
+        userBalance: 500.0,
+        userBalanceUSD: 500.0,
+        price: 1.00
+      }
+    ];
+
+    res.json({
+      success: true,
+      address,
+      chain,
+      tokens: mockBalances,
+      totalUSD: mockBalances.reduce((sum, token) => sum + token.userBalanceUSD, 0)
+    });
+
+  } catch (error) {
+    console.error('Moralis balances error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch balances',
+      error: error.message
+    });
+  }
+});
+
+// ===== TRADING ENDPOINTS =====
+
+// POST /api/trade/buy-inr - Buy tokens with INR
+router.post("/api/trade/buy-inr", async (req, res) => {
+  const { tokenAddress, amountINR, userAddress } = req.body;
+
+  if (!tokenAddress || !amountINR || !userAddress) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields'
+    });
+  }
+
+  try {
+    console.log(`🔄 Processing INR buy: ₹${amountINR} for token ${tokenAddress}`);
+
+    // In production, integrate with Indian exchange APIs (WazirX, CoinDCX)
+    // For demo, simulate the purchase
+    
+    // 1. Convert INR to USD (approximate rate)
+    const usdAmount = parseFloat(amountINR) / 83; // ~83 INR per USD
+    
+    // 2. Get token price and calculate tokens to buy
+    const tokenPrice = 2450.50; // Mock price, would fetch real price
+    const tokensToReceive = usdAmount / tokenPrice;
+    
+    // 3. Execute purchase (would call exchange API)
+    const transaction = {
+      id: `buy_${Date.now()}`,
+      type: 'buy',
+      tokenAddress,
+      amountINR: parseFloat(amountINR),
+      amountUSD: usdAmount,
+      tokensReceived: tokensToReceive,
+      userAddress,
+      timestamp: new Date().toISOString(),
+      status: 'completed'
+    };
+
+    res.json({
+      success: true,
+      message: 'Purchase completed successfully',
+      transaction
+    });
+
+  } catch (error) {
+    console.error('INR buy error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Purchase failed',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/trade/sell-inr - Sell tokens for INR
+router.post("/api/trade/sell-inr", async (req, res) => {
+  const { tokenAddress, amount, userAddress } = req.body;
+
+  if (!tokenAddress || !amount || !userAddress) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields'
+    });
+  }
+
+  try {
+    console.log(`🔄 Processing INR sell: ${amount} tokens to INR`);
+
+    // 1. Get token price
+    const tokenPrice = 2450.50; // Mock price
+    
+    // 2. Calculate INR amount
+    const usdAmount = parseFloat(amount) * tokenPrice;
+    const inrAmount = usdAmount * 83; // Convert to INR
+    
+    // 3. Execute sale (would call exchange API)
+    const transaction = {
+      id: `sell_${Date.now()}`,
+      type: 'sell',
+      tokenAddress,
+      tokenAmount: parseFloat(amount),
+      amountUSD: usdAmount,
+      amountINR: inrAmount,
+      userAddress,
+      timestamp: new Date().toISOString(),
+      status: 'completed'
+    };
+
+    res.json({
+      success: true,
+      message: 'Sale completed successfully',
+      transaction
+    });
+
+  } catch (error) {
+    console.error('INR sell error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sale failed',
+      error: error.message
+    });
+  }
+});
+
 // ===== SWAP ENDPOINTS =====
 
 // GET /api/swap/tokens - Get supported tokens for swapping

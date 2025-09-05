@@ -1,54 +1,44 @@
 // ===== IMPORT SECTION =====
-// This section imports all the external libraries and components needed for the dashboard
+// Import all necessary dependencies for the dashboard
 
-// React core library for component state management
-import React, { useState } from 'react';
-// React Query for data fetching and caching
+// React hooks for state management and lifecycle
+import { useEffect, useState } from "react";
+
+// API and authentication hooks
 import { useQuery } from "@tanstack/react-query";
-// UI components from our custom component library
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
+
+// UI components from our component library
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
-// Icons from Lucide React icon library
-import {
-  Send,
-  ArrowDownLeft,
-  Wallet as WalletIcon,
-  TrendingUp,
-  TrendingDown,
-  Eye,
-  EyeOff,
-  BarChart3,
-  Coins,
-  Clock,
-  Copy,
-  ExternalLink,
-  Plus,
-  Settings,
-  RefreshCw,
-  Bell,
-  Star,
-  Filter,
-  Download,
-  Upload,
-  Search,
-  ChevronRight,
-  ShieldCheck,
-  ArrowUpDown,
-  LogOut
-} from "lucide-react";
-// Authentication hook for user data
-import { useAuth } from "@/hooks/use-auth";
-// API request helper function
-import { apiRequest } from "@/lib/queryClient";
-// Custom components for dashboard functionality
-import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
-import { DexSwap } from "@/components/dex-swap";
-import { NotesPanel } from "@/components/notes-panel";
 
+// Custom components for different sections
+import { PriceTicker } from "@/components/price-ticker";
+import { WalletOverview } from "@/components/wallet-overview";
+import { TransactionList } from "@/components/transaction-list";
+import { DexSwap } from "@/components/dex-swap";
+import { FloatingChatWidget } from "@/components/floating-chat-widget";
+import { EnhancedTokenList } from "@/components/enhanced-token-list";
+
+// Icons from Lucide React
+import { 
+  Wallet, 
+  TrendingUp, 
+  DollarSign, 
+  RefreshCw, 
+  ArrowUpRight, 
+  ArrowDownLeft,
+  Coins,
+  BarChart3,
+  Activity,
+  Users,
+  Settings,
+  Bell,
+  Menu,
+  X
+} from "lucide-react";
 // ===== TYPE DEFINITIONS =====
 // Define TypeScript interfaces for cryptocurrency asset data
 interface CryptoAsset {
@@ -82,7 +72,6 @@ interface TokenPriceData {
 import { Link, useLocation } from "wouter";
 // Additional UI components for dashboard functionality
 import { AddressCard } from "@/components/address-card";
-import { TransactionList } from "@/components/transaction-list";
 // Mock blockchain utilities for development
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
 // TypeScript types for data structures
@@ -295,7 +284,7 @@ export default function Dashboard() {
           }, 200);
         }}
       ></div>
-      
+
       {/* Additional hover area for header element itself */}
       <div 
         className="fixed top-0 left-0 right-0 h-16 z-51"
@@ -313,7 +302,7 @@ export default function Dashboard() {
       ></div>
 
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 bg-white">
-        
+
 
         {/* Session Status Display */}
         {sessionStatus && (
@@ -620,7 +609,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        
+
       </div>
 
       {/* Auto-hiding Footer */}
@@ -675,7 +664,7 @@ export default function Dashboard() {
           }, 200);
         }}
       ></div>
-      
+
       {/* Additional hover area for footer element itself */}
       <div 
         className="fixed bottom-0 left-0 right-0 h-16 z-51"
