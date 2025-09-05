@@ -80,8 +80,6 @@ import type { Wallet as WalletType, Transaction } from "@shared/schema";
 import { RiExchangeFundsFill } from "react-icons/ri";
 // Custom hooks for MetaMask wallet connection
 import { useMetaMask } from "@/hooks/use-metamask";
-// Wallet overview component for displaying portfolio summary
-import { WalletOverview } from "@/components/wallet-overview";
 
 // ===== MOCK DATA FOR DEVELOPMENT =====
 // Mock token portfolio data to show while developing/testing
