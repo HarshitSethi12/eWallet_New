@@ -877,14 +877,14 @@ router.post("/api/trade/buy-inr", async (req, res) => {
 
     // In production, integrate with Indian exchange APIs (WazirX, CoinDCX)
     // For demo, simulate the purchase
-    
+
     // 1. Convert INR to USD (approximate rate)
     const usdAmount = parseFloat(amountINR) / 83; // ~83 INR per USD
-    
+
     // 2. Get token price and calculate tokens to buy
     const tokenPrice = 2450.50; // Mock price, would fetch real price
     const tokensToReceive = usdAmount / tokenPrice;
-    
+
     // 3. Execute purchase (would call exchange API)
     const transaction = {
       id: `buy_${Date.now()}`,
@@ -930,11 +930,11 @@ router.post("/api/trade/sell-inr", async (req, res) => {
 
     // 1. Get token price
     const tokenPrice = 2450.50; // Mock price
-    
+
     // 2. Calculate INR amount
     const usdAmount = parseFloat(amount) * tokenPrice;
     const inrAmount = usdAmount * 83; // Convert to INR
-    
+
     // 3. Execute sale (would call exchange API)
     const transaction = {
       id: `sell_${Date.now()}`,
@@ -1252,6 +1252,365 @@ function generateMockQuote(fromToken, toToken, amount) {
     provider: 'Mock'
   };
 }
+
+// ===== TEST MORALIS ENDPOINT =====
+// Route to test Moralis API connection and functionality
+
+router.post("/api/test-moralis", async (req, res) => {
+  console.log('🔵 Testing Moralis API connection...');
+
+  try {
+    const { testType = 'basic' } = req.body;
+
+    if (!process.env.MORALIS_API_KEY) {
+      console.log('❌ MORALIS_API_KEY not found in environment variables');
+      return res.status(500).json({ 
+        error: 'Moralis API key not configured',
+        details: 'Please add MORALIS_API_KEY to your environment variables'
+      });
+    }
+
+    let testResult;
+
+    switch (testType) {
+      case 'price':
+        // Test price endpoint
+        console.log('🔵 Testing Moralis price endpoint...');
+        const priceResponse = await fetch('https://deep-index.moralis.io/api/v2.2/erc20/0xA0b86991c951449b402c7C27D170c54E0F13A8BfD/price?chain=eth', {
+          headers: {
+            'X-API-Key': process.env.MORALIS_API_KEY,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (priceResponse.ok) {
+          testResult = await priceResponse.json();
+          console.log('✅ Moralis price test successful');
+        } else {
+          throw new Error(`Price API failed: ${priceResponse.status}`);
+        }
+        break;
+
+      case 'balance':
+        // Test balance endpoint
+        console.log('🔵 Testing Moralis balance endpoint...');
+        const balanceResponse = await fetch('https://deep-index.moralis.io/api/v2.2/0x742d35Cc6635C0532925a3b8D6Ac6741A8d456A5C/erc20?chain=eth&limit=10', {
+          headers: {
+            'X-API-Key': process.env.MORALIS_API_KEY,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (balanceResponse.ok) {
+          testResult = await balanceResponse.json();
+          console.log('✅ Moralis balance test successful');
+        } else {
+          throw new Error(`Balance API failed: ${balanceResponse.status}`);
+        }
+        break;
+
+      default:
+        // Basic connectivity test
+        console.log('🔵 Testing basic Moralis connectivity...');
+        const basicResponse = await fetch('https://deep-index.moralis.io/api/v2.2/block/latest?chain=eth', {
+          headers: {
+            'X-API-Key': process.env.MORALIS_API_KEY,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (basicResponse.ok) {
+          testResult = await basicResponse.json();
+          console.log('✅ Moralis basic connectivity test successful');
+        } else {
+          throw new Error(`Basic API failed: ${basicResponse.status}`);
+        }
+    }
+
+    res.json({
+      success: true,
+      testType,
+      result: testResult,
+      message: `Moralis ${testType} test completed successfully`
+    });
+
+  } catch (error) {
+    console.error('❌ Moralis test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      details: 'Moralis API test failed'
+    });
+  }
+});
+
+// ===== COINGECKO API ENDPOINTS =====
+// Routes for fetching cryptocurrency price data from CoinGecko
+
+router.get("/api/crypto-prices", async (req, res) => {
+  console.log('🔵 Fetching crypto prices...');
+
+  try {
+    // List of popular cryptocurrencies to fetch prices for
+    const cryptoIds = 'bitcoin,ethereum,binancecoin,cardano,solana,polkadot,chainlink,uniswap,aave,maker';
+
+    // Fetch prices from CoinGecko API
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd&include_24hr_change=true`
+    );
+
+    if (!response.ok) {
+      throw new Error(`CoinGecko API responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ CoinGecko prices fetched successfully');
+
+    // Transform the data into a more usable format
+    const transformedData = {};
+    Object.keys(data).forEach(key => {
+      const crypto = data[key];
+      transformedData[key] = {
+        price: crypto.usd,
+        change24h: crypto.usd_24h_change || 0
+      };
+    });
+
+    res.json(transformedData);
+  } catch (error) {
+    console.error('❌ Error fetching crypto prices:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch cryptocurrency prices',
+      details: error.message 
+    });
+  }
+});
+
+// CoinGecko token list endpoint
+router.post("/api/coingecko/tokens", async (req, res) => {
+  try {
+    const { chain, limit = 50 } = req.body;
+
+    const chainMap = {
+      'ethereum': 'ethereum',
+      'bsc': 'binance-smart-chain',
+      'polygon': 'polygon-pos'
+    };
+
+    const platformId = chainMap[chain] || 'ethereum';
+
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&category=decentralized-finance-defi&order=market_cap_desc&per_page=${limit}&page=1&sparkline=false&price_change_percentage=24h&locale=en`
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      const tokens = data.map(coin => ({
+        symbol: coin.symbol.toUpperCase(),
+        name: coin.name,
+        address: coin.id, // Using CoinGecko ID as address for now
+        price: coin.current_price || 0,
+        change24h: coin.price_change_percentage_24h || 0,
+        marketCap: coin.market_cap || 0,
+        volume24h: coin.total_volume || 0,
+        logoURI: coin.image,
+        chainId: chain === 'ethereum' ? 1 : chain === 'bsc' ? 56 : 137
+      }));
+
+      res.json({ tokens, source: 'coingecko' });
+    } else {
+      throw new Error('CoinGecko API failed');
+    }
+  } catch (error) {
+    console.error('CoinGecko tokens error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// CoinMarketCap token list endpoint
+router.post("/api/coinmarketcap/tokens", async (req, res) => {
+  try {
+    const { chain, limit = 50 } = req.body;
+
+    // Note: You'll need to add CMC_API_KEY to your environment variables
+    const apiKey = process.env.CMC_API_KEY;
+    if (!apiKey) {
+      throw new Error('CoinMarketCap API key not configured');
+    }
+
+    const response = await fetch(
+      `https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?start=1&limit=${limit}&convert=USD`,
+      {
+        headers: {
+          'X-CMC_PRO_API_KEY': apiKey,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      const tokens = data.data.map(coin => ({
+        symbol: coin.symbol,
+        name: coin.name,
+        address: coin.slug, // Using slug as address
+        price: coin.quote.USD.price || 0,
+        change24h: coin.quote.USD.percent_change_24h || 0,
+        marketCap: coin.quote.USD.market_cap || 0,
+        volume24h: coin.quote.USD.volume_24h || 0,
+        logoURI: `https://s2.coinmarketcap.com/static/img/coins/64x64/${coin.id}.png`,
+        chainId: chain === 'ethereum' ? 1 : chain === 'bsc' ? 56 : 137
+      }));
+
+      res.json({ tokens, source: 'coinmarketcap' });
+    } else {
+      throw new Error('CoinMarketCap API failed');
+    }
+  } catch (error) {
+    console.error('CoinMarketCap tokens error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== DEX SWAP QUOTE ENDPOINTS =====
+
+// Uniswap quote endpoint
+router.post("/api/uniswap/quote", async (req, res) => {
+  try {
+    const { fromToken, toToken, amount, network } = req.body;
+
+    if (network !== 'ethereum') {
+      throw new Error('Uniswap only supports Ethereum mainnet');
+    }
+
+    // For now, return a mock quote - in production you'd use Uniswap SDK
+    const mockQuote = {
+      fromToken,
+      toToken,
+      fromAmount: amount,
+      toAmount: (parseFloat(amount) * 0.95).toFixed(6),
+      priceImpact: 0.5,
+      fee: '0.3%',
+      provider: 'Uniswap V3',
+      route: [fromToken, toToken]
+    };
+
+    res.json({ quote: mockQuote, source: 'uniswap' });
+  } catch (error) {
+    console.error('Uniswap quote error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 0x Protocol quote endpoint
+router.post("/api/0x/quote", async (req, res) => {
+  try {
+    const { fromToken, toToken, amount, network } = req.body;
+
+    const chainMap = {
+      'ethereum': '1',
+      'bsc': '56',
+      'polygon': '137'
+    };
+
+    const chainId = chainMap[network] || '1';
+
+    // Note: You'll need to add 0x API key if using their API
+    const mockQuote = {
+      fromToken,
+      toToken,
+      fromAmount: amount,
+      toAmount: (parseFloat(amount) * 0.96).toFixed(6),
+      priceImpact: 0.4,
+      fee: '0.25%',
+      provider: '0x Protocol',
+      route: [fromToken, toToken]
+    };
+
+    res.json({ quote: mockQuote, source: '0x' });
+  } catch (error) {
+    console.error('0x quote error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Paraswap quote endpoint
+router.post("/api/paraswap/quote", async (req, res) => {
+  try {
+    const { fromToken, toToken, amount, network } = req.body;
+
+    // Paraswap supports multiple networks
+    const mockQuote = {
+      fromToken,
+      toToken,
+      fromAmount: amount,
+      toAmount: (parseFloat(amount) * 0.97).toFixed(6),
+      priceImpact: 0.3,
+      fee: '0.2%',
+      provider: 'Paraswap',
+      route: [fromToken, toToken]
+    };
+
+    res.json({ quote: mockQuote, source: 'paraswap' });
+  } catch (error) {
+    console.error('Paraswap quote error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Jupiter quote endpoint for Solana
+router.post("/api/jupiter/quote", async (req, res) => {
+  try {
+    const { fromToken, toToken, amount, network } = req.body;
+
+    if (network !== 'solana') {
+      throw new Error('Jupiter only supports Solana');
+    }
+
+    // Try to get real Jupiter quote
+    try {
+      const response = await fetch(
+        `https://quote-api.jup.ag/v6/quote?inputMint=${fromToken}&outputMint=${toToken}&amount=${amount}&slippageBps=50`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const quote = {
+          fromToken,
+          toToken,
+          fromAmount: amount,
+          toAmount: data.outAmount,
+          priceImpact: data.priceImpactPct || 0,
+          fee: '0.25%',
+          provider: 'Jupiter',
+          route: data.routePlan?.map(r => r.swapInfo.outputMint) || [fromToken, toToken]
+        };
+
+        res.json({ quote, source: 'jupiter' });
+        return;
+      }
+    } catch (jupiterError) {
+      console.warn('Jupiter API failed, using fallback');
+    }
+
+    // Fallback mock quote
+    const mockQuote = {
+      fromToken,
+      toToken,
+      fromAmount: amount,
+      toAmount: (parseFloat(amount) * 0.98).toFixed(6),
+      priceImpact: 0.2,
+      fee: '0.25%',
+      provider: 'Jupiter (Mock)',
+      route: [fromToken, toToken]
+    };
+
+    res.json({ quote: mockQuote, source: 'jupiter-mock' });
+  } catch (error) {
+    console.error('Jupiter quote error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Export default router
 export default router;
