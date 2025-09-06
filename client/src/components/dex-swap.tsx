@@ -215,48 +215,118 @@ export function DexSwap() {
       
       console.log('🚀 Executing AMM swap...');
       
-      // In a real implementation, this would:
-      // 1. Request approval for token spending (if not native ETH)
-      // 2. Execute the swap transaction through MetaMask
-      // 3. Wait for transaction confirmation
-      // 4. Update balances
-      
-      // For demo, we'll simulate the swap
-      const response = await fetch('/api/trade/buy-inr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tokenAddress: toToken.address,
-          amountINR: fromToken.symbol === 'INR' ? fromAmount : parseFloat(fromAmount) * parseFloat(quote.price),
-          userAddress: metamask.account
-        })
-      });
+      // Step 1: Create swap transaction data
+      const swapData = {
+        fromToken: fromToken.address,
+        toToken: toToken.address,
+        fromAmount: fromAmount,
+        expectedOutput: quote.outputAmount,
+        userAddress: metamask.account,
+        slippage: 0.5,
+        quote: quote
+      };
 
-      if (response.ok) {
-        const result = await response.json();
+      // Step 2: For ERC-20 tokens, check and request approval first
+      if (fromToken.symbol !== 'ETH' && fromToken.address !== '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
+        try {
+          // Check current allowance (mock implementation)
+          console.log('🔍 Checking token allowance...');
+          
+          // If allowance is insufficient, request approval
+          console.log('📝 Requesting token approval...');
+          
+          // Mock approval transaction - in production, this would be a real MetaMask transaction
+          const approvalMessage = `Approve BitWallet to spend ${fromAmount} ${fromToken.symbol}`;
+          const approvalSignature = await metamask.signMessage(approvalMessage);
+          
+          console.log('✅ Token approval granted');
+          
+          toast({
+            title: "Approval Granted ✓",
+            description: `You can now swap ${fromToken.symbol}`,
+            duration: 2000
+          });
+          
+          // Small delay to simulate blockchain confirmation
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (approvalError) {
+          console.error('❌ Token approval failed:', approvalError);
+          toast({
+            variant: "destructive",
+            title: "Approval Failed",
+            description: "Token spending approval was rejected"
+          });
+          return;
+        }
+      }
+
+      // Step 3: Execute the actual swap
+      console.log('💱 Executing swap transaction...');
+      
+      // Create swap message for signature
+      const swapMessage = `Execute swap: ${fromAmount} ${fromToken.symbol} → ${quote.outputAmount} ${toToken.symbol}\nPool: ${quote.poolId}\nPrice: ${quote.price}\nFee: ${quote.fee}`;
+      
+      try {
+        // Get user signature for swap execution
+        const swapSignature = await metamask.signMessage(swapMessage);
+        console.log('✅ Swap signature obtained');
         
-        toast({
-          title: "Swap Successful! 🎉",
-          description: `Swapped ${fromAmount} ${fromToken.symbol} for ${quote.outputAmount} ${toToken.symbol}`
+        // Send swap request to backend
+        const response = await fetch('/api/exchange/execute-swap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...swapData,
+            signature: swapSignature,
+            message: swapMessage
+          })
         });
+
+        if (response.ok) {
+          const result = await response.json();
+          
+          // Simulate transaction confirmation delay
+          toast({
+            title: "Transaction Submitted ⏳",
+            description: "Waiting for blockchain confirmation..."
+          });
+          
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          toast({
+            title: "Swap Successful! 🎉",
+            description: `Swapped ${fromAmount} ${fromToken.symbol} for ${quote.outputAmount} ${toToken.symbol}`,
+            duration: 5000
+          });
+          
+          // Update local balances
+          setTokenBalances(prev => ({
+            ...prev,
+            [fromToken.symbol]: (parseFloat(prev[fromToken.symbol] || '0') - parseFloat(fromAmount)).toString(),
+            [toToken.symbol]: (parseFloat(prev[toToken.symbol] || '0') + parseFloat(quote.outputAmount)).toString()
+          }));
+          
+          // Reset form
+          setFromAmount('');
+          setToAmount('');
+          setQuote(null);
+          
+          // Refresh pools data
+          fetchPools();
+          
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Swap transaction failed');
+        }
         
-        // Update balances
-        setTokenBalances(prev => ({
-          ...prev,
-          [fromToken.symbol]: (parseFloat(prev[fromToken.symbol] || '0') - parseFloat(fromAmount)).toString(),
-          [toToken.symbol]: (parseFloat(prev[toToken.symbol] || '0') + parseFloat(quote.outputAmount)).toString()
-        }));
-        
-        // Reset form
-        setFromAmount('');
-        setToAmount('');
-        setQuote(null);
-        
-        // Refresh pools data
-        fetchPools();
-        
-      } else {
-        throw new Error('Swap transaction failed');
+      } catch (signatureError) {
+        console.error('❌ Swap signature failed:', signatureError);
+        toast({
+          variant: "destructive",
+          title: "Swap Cancelled",
+          description: "Transaction signature was rejected"
+        });
+        return;
       }
       
     } catch (error) {

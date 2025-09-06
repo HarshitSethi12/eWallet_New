@@ -285,6 +285,32 @@ export function useMetaMask() {
       return signature;
     } catch (error) {
       console.error('❌ Failed to sign message:', error);
+      
+      if (error.code === 4001) {
+        throw new Error('Transaction signature was rejected by user');
+      } else if (error.code === -32603) {
+        throw new Error('MetaMask internal error. Please try again.');
+      }
+      
+      throw error;
+    }
+  };
+
+  const switchNetwork = async (chainId: string) => {
+    if (!window.ethereum) {
+      throw new Error('MetaMask not installed');
+    }
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId }],
+      });
+      
+      setState(prev => ({ ...prev, chainId }));
+      return true;
+    } catch (error) {
+      console.error('Failed to switch network:', error);
       throw error;
     }
   };

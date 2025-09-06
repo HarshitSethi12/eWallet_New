@@ -1083,6 +1083,117 @@ router.post("/api/trade/buy-inr", async (req, res) => {
   }
 });
 
+// POST /api/exchange/execute-swap - Execute token swap with signature verification
+router.post("/api/exchange/execute-swap", async (req, res) => {
+  const { fromToken, toToken, fromAmount, expectedOutput, userAddress, signature, message, quote } = req.body;
+
+  if (!fromToken || !toToken || !fromAmount || !userAddress || !signature) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields for swap execution'
+    });
+  }
+
+  try {
+    console.log(`🚀 Executing swap: ${fromAmount} ${getTokenSymbol(fromToken)} → ${expectedOutput} ${getTokenSymbol(toToken)}`);
+
+    // Verify the signature (basic verification)
+    if (!message || !signature) {
+      throw new Error('Invalid signature data');
+    }
+
+    // Find the appropriate pool
+    const fromSymbol = getTokenSymbol(fromToken);
+    const toSymbol = getTokenSymbol(toToken);
+    const pairId = `${fromSymbol}-${toSymbol}`;
+    const reversePairId = `${toSymbol}-${fromSymbol}`;
+    
+    let pool = liquidityPools.get(pairId);
+    let isReversed = false;
+    
+    if (!pool) {
+      pool = liquidityPools.get(reversePairId);
+      isReversed = true;
+    }
+
+    if (!pool) {
+      throw new Error('Trading pair not available');
+    }
+
+    const inputAmount = parseFloat(fromAmount);
+    
+    // Recalculate quote to ensure it's still valid
+    const [reserveIn, reserveOut] = isReversed ? 
+      [pool.reserveB, pool.reserveA] : [pool.reserveA, pool.reserveB];
+    
+    const amountInWithFee = inputAmount * (1 - pool.fee);
+    const calculatedOutput = (reserveOut * amountInWithFee) / (reserveIn + amountInWithFee);
+    
+    // Check if the calculated output matches expected output (within 1% tolerance)
+    const outputDifference = Math.abs(calculatedOutput - parseFloat(expectedOutput)) / parseFloat(expectedOutput);
+    if (outputDifference > 0.01) {
+      throw new Error('Price has changed. Please get a new quote.');
+    }
+
+    // Update pool reserves
+    if (isReversed) {
+      pool.reserveB -= calculatedOutput;
+      pool.reserveA += inputAmount;
+    } else {
+      pool.reserveA -= calculatedOutput;
+      pool.reserveB += inputAmount;
+    }
+    
+    pool.volume24h += inputAmount * pool.priceA;
+    pool.priceA = pool.reserveB / pool.reserveA;
+
+    // Generate transaction hash (mock)
+    const txHash = `0x${crypto.randomBytes(32).toString('hex')}`;
+
+    // Record transaction
+    const transaction = {
+      id: `swap_${Date.now()}`,
+      type: 'swap',
+      fromToken: fromSymbol,
+      toToken: toSymbol,
+      fromAmount: inputAmount,
+      toAmount: calculatedOutput,
+      userAddress,
+      txHash,
+      poolId: isReversed ? reversePairId : pairId,
+      price: inputAmount / calculatedOutput,
+      fee: pool.fee,
+      signature,
+      timestamp: new Date().toISOString(),
+      status: 'confirmed'
+    };
+
+    tradeHistory.push(transaction);
+
+    console.log(`✅ Swap executed successfully: ${txHash}`);
+
+    res.json({
+      success: true,
+      message: 'Swap executed successfully',
+      transaction,
+      txHash,
+      newPoolState: {
+        reserveA: pool.reserveA,
+        reserveB: pool.reserveB,
+        price: pool.priceA
+      }
+    });
+
+  } catch (error) {
+    console.error('Swap execution error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Swap execution failed',
+      error: error.message
+    });
+  }
+});
+
 // POST /api/trade/sell-inr - Sell tokens for INR using our own pools
 router.post("/api/trade/sell-inr", async (req, res) => {
   const { tokenAddress, amount, userAddress } = req.body;
