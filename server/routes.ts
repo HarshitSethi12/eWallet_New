@@ -859,9 +859,160 @@ router.post("/api/moralis/balances", async (req, res) => {
   }
 });
 
-// ===== TRADING ENDPOINTS =====
+// ===== INDEPENDENT EXCHANGE ENDPOINTS =====
 
-// POST /api/trade/buy-inr - Buy tokens with INR
+// In-memory liquidity pools (in production, use database)
+const liquidityPools = new Map();
+const tradeHistory = [];
+
+// Initialize default liquidity pools
+const initializeLiquidityPools = () => {
+  liquidityPools.set('ETH-INR', {
+    tokenA: 'ETH',
+    tokenB: 'INR',
+    reserveA: 1000, // 1000 ETH
+    reserveB: 200000000, // 20 Crore INR
+    k: 1000 * 200000000, // Constant product
+    fee: 0.003, // 0.3% fee
+    totalShares: 100000,
+    priceA: 200000, // ETH price in INR
+    volume24h: 0
+  });
+
+  liquidityPools.set('BTC-INR', {
+    tokenA: 'BTC',
+    tokenB: 'INR',
+    reserveA: 100, // 100 BTC
+    reserveB: 360000000, // 36 Crore INR
+    k: 100 * 360000000,
+    fee: 0.003,
+    totalShares: 50000,
+    priceA: 3600000, // BTC price in INR
+    volume24h: 0
+  });
+
+  liquidityPools.set('USDC-INR', {
+    tokenA: 'USDC',
+    tokenB: 'INR',
+    reserveA: 1000000, // 10 Lakh USDC
+    reserveB: 83000000, // 8.3 Crore INR
+    k: 1000000 * 83000000,
+    fee: 0.001, // 0.1% fee for stablecoins
+    totalShares: 200000,
+    priceA: 83, // USDC price in INR
+    volume24h: 0
+  });
+};
+
+// Initialize pools on startup
+initializeLiquidityPools();
+
+// GET /api/exchange/pools - Get all liquidity pools
+router.get("/api/exchange/pools", (req, res) => {
+  const pools = Array.from(liquidityPools.entries()).map(([pairId, pool]) => ({
+    pairId,
+    ...pool,
+    currentPrice: pool.reserveB / pool.reserveA,
+    tvl: pool.reserveA * pool.priceA + pool.reserveB
+  }));
+
+  res.json({
+    success: true,
+    pools,
+    totalPools: pools.length,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// POST /api/exchange/quote - Get price quote from our own pools
+router.post("/api/exchange/quote", (req, res) => {
+  const { fromToken, toToken, amount, type } = req.body;
+
+  if (!fromToken || !toToken || !amount) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields'
+    });
+  }
+
+  try {
+    const pairId = `${fromToken}-${toToken}`;
+    const reversePairId = `${toToken}-${fromToken}`;
+    
+    let pool = liquidityPools.get(pairId);
+    let isReversed = false;
+    
+    if (!pool) {
+      pool = liquidityPools.get(reversePairId);
+      isReversed = true;
+    }
+
+    if (!pool) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trading pair not found'
+      });
+    }
+
+    const inputAmount = parseFloat(amount);
+    let outputAmount, priceImpact;
+
+    if (type === 'buy') {
+      // Calculate output amount using AMM formula
+      const [reserveIn, reserveOut] = isReversed ? 
+        [pool.reserveB, pool.reserveA] : [pool.reserveA, pool.reserveB];
+      
+      const amountInWithFee = inputAmount * (1 - pool.fee);
+      outputAmount = (reserveOut * amountInWithFee) / (reserveIn + amountInWithFee);
+      
+      // Calculate price impact
+      const currentPrice = reserveOut / reserveIn;
+      const newPrice = (reserveOut - outputAmount) / (reserveIn + inputAmount);
+      priceImpact = Math.abs((newPrice - currentPrice) / currentPrice) * 100;
+    } else {
+      // Reverse calculation for sell orders
+      const [reserveOut, reserveIn] = isReversed ? 
+        [pool.reserveB, pool.reserveA] : [pool.reserveA, pool.reserveB];
+      
+      const amountInWithFee = inputAmount * (1 - pool.fee);
+      outputAmount = (reserveOut * amountInWithFee) / (reserveIn + amountInWithFee);
+      
+      const currentPrice = reserveOut / reserveIn;
+      const newPrice = (reserveOut - outputAmount) / (reserveIn + inputAmount);
+      priceImpact = Math.abs((newPrice - currentPrice) / currentPrice) * 100;
+    }
+
+    const quote = {
+      fromToken,
+      toToken,
+      inputAmount: amount,
+      outputAmount: outputAmount.toFixed(6),
+      price: outputAmount / inputAmount,
+      priceImpact: priceImpact.toFixed(2),
+      fee: `${(pool.fee * 100).toFixed(1)}%`,
+      minReceived: (outputAmount * 0.995).toFixed(6), // 0.5% slippage tolerance
+      route: [fromToken, toToken],
+      provider: 'BitWallet Exchange',
+      poolId: isReversed ? reversePairId : pairId
+    };
+
+    res.json({
+      success: true,
+      quote,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Quote calculation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to calculate quote',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/trade/buy-inr - Buy tokens with INR using our own pools
 router.post("/api/trade/buy-inr", async (req, res) => {
   const { tokenAddress, amountINR, userAddress } = req.body;
 
@@ -875,33 +1026,52 @@ router.post("/api/trade/buy-inr", async (req, res) => {
   try {
     console.log(`🔄 Processing INR buy: ₹${amountINR} for token ${tokenAddress}`);
 
-    // In production, integrate with Indian exchange APIs (WazirX, CoinDCX)
-    // For demo, simulate the purchase
+    // Find the appropriate pool
+    const tokenSymbol = getTokenSymbol(tokenAddress);
+    const pairId = `${tokenSymbol}-INR`;
+    const pool = liquidityPools.get(pairId);
 
-    // 1. Convert INR to USD (approximate rate)
-    const usdAmount = parseFloat(amountINR) / 83; // ~83 INR per USD
+    if (!pool) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trading pair not available'
+      });
+    }
 
-    // 2. Get token price and calculate tokens to buy
-    const tokenPrice = 2450.50; // Mock price, would fetch real price
-    const tokensToReceive = usdAmount / tokenPrice;
+    const amountINRNum = parseFloat(amountINR);
+    
+    // Calculate tokens to receive using AMM formula
+    const amountInWithFee = amountINRNum * (1 - pool.fee);
+    const tokensToReceive = (pool.reserveA * amountInWithFee) / (pool.reserveB + amountInWithFee);
+    
+    // Update pool reserves
+    pool.reserveA -= tokensToReceive;
+    pool.reserveB += amountINRNum;
+    pool.volume24h += amountINRNum;
+    pool.priceA = pool.reserveB / pool.reserveA;
 
-    // 3. Execute purchase (would call exchange API)
+    // Record transaction
     const transaction = {
       id: `buy_${Date.now()}`,
       type: 'buy',
       tokenAddress,
-      amountINR: parseFloat(amountINR),
-      amountUSD: usdAmount,
+      tokenSymbol,
+      amountINR: amountINRNum,
       tokensReceived: tokensToReceive,
       userAddress,
+      poolId: pairId,
+      price: amountINRNum / tokensToReceive,
       timestamp: new Date().toISOString(),
       status: 'completed'
     };
 
+    tradeHistory.push(transaction);
+
     res.json({
       success: true,
       message: 'Purchase completed successfully',
-      transaction
+      transaction,
+      newPoolPrice: pool.priceA
     });
 
   } catch (error) {
@@ -914,7 +1084,7 @@ router.post("/api/trade/buy-inr", async (req, res) => {
   }
 });
 
-// POST /api/trade/sell-inr - Sell tokens for INR
+// POST /api/trade/sell-inr - Sell tokens for INR using our own pools
 router.post("/api/trade/sell-inr", async (req, res) => {
   const { tokenAddress, amount, userAddress } = req.body;
 
@@ -928,30 +1098,52 @@ router.post("/api/trade/sell-inr", async (req, res) => {
   try {
     console.log(`🔄 Processing INR sell: ${amount} tokens to INR`);
 
-    // 1. Get token price
-    const tokenPrice = 2450.50; // Mock price
+    // Find the appropriate pool
+    const tokenSymbol = getTokenSymbol(tokenAddress);
+    const pairId = `${tokenSymbol}-INR`;
+    const pool = liquidityPools.get(pairId);
 
-    // 2. Calculate INR amount
-    const usdAmount = parseFloat(amount) * tokenPrice;
-    const inrAmount = usdAmount * 83; // Convert to INR
+    if (!pool) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trading pair not available'
+      });
+    }
 
-    // 3. Execute sale (would call exchange API)
+    const tokenAmount = parseFloat(amount);
+    
+    // Calculate INR to receive using AMM formula
+    const amountInWithFee = tokenAmount * (1 - pool.fee);
+    const inrToReceive = (pool.reserveB * amountInWithFee) / (pool.reserveA + amountInWithFee);
+    
+    // Update pool reserves
+    pool.reserveA += tokenAmount;
+    pool.reserveB -= inrToReceive;
+    pool.volume24h += inrToReceive;
+    pool.priceA = pool.reserveB / pool.reserveA;
+
+    // Record transaction
     const transaction = {
       id: `sell_${Date.now()}`,
       type: 'sell',
       tokenAddress,
-      tokenAmount: parseFloat(amount),
-      amountUSD: usdAmount,
-      amountINR: inrAmount,
+      tokenSymbol,
+      tokenAmount: tokenAmount,
+      amountINR: inrToReceive,
       userAddress,
+      poolId: pairId,
+      price: inrToReceive / tokenAmount,
       timestamp: new Date().toISOString(),
       status: 'completed'
     };
 
+    tradeHistory.push(transaction);
+
     res.json({
       success: true,
       message: 'Sale completed successfully',
-      transaction
+      transaction,
+      newPoolPrice: pool.priceA
     });
 
   } catch (error) {
@@ -963,6 +1155,97 @@ router.post("/api/trade/sell-inr", async (req, res) => {
     });
   }
 });
+
+// POST /api/exchange/add-liquidity - Add liquidity to pools
+router.post("/api/exchange/add-liquidity", authenticateUser, async (req, res) => {
+  const { pairId, amountA, amountB } = req.body;
+
+  if (!pairId || !amountA || !amountB) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields'
+    });
+  }
+
+  try {
+    const pool = liquidityPools.get(pairId);
+    if (!pool) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pool not found'
+      });
+    }
+
+    const amountANum = parseFloat(amountA);
+    const amountBNum = parseFloat(amountB);
+
+    // Calculate shares to mint based on current pool ratio
+    const sharePercentage = amountANum / pool.reserveA;
+    const sharesToMint = pool.totalShares * sharePercentage;
+
+    // Update pool
+    pool.reserveA += amountANum;
+    pool.reserveB += amountBNum;
+    pool.totalShares += sharesToMint;
+    pool.k = pool.reserveA * pool.reserveB;
+
+    res.json({
+      success: true,
+      message: 'Liquidity added successfully',
+      sharesMinted: sharesToMint,
+      newTotalShares: pool.totalShares,
+      poolInfo: pool
+    });
+
+  } catch (error) {
+    console.error('Add liquidity error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add liquidity',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/exchange/trade-history - Get trade history
+router.get("/api/exchange/trade-history", (req, res) => {
+  const { limit = 50, type, tokenSymbol } = req.query;
+
+  let filteredHistory = tradeHistory;
+
+  if (type) {
+    filteredHistory = filteredHistory.filter(trade => trade.type === type);
+  }
+
+  if (tokenSymbol) {
+    filteredHistory = filteredHistory.filter(trade => trade.tokenSymbol === tokenSymbol);
+  }
+
+  // Sort by timestamp (newest first) and limit
+  filteredHistory = filteredHistory
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, parseInt(limit as string));
+
+  res.json({
+    success: true,
+    trades: filteredHistory,
+    total: tradeHistory.length,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Helper function to get token symbol from address
+function getTokenSymbol(address: string): string {
+  const tokenMap = {
+    '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE': 'ETH',
+    '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD': 'USDC',
+    '0xdAC17F958D2ee523a2206206994597C13D831ec7': 'USDT',
+    '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599': 'WBTC',
+    'bitcoin': 'BTC'
+  };
+  
+  return tokenMap[address] || address.slice(0, 6);
+}
 
 // ===== SWAP ENDPOINTS =====
 

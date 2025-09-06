@@ -335,12 +335,46 @@ export function EnhancedTokenList() {
     }
   };
 
+  // Get quote from our own exchange
+  const getOwnExchangeQuote = async (fromToken: string, toToken: string, amount: string, type: 'buy' | 'sell') => {
+    try {
+      const response = await fetch('/api/exchange/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromToken,
+          toToken,
+          amount,
+          type
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.quote;
+      }
+    } catch (error) {
+      console.error('Own exchange quote error:', error);
+    }
+    return null;
+  };
+
   // Handle buy with INR
   const handleBuyWithINR = async () => {
     if (!selectedToken || !tradeAmount) return;
     
     setIsTrading(true);
     try {
+      // First get quote from our own exchange
+      const quote = await getOwnExchangeQuote('INR', selectedToken.symbol, tradeAmount, 'buy');
+      
+      if (quote) {
+        toast({
+          title: "Quote Available",
+          description: `You will receive ${quote.outputAmount} ${selectedToken.symbol} (${quote.priceImpact}% impact)`
+        });
+      }
+
       const response = await fetch('/api/trade/buy-inr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -352,9 +386,10 @@ export function EnhancedTokenList() {
       });
       
       if (response.ok) {
+        const data = await response.json();
         toast({
           title: "Purchase Successful!",
-          description: `Bought ${selectedToken.symbol} worth ₹${tradeAmount}`
+          description: `Bought ${data.transaction.tokensReceived.toFixed(6)} ${selectedToken.symbol} for ₹${tradeAmount}`
         });
         setSelectedToken(null);
         setTradeAmount('');
