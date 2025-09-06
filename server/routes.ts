@@ -924,7 +924,7 @@ router.get("/api/exchange/pools", (req, res) => {
   });
 });
 
-// POST /api/exchange/quote - Get price quote from our own pools
+// POST /api/exchange/quote - Get price quote using proper AMM calculations
 router.post("/api/exchange/quote", (req, res) => {
   const { fromToken, toToken, amount, type } = req.body;
 
@@ -955,45 +955,44 @@ router.post("/api/exchange/quote", (req, res) => {
     }
 
     const inputAmount = parseFloat(amount);
-    let outputAmount, priceImpact;
-
-    if (type === 'buy') {
-      // Calculate output amount using AMM formula
-      const [reserveIn, reserveOut] = isReversed ? 
-        [pool.reserveB, pool.reserveA] : [pool.reserveA, pool.reserveB];
-      
-      const amountInWithFee = inputAmount * (1 - pool.fee);
-      outputAmount = (reserveOut * amountInWithFee) / (reserveIn + amountInWithFee);
-      
-      // Calculate price impact
-      const currentPrice = reserveOut / reserveIn;
-      const newPrice = (reserveOut - outputAmount) / (reserveIn + inputAmount);
-      priceImpact = Math.abs((newPrice - currentPrice) / currentPrice) * 100;
-    } else {
-      // Reverse calculation for sell orders
-      const [reserveOut, reserveIn] = isReversed ? 
-        [pool.reserveB, pool.reserveA] : [pool.reserveA, pool.reserveB];
-      
-      const amountInWithFee = inputAmount * (1 - pool.fee);
-      outputAmount = (reserveOut * amountInWithFee) / (reserveIn + amountInWithFee);
-      
-      const currentPrice = reserveOut / reserveIn;
-      const newPrice = (reserveOut - outputAmount) / (reserveIn + inputAmount);
-      priceImpact = Math.abs((newPrice - currentPrice) / currentPrice) * 100;
-    }
+    
+    // Proper AMM calculation using constant product formula (x * y = k)
+    const [reserveIn, reserveOut] = isReversed ? 
+      [pool.reserveB, pool.reserveA] : [pool.reserveA, pool.reserveB];
+    
+    // Apply trading fee (e.g., 0.3%)
+    const amountInWithFee = inputAmount * (1 - pool.fee);
+    
+    // AMM Formula: amountOut = (reserveOut * amountInWithFee) / (reserveIn + amountInWithFee)
+    const outputAmount = (reserveOut * amountInWithFee) / (reserveIn + amountInWithFee);
+    
+    // Calculate price impact
+    const currentPrice = reserveOut / reserveIn;
+    const executionPrice = outputAmount / inputAmount;
+    const priceImpact = Math.abs((executionPrice - currentPrice) / currentPrice) * 100;
+    
+    // Calculate slippage protection (minimum tokens received)
+    const slippageTolerance = 0.5; // 0.5%
+    const minReceived = outputAmount * (1 - slippageTolerance / 100);
 
     const quote = {
       fromToken,
       toToken,
       inputAmount: amount,
       outputAmount: outputAmount.toFixed(6),
-      price: outputAmount / inputAmount,
+      price: executionPrice,
+      currentPoolPrice: currentPrice,
       priceImpact: priceImpact.toFixed(2),
       fee: `${(pool.fee * 100).toFixed(1)}%`,
-      minReceived: (outputAmount * 0.995).toFixed(6), // 0.5% slippage tolerance
+      minReceived: minReceived.toFixed(6),
       route: [fromToken, toToken],
-      provider: 'BitWallet Exchange',
-      poolId: isReversed ? reversePairId : pairId
+      provider: 'BitWallet AMM',
+      poolId: isReversed ? reversePairId : pairId,
+      poolInfo: {
+        reserveIn: reserveIn.toFixed(2),
+        reserveOut: reserveOut.toFixed(2),
+        totalLiquidity: (reserveIn * currentPrice + reserveOut).toFixed(2)
+      }
     };
 
     res.json({

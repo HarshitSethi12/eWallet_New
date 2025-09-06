@@ -4,236 +4,162 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpDown, RefreshCw, Info, AlertTriangle } from "lucide-react";
+import { ArrowUpDown, RefreshCw, Info, AlertTriangle, Wallet, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useMetaMask } from "@/hooks/use-metamask";
+import { useAuth } from "@/hooks/use-auth";
 
-// Types for the swap component
+// Enhanced token interface for AMM
 interface Token {
   symbol: string;
   name: string;
   address: string;
   decimals: number;
   logoURI?: string;
-  price?: number;
   balance?: string;
+  price?: number;
 }
 
-interface SwapQuote {
-  fromToken: Token;
-  toToken: Token;
-  fromAmount: string;
-  toAmount: string;
+// AMM-specific quote interface
+interface AMMQuote {
+  fromToken: string;
+  toToken: string;
+  inputAmount: string;
+  outputAmount: string;
   price: number;
-  priceImpact: number;
+  currentPoolPrice: number;
+  priceImpact: string;
   fee: string;
+  minReceived: string;
   route: string[];
-  estimatedGas: string;
   provider: string;
+  poolId: string;
+  poolInfo: {
+    reserveIn: string;
+    reserveOut: string;
+    totalLiquidity: string;
+  };
 }
 
-// Popular tokens across multiple chains
-const POPULAR_TOKENS: Token[] = [
-  // Ethereum Mainnet
+// Popular tokens for AMM trading
+const AMM_TOKENS: Token[] = [
   { symbol: 'ETH', name: 'Ethereum', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18 },
   { symbol: 'USDC', name: 'USD Coin', address: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD', decimals: 6 },
   { symbol: 'USDT', name: 'Tether USD', address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
   { symbol: 'WBTC', name: 'Wrapped Bitcoin', address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', decimals: 8 },
-  { symbol: 'LINK', name: 'Chainlink', address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', decimals: 18 },
-  { symbol: 'UNI', name: 'Uniswap', address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', decimals: 18 },
-  { symbol: 'AAVE', name: 'Aave', address: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', decimals: 18 },
-  { symbol: 'MKR', name: 'Maker', address: '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2', decimals: 18 },
-  
-  // BSC Tokens
-  { symbol: 'BNB', name: 'BNB', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18 },
-  { symbol: 'BUSD', name: 'Binance USD', address: '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56', decimals: 18 },
-  { symbol: 'CAKE', name: 'PancakeSwap', address: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82', decimals: 18 },
-  
-  // Polygon Tokens
-  { symbol: 'MATIC', name: 'Polygon', address: '0x0000000000000000000000000000000000001010', decimals: 18 },
-  { symbol: 'WETH', name: 'Wrapped Ether', address: '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619', decimals: 18 },
-  
-  // Solana Tokens
-  { symbol: 'SOL', name: 'Solana', address: 'So11111111111111111111111111111111111111112', decimals: 9 },
-  { symbol: 'USDC-SOL', name: 'USD Coin (Solana)', address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6 },
-  { symbol: 'RAY', name: 'Raydium', address: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R', decimals: 6 },
-];
-
-// Supported networks
-const NETWORKS = [
-  { id: 'ethereum', name: 'Ethereum', chainId: 1 },
-  { id: 'bsc', name: 'Binance Smart Chain', chainId: 56 },
-  { id: 'polygon', name: 'Polygon', chainId: 137 },
-  { id: 'solana', name: 'Solana', chainId: 0 },
-  { id: 'avalanche', name: 'Avalanche', chainId: 43114 },
+  { symbol: 'BTC', name: 'Bitcoin', address: 'bitcoin', decimals: 8 },
+  { symbol: 'INR', name: 'Indian Rupee', address: 'inr', decimals: 2 },
 ];
 
 export function DexSwap() {
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+  const metamask = useMetaMask();
   
   // State management
-  const [selectedNetwork, setSelectedNetwork] = useState(NETWORKS[0]);
-  const [fromToken, setFromToken] = useState<Token | null>(POPULAR_TOKENS[0]);
-  const [toToken, setToToken] = useState<Token | null>(POPULAR_TOKENS[1]);
+  const [fromToken, setFromToken] = useState<Token>(AMM_TOKENS[0]);
+  const [toToken, setToToken] = useState<Token>(AMM_TOKENS[1]);
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [quote, setQuote] = useState<SwapQuote | null>(null);
-  const [tokenPrices, setTokenPrices] = useState<Record<string, number>>({});
+  const [quote, setQuote] = useState<AMMQuote | null>(null);
+  const [slippageTolerance, setSlippageTolerance] = useState(0.5);
+  const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({});
+  const [pools, setPools] = useState([]);
 
-  // Filter tokens by network
-  const getTokensForNetwork = (networkId: string): Token[] => {
-    // In a real app, you'd filter by network
-    return POPULAR_TOKENS;
-  };
+  // Fetch user token balances from MetaMask
+  const fetchTokenBalances = async () => {
+    if (!metamask.account) return;
 
-  // Fetch token prices from CoinGecko
-  const fetchTokenPrices = async () => {
     try {
-      const response = await fetch('/api/crypto-prices');
-      if (response.ok) {
-        const data = await response.json();
-        setTokenPrices(data);
-      }
+      console.log('🔍 Fetching token balances for:', metamask.account);
+      
+      // For demo purposes, simulate balance fetching
+      // In production, you'd call actual blockchain APIs
+      const mockBalances = {
+        'ETH': '2.5',
+        'USDC': '1000.0',
+        'USDT': '500.0',
+        'WBTC': '0.1',
+        'BTC': '0.05',
+        'INR': '50000.0'
+      };
+
+      setTokenBalances(mockBalances);
+      
+      // Update token objects with balances
+      AMM_TOKENS.forEach(token => {
+        token.balance = mockBalances[token.symbol] || '0';
+      });
+
     } catch (error) {
-      console.error('Error fetching prices:', error);
+      console.error('Error fetching balances:', error);
     }
   };
 
-  // Get swap quote using multiple providers
-  const getSwapQuote = async (from: Token, to: Token, amount: string): Promise<SwapQuote | null> => {
-    if (!amount || !from || !to) return null;
+  // Fetch available liquidity pools
+  const fetchPools = async () => {
+    try {
+      const response = await fetch('/api/exchange/pools');
+      if (response.ok) {
+        const data = await response.json();
+        setPools(data.pools || []);
+      }
+    } catch (error) {
+      console.error('Error fetching pools:', error);
+    }
+  };
+
+  // Get AMM quote from your backend
+  const getAMMQuote = async (from: Token, to: Token, amount: string): Promise<AMMQuote | null> => {
+    if (!amount || !from || !to || parseFloat(amount) <= 0) return null;
     
     try {
       setIsLoading(true);
       
-      // Try multiple quote providers
-      const providers = [
-        { name: 'CoinGecko', getQuote: getCoinGeckoQuote },
-        { name: 'Moralis', getQuote: getMoralisQuote },
-        { name: 'Jupiter', getQuote: getJupiterQuote },
-      ];
+      console.log(`🔄 Getting AMM quote: ${amount} ${from.symbol} → ${to.symbol}`);
+      
+      const response = await fetch('/api/exchange/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromToken: from.symbol,
+          toToken: to.symbol,
+          amount,
+          type: 'buy'
+        })
+      });
 
-      for (const provider of providers) {
-        try {
-          const quote = await provider.getQuote(from, to, amount);
-          if (quote) {
-            console.log(`✅ Got quote from ${provider.name}`);
-            return quote;
-          }
-        } catch (error) {
-          console.warn(`❌ ${provider.name} failed:`, error);
-          continue;
-        }
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ AMM quote received:', data.quote);
+        return data.quote;
+      } else {
+        throw new Error('Failed to get quote');
       }
-
-      // Fallback to mock quote
-      return getMockQuote(from, to, amount);
       
     } catch (error) {
-      console.error('Error getting swap quote:', error);
+      console.error('Error getting AMM quote:', error);
+      toast({
+        variant: "destructive",
+        title: "Quote Error",
+        description: "Failed to get swap quote. Please try again."
+      });
       return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // CoinGecko-based quote (using price data)
-  const getCoinGeckoQuote = async (from: Token, to: Token, amount: string): Promise<SwapQuote | null> => {
-    const fromPrice = tokenPrices[from.symbol.toLowerCase()] || 0;
-    const toPrice = tokenPrices[to.symbol.toLowerCase()] || 0;
-    
-    if (!fromPrice || !toPrice) return null;
-    
-    const fromAmountNum = parseFloat(amount);
-    const toAmountNum = (fromAmountNum * fromPrice) / toPrice;
-    
-    return {
-      fromToken: from,
-      toToken: to,
-      fromAmount: amount,
-      toAmount: toAmountNum.toFixed(6),
-      price: fromPrice / toPrice,
-      priceImpact: 0.5, // Mock 0.5% impact
-      fee: '0.3%',
-      route: [from.symbol, to.symbol],
-      estimatedGas: '21000',
-      provider: 'CoinGecko'
-    };
-  };
-
-  // Moralis API quote (placeholder)
-  const getMoralisQuote = async (from: Token, to: Token, amount: string): Promise<SwapQuote | null> => {
-    // In production, you'd call Moralis API here
-    const response = await fetch('/api/moralis/quote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: from.address, to: to.address, amount })
-    });
-    
-    if (response.ok) {
-      return await response.json();
-    }
-    return null;
-  };
-
-  // Jupiter API quote for Solana
-  const getJupiterQuote = async (from: Token, to: Token, amount: string): Promise<SwapQuote | null> => {
-    if (selectedNetwork.id !== 'solana') return null;
-    
-    try {
-      const response = await fetch(
-        `https://quote-api.jup.ag/v6/quote?inputMint=${from.address}&outputMint=${to.address}&amount=${amount}&slippageBps=50`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          fromToken: from,
-          toToken: to,
-          fromAmount: amount,
-          toAmount: data.outAmount,
-          price: parseFloat(data.outAmount) / parseFloat(amount),
-          priceImpact: data.priceImpactPct || 0,
-          fee: '0.25%',
-          route: data.routePlan?.map(r => r.swapInfo.outputMint) || [from.symbol, to.symbol],
-          estimatedGas: 'N/A',
-          provider: 'Jupiter'
-        };
-      }
-    } catch (error) {
-      console.error('Jupiter API error:', error);
-    }
-    return null;
-  };
-
-  // Mock quote for demo purposes
-  const getMockQuote = async (from: Token, to: Token, amount: string): Promise<SwapQuote> => {
-    const fromAmountNum = parseFloat(amount);
-    const mockRate = Math.random() * 100 + 1; // Random exchange rate
-    const toAmountNum = fromAmountNum * mockRate;
-    
-    return {
-      fromToken: from,
-      toToken: to,
-      fromAmount: amount,
-      toAmount: toAmountNum.toFixed(6),
-      price: mockRate,
-      priceImpact: Math.random() * 2, // 0-2% price impact
-      fee: '0.3%',
-      route: [from.symbol, to.symbol],
-      estimatedGas: '150000',
-      provider: 'Mock'
-    };
-  };
-
-  // Handle amount input changes
+  // Handle amount input changes with real-time quotes
   const handleFromAmountChange = async (value: string) => {
     setFromAmount(value);
+    
     if (value && fromToken && toToken) {
-      const newQuote = await getSwapQuote(fromToken, toToken, value);
+      const newQuote = await getAMMQuote(fromToken, toToken, value);
       if (newQuote) {
         setQuote(newQuote);
-        setToAmount(newQuote.toAmount);
+        setToAmount(newQuote.outputAmount);
       }
     } else {
       setToAmount('');
@@ -251,8 +177,8 @@ export function DexSwap() {
     setQuote(null);
   };
 
-  // Execute the swap
-  const handleSwap = async () => {
+  // Execute AMM swap with MetaMask
+  const executeSwap = async () => {
     if (!quote || !fromToken || !toToken) {
       toast({
         variant: "destructive",
@@ -262,40 +188,82 @@ export function DexSwap() {
       return;
     }
 
+    if (!metamask.account) {
+      toast({
+        variant: "destructive",
+        title: "Wallet not connected",
+        description: "Please connect your MetaMask wallet"
+      });
+      return;
+    }
+
+    // Check if user has sufficient balance
+    const userBalance = parseFloat(tokenBalances[fromToken.symbol] || '0');
+    const swapAmount = parseFloat(fromAmount);
+    
+    if (userBalance < swapAmount) {
+      toast({
+        variant: "destructive",
+        title: "Insufficient balance",
+        description: `You need ${swapAmount} ${fromToken.symbol} but only have ${userBalance}`
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
       
-      // In production, this would execute the actual swap
-      const response = await fetch('/api/swap/execute', {
+      console.log('🚀 Executing AMM swap...');
+      
+      // In a real implementation, this would:
+      // 1. Request approval for token spending (if not native ETH)
+      // 2. Execute the swap transaction through MetaMask
+      // 3. Wait for transaction confirmation
+      // 4. Update balances
+      
+      // For demo, we'll simulate the swap
+      const response = await fetch('/api/trade/buy-inr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fromToken: fromToken.address,
-          toToken: toToken.address,
-          amount: fromAmount,
-          quote: quote,
-          network: selectedNetwork.id
+          tokenAddress: toToken.address,
+          amountINR: fromToken.symbol === 'INR' ? fromAmount : parseFloat(fromAmount) * parseFloat(quote.price),
+          userAddress: metamask.account
         })
       });
 
       if (response.ok) {
+        const result = await response.json();
+        
         toast({
-          title: "Swap successful!",
-          description: `Swapped ${fromAmount} ${fromToken.symbol} for ${quote.toAmount} ${toToken.symbol}`
+          title: "Swap Successful! 🎉",
+          description: `Swapped ${fromAmount} ${fromToken.symbol} for ${quote.outputAmount} ${toToken.symbol}`
         });
+        
+        // Update balances
+        setTokenBalances(prev => ({
+          ...prev,
+          [fromToken.symbol]: (parseFloat(prev[fromToken.symbol] || '0') - parseFloat(fromAmount)).toString(),
+          [toToken.symbol]: (parseFloat(prev[toToken.symbol] || '0') + parseFloat(quote.outputAmount)).toString()
+        }));
         
         // Reset form
         setFromAmount('');
         setToAmount('');
         setQuote(null);
+        
+        // Refresh pools data
+        fetchPools();
+        
       } else {
-        throw new Error('Swap failed');
+        throw new Error('Swap transaction failed');
       }
       
     } catch (error) {
+      console.error('Swap execution error:', error);
       toast({
         variant: "destructive",
-        title: "Swap failed",
+        title: "Swap Failed",
         description: error instanceof Error ? error.message : "Unknown error occurred"
       });
     } finally {
@@ -303,56 +271,68 @@ export function DexSwap() {
     }
   };
 
-  // Load token prices on component mount
+  // Load data on component mount
   useEffect(() => {
-    fetchTokenPrices();
-  }, []);
+    fetchPools();
+    
+    if (metamask.account) {
+      fetchTokenBalances();
+    }
+  }, [metamask.account]);
+
+  // Calculate price impact warning level
+  const getPriceImpactColor = (impact: string) => {
+    const impactNum = parseFloat(impact);
+    if (impactNum > 5) return 'text-red-600';
+    if (impactNum > 2) return 'text-orange-600';
+    return 'text-green-600';
+  };
 
   return (
     <Card className="w-full max-w-md mx-auto p-6">
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Swap Tokens</h2>
-          <RefreshCw 
-            className="h-4 w-4 cursor-pointer hover:text-blue-600" 
-            onClick={fetchTokenPrices}
-          />
+          <h2 className="text-lg font-semibold">AMM Swap</h2>
+          <div className="flex items-center gap-2">
+            <Settings className="h-4 w-4 cursor-pointer hover:text-blue-600" />
+            <RefreshCw 
+              className="h-4 w-4 cursor-pointer hover:text-blue-600" 
+              onClick={() => {
+                fetchPools();
+                fetchTokenBalances();
+              }}
+            />
+          </div>
         </div>
 
-        {/* Network Selection */}
-        <div>
-          <label className="text-sm font-medium mb-1 block">Network</label>
-          <Select value={selectedNetwork.id} onValueChange={(value) => {
-            const network = NETWORKS.find(n => n.id === value);
-            if (network) setSelectedNetwork(network);
-          }}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {NETWORKS.map((network) => (
-                <SelectItem key={network.id} value={network.id}>
-                  {network.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Wallet Connection Status */}
+        <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+          <Wallet className="h-4 w-4" />
+          {metamask.account ? (
+            <span className="text-sm text-green-600">
+              Connected: {metamask.account.slice(0, 6)}...{metamask.account.slice(-4)}
+            </span>
+          ) : (
+            <span className="text-sm text-orange-600">
+              Wallet not connected
+            </span>
+          )}
         </div>
 
         {/* From Token */}
         <div className="space-y-2">
           <label className="text-sm font-medium">From</label>
           <div className="flex gap-2">
-            <Select value={fromToken?.symbol || ''} onValueChange={(value) => {
-              const token = getTokensForNetwork(selectedNetwork.id).find(t => t.symbol === value);
-              setFromToken(token || null);
+            <Select value={fromToken.symbol} onValueChange={(value) => {
+              const token = AMM_TOKENS.find(t => t.symbol === value);
+              if (token) setFromToken(token);
             }}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {getTokensForNetwork(selectedNetwork.id).map((token) => (
+                {AMM_TOKENS.map((token) => (
                   <SelectItem key={token.symbol} value={token.symbol}>
                     {token.symbol}
                   </SelectItem>
@@ -367,11 +347,15 @@ export function DexSwap() {
               className="flex-1"
             />
           </div>
-          {fromToken && tokenPrices[fromToken.symbol.toLowerCase()] && (
-            <p className="text-xs text-gray-500">
-              1 {fromToken.symbol} = ${tokenPrices[fromToken.symbol.toLowerCase()]?.toFixed(2)}
-            </p>
-          )}
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>Balance: {tokenBalances[fromToken.symbol] || '0'}</span>
+            <button 
+              className="text-blue-600 hover:text-blue-800"
+              onClick={() => handleFromAmountChange(tokenBalances[fromToken.symbol] || '0')}
+            >
+              MAX
+            </button>
+          </div>
         </div>
 
         {/* Swap Button */}
@@ -390,15 +374,15 @@ export function DexSwap() {
         <div className="space-y-2">
           <label className="text-sm font-medium">To</label>
           <div className="flex gap-2">
-            <Select value={toToken?.symbol || ''} onValueChange={(value) => {
-              const token = getTokensForNetwork(selectedNetwork.id).find(t => t.symbol === value);
-              setToToken(token || null);
+            <Select value={toToken.symbol} onValueChange={(value) => {
+              const token = AMM_TOKENS.find(t => t.symbol === value);
+              if (token) setToToken(token);
             }}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {getTokensForNetwork(selectedNetwork.id).map((token) => (
+                {AMM_TOKENS.map((token) => (
                   <SelectItem key={token.symbol} value={token.symbol}>
                     {token.symbol}
                   </SelectItem>
@@ -413,56 +397,98 @@ export function DexSwap() {
               className="flex-1 bg-gray-50"
             />
           </div>
-          {toToken && tokenPrices[toToken.symbol.toLowerCase()] && (
-            <p className="text-xs text-gray-500">
-              1 {toToken.symbol} = ${tokenPrices[toToken.symbol.toLowerCase()]?.toFixed(2)}
-            </p>
-          )}
+          <div className="text-xs text-gray-500">
+            Balance: {tokenBalances[toToken.symbol] || '0'}
+          </div>
         </div>
 
-        {/* Quote Information */}
+        {/* AMM Quote Information */}
         {quote && (
-          <div className="bg-gray-50 p-3 rounded-lg space-y-2">
-            <div className="flex items-center gap-2 text-sm">
+          <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
               <Info className="h-4 w-4" />
-              <span className="font-medium">Quote Details</span>
+              <span>AMM Pool Information</span>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>Price: {quote.price.toFixed(6)}</div>
-              <div>Impact: {quote.priceImpact.toFixed(2)}%</div>
-              <div>Fee: {quote.fee}</div>
-              <div>Provider: {quote.provider}</div>
+            
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-gray-600">Price Impact:</span>
+                <span className={`ml-1 font-medium ${getPriceImpactColor(quote.priceImpact)}`}>
+                  {quote.priceImpact}%
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-600">Fee:</span>
+                <span className="ml-1 font-medium">{quote.fee}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Min Received:</span>
+                <span className="ml-1 font-medium">{quote.minReceived}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Pool TVL:</span>
+                <span className="ml-1 font-medium">${quote.poolInfo.totalLiquidity}</span>
+              </div>
             </div>
-            <div className="text-xs text-gray-600">
-              Route: {quote.route.join(' → ')}
+            
+            <div className="text-xs text-gray-600 border-t pt-2">
+              <div>Pool: {quote.poolInfo.reserveIn} {fromToken.symbol} / {quote.poolInfo.reserveOut} {toToken.symbol}</div>
+              <div>Rate: 1 {fromToken.symbol} = {quote.price.toFixed(6)} {toToken.symbol}</div>
             </div>
           </div>
         )}
 
-        {/* Warning */}
-        <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
-          <div className="text-xs text-amber-700">
-            <p className="font-medium">Demo Mode</p>
-            <p>This is a demo swap interface. Real swaps require wallet connection and sufficient funds.</p>
+        {/* Price Impact Warning */}
+        {quote && parseFloat(quote.priceImpact) > 5 && (
+          <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
+            <div className="text-xs text-red-700">
+              <p className="font-medium">High Price Impact Warning</p>
+              <p>This swap has a price impact of {quote.priceImpact}%. Consider reducing the amount.</p>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Swap Button */}
-        <Button
-          onClick={handleSwap}
-          disabled={!quote || isLoading || !fromAmount}
-          className="w-full"
-        >
-          {isLoading ? (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            `Swap ${fromToken?.symbol || ''} for ${toToken?.symbol || ''}`
-          )}
-        </Button>
+        {/* Connect Wallet / Swap Button */}
+        {!metamask.account ? (
+          <Button
+            onClick={metamask.connectWallet}
+            disabled={metamask.isLoading}
+            className="w-full"
+          >
+            {metamask.isLoading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <Wallet className="mr-2 h-4 w-4" />
+                Connect MetaMask
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button
+            onClick={executeSwap}
+            disabled={!quote || isLoading || !fromAmount || parseFloat(fromAmount) <= 0}
+            className="w-full"
+          >
+            {isLoading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Executing Swap...
+              </>
+            ) : (
+              `Swap ${fromToken.symbol} for ${toToken.symbol}`
+            )}
+          </Button>
+        )}
+
+        {/* Footer Info */}
+        <div className="text-xs text-gray-500 text-center">
+          <p>Powered by BitWallet AMM • Slippage: {slippageTolerance}%</p>
+        </div>
       </div>
     </Card>
   );

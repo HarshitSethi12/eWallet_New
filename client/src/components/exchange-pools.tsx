@@ -24,6 +24,7 @@ export function ExchangePools() {
   const { toast } = useToast();
   const [pools, setPools] = useState<LiquidityPool[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedPool, setSelectedPool] = useState<string>('');
 
   const fetchPools = async () => {
     setIsLoading(true);
@@ -32,13 +33,14 @@ export function ExchangePools() {
       if (response.ok) {
         const data = await response.json();
         setPools(data.pools || []);
+        console.log('🏊 AMM pools updated:', data.pools?.length || 0, 'pools');
       }
     } catch (error) {
       console.error('Error fetching pools:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch liquidity pools"
+        title: "Error", 
+        description: "Failed to fetch AMM liquidity pools"
       });
     } finally {
       setIsLoading(false);
@@ -48,8 +50,12 @@ export function ExchangePools() {
   useEffect(() => {
     fetchPools();
     
-    // Auto-refresh pools every 30 seconds
-    const interval = setInterval(fetchPools, 30000);
+    // Real-time pool monitoring (like real exchanges)
+    const interval = setInterval(() => {
+      fetchPools();
+      console.log('🔄 Auto-refreshing AMM pool data...');
+    }, 15000); // Refresh every 15 seconds
+    
     return () => clearInterval(interval);
   }, []);
 
