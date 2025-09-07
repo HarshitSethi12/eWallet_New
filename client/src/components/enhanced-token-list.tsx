@@ -97,20 +97,20 @@ export function EnhancedTokenList() {
     }
   };
 
-  // Fetch tokens using multiple APIs with weighted pricing (like real exchanges)
+  // Fetch tokens using exchange-specific pricing (alternative approach)
   const fetchTokensFromAPIs = async (): Promise<TokenData[]> => {
-    const providers = [
-      { name: 'CoinGecko', fetchFn: fetchCoinGeckoTokens, weight: 0.4 },
-      { name: 'CoinMarketCap', fetchFn: fetchCMCTokens, weight: 0.3 },
-      { name: 'Moralis', fetchFn: fetchMoralisTokens, weight: 0.3 },
+    const exchangeProviders = [
+      { name: 'OurAMM', fetchFn: fetchOurAMMPrices, weight: 0.5 },
+      { name: 'Jupiter', fetchFn: fetchJupiterPrices, weight: 0.3 },
+      { name: 'Uniswap', fetchFn: fetchUniswapPrices, weight: 0.2 },
     ];
 
     const allTokenData = [];
     
-    // Fetch from all providers simultaneously
-    for (const provider of providers) {
+    // Fetch from exchange providers
+    for (const provider of exchangeProviders) {
       try {
-        console.log(`🔄 Fetching from ${provider.name}...`);
+        console.log(`🔄 Fetching exchange prices from ${provider.name}...`);
         const tokens = await provider.fetchFn();
         if (tokens && tokens.length > 0) {
           allTokenData.push({ provider: provider.name, tokens, weight: provider.weight });
@@ -120,14 +120,104 @@ export function EnhancedTokenList() {
       }
     }
     
-    // If we have data from multiple sources, calculate weighted average prices
-    if (allTokenData.length > 1) {
-      return calculateWeightedTokenPrices(allTokenData);
-    } else if (allTokenData.length === 1) {
-      return allTokenData[0].tokens;
+    // If exchange data available, use it
+    if (allTokenData.length > 0) {
+      return calculateExchangeWeightedPrices(allTokenData);
     }
     
-    // Fallback to mock data
+    // Fallback to market data if exchanges fail
+    return await fetchMarketDataFallback();
+  };
+
+  // Fetch prices from your own AMM pools
+  const fetchOurAMMPrices = async (): Promise<TokenData[]> => {
+    try {
+      const response = await fetch('/api/exchange/pools');
+      if (response.ok) {
+        const data = await response.json();
+        return data.pools.map(pool => ({
+          symbol: pool.tokenA,
+          name: pool.tokenA,
+          address: `pool_${pool.pairId}`,
+          price: pool.currentPrice,
+          change24h: 0, // Calculate from pool history
+          marketCap: pool.tvl,
+          volume24h: pool.volume24h,
+          logoURI: '',
+          chainId: 1
+        }));
+      }
+    } catch (error) {
+      console.error('Our AMM prices error:', error);
+    }
+    return [];
+  };
+
+  // Fetch prices from Jupiter (for Solana tokens)
+  const fetchJupiterPrices = async (): Promise<TokenData[]> => {
+    try {
+      const response = await fetch('/api/jupiter/prices');
+      if (response.ok) {
+        const data = await response.json();
+        return data.tokens || [];
+      }
+    } catch (error) {
+      console.error('Jupiter prices error:', error);
+    }
+    return [];
+  };
+
+  // Fetch prices from Uniswap (for Ethereum tokens)
+  const fetchUniswapPrices = async (): Promise<TokenData[]> => {
+    try {
+      const response = await fetch('/api/uniswap/prices');
+      if (response.ok) {
+        const data = await response.json();
+        return data.tokens || [];
+      }
+    } catch (error) {
+      console.error('Uniswap prices error:', error);
+    }
+    return [];
+  };
+
+  // Calculate weighted prices from exchange sources
+  const calculateExchangeWeightedPrices = (allTokenData: any[]): TokenData[] => {
+    const tokenMap = new Map<string, TokenData>();
+    
+    allTokenData.forEach(({ tokens, weight, provider }) => {
+      tokens.forEach(token => {
+        if (tokenMap.has(token.symbol)) {
+          const existing = tokenMap.get(token.symbol)!;
+          // Weighted average with provider info
+          existing.price = (existing.price * 0.5) + (token.price * weight);
+          existing.change24h = (existing.change24h * 0.5) + (token.change24h * weight);
+          existing.volume24h += token.volume24h * weight;
+        } else {
+          tokenMap.set(token.symbol, { ...token, provider });
+        }
+      });
+    });
+    
+    return Array.from(tokenMap.values());
+  };
+
+  // Fallback to market data if exchanges fail
+  const fetchMarketDataFallback = async (): Promise<TokenData[]> => {
+    try {
+      const response = await fetch('/api/coingecko/tokens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chain: selectedChain, limit: 50 })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.tokens || [];
+      }
+    } catch (error) {
+      console.error('Market data fallback error:', error);
+    }
     return getMockTokens();
   };
 
@@ -605,7 +695,9 @@ export function EnhancedTokenList() {
               <div className="text-right">
                 <div className="text-right">
                   <p className="font-semibold">${token.price.toFixed(6)}</p>
-                  <p className="text-xs text-gray-400">Market Price</p>
+                  <p className="text-xs text-gray-400">
+                    {token.provider ? `${token.provider} Price` : 'Exchange Price'}
+                  </p>
                 </div>
                 <Badge variant={token.change24h >= 0 ? "default" : "destructive"}>
                   {token.change24h >= 0 ? (

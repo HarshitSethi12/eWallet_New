@@ -1974,6 +1974,113 @@ router.post("/api/paraswap/quote", async (req, res) => {
   }
 });
 
+// GET /api/jupiter/prices - Get token prices from Jupiter
+router.get("/api/jupiter/prices", async (req, res) => {
+  try {
+    console.log('🔄 Fetching Jupiter token prices...');
+    
+    // Popular Solana tokens
+    const solanaTokens = [
+      { mint: 'So11111111111111111111111111111111111111112', symbol: 'SOL' },
+      { mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', symbol: 'USDC' },
+      { mint: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R', symbol: 'RAY' },
+    ];
+
+    const tokens = [];
+    
+    for (const token of solanaTokens) {
+      try {
+        const response = await fetch(
+          `https://price.jup.ag/v4/price?ids=${token.mint}`,
+          { timeout: 5000 }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          const price = data.data?.[token.mint]?.price;
+          
+          if (price) {
+            tokens.push({
+              symbol: token.symbol,
+              name: token.symbol,
+              address: token.mint,
+              price: price,
+              change24h: 0,
+              marketCap: 0,
+              volume24h: 0,
+              provider: 'Jupiter',
+              chainId: 900 // Solana
+            });
+          }
+        }
+      } catch (error) {
+        console.warn(`Jupiter price error for ${token.symbol}:`, error);
+      }
+    }
+
+    res.json({
+      success: true,
+      tokens,
+      source: 'jupiter',
+      count: tokens.length
+    });
+
+  } catch (error) {
+    console.error('Jupiter prices error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// GET /api/uniswap/prices - Get token prices from Uniswap
+router.get("/api/uniswap/prices", async (req, res) => {
+  try {
+    console.log('🔄 Fetching Uniswap token prices...');
+    
+    // Mock Uniswap prices - in production, use Uniswap V3 SDK
+    const tokens = [
+      {
+        symbol: 'ETH',
+        name: 'Ethereum',
+        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+        price: 2450.00,
+        change24h: 2.1,
+        marketCap: 294500000000,
+        volume24h: 15600000000,
+        provider: 'Uniswap',
+        chainId: 1
+      },
+      {
+        symbol: 'USDC',
+        name: 'USD Coin',
+        address: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD',
+        price: 1.00,
+        change24h: 0.01,
+        marketCap: 32800000000,
+        volume24h: 4200000000,
+        provider: 'Uniswap',
+        chainId: 1
+      }
+    ];
+
+    res.json({
+      success: true,
+      tokens,
+      source: 'uniswap',
+      count: tokens.length
+    });
+
+  } catch (error) {
+    console.error('Uniswap prices error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Jupiter quote endpoint for Solana
 router.post("/api/jupiter/quote", async (req, res) => {
   try {
