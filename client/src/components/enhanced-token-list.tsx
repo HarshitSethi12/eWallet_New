@@ -603,7 +603,10 @@ export function EnhancedTokenList() {
               </div>
               
               <div className="text-right">
-                <p className="font-semibold">${token.price.toFixed(6)}</p>
+                <div className="text-right">
+                  <p className="font-semibold">${token.price.toFixed(6)}</p>
+                  <p className="text-xs text-gray-400">Market Price</p>
+                </div>
                 <Badge variant={token.change24h >= 0 ? "default" : "destructive"}>
                   {token.change24h >= 0 ? (
                     <TrendingUp className="h-3 w-3 mr-1" />
@@ -749,13 +752,17 @@ export function EnhancedTokenList() {
                           <div className="bg-gray-50 p-3 rounded-lg">
                             <div className="flex items-center gap-2 text-sm mb-2">
                               <Info className="h-4 w-4" />
-                              <span className="font-medium">Quote</span>
+                              <span className="font-medium">Live Quote</span>
                             </div>
                             <div className="text-sm space-y-1">
                               <div>You get: {quote.toAmount}</div>
+                              <div>Execution price: ${(parseFloat(tradeAmount) / parseFloat(quote.toAmount)).toFixed(6)}</div>
                               <div>Price impact: {quote.priceImpact.toFixed(2)}%</div>
                               <div>Fee: {quote.fee}</div>
                               <div>Provider: {quote.provider}</div>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-2 pt-2 border-t">
+                              <div>Market: ${selectedToken?.price.toFixed(6)} • Live: ${(parseFloat(tradeAmount) / parseFloat(quote.toAmount)).toFixed(6)}</div>
                             </div>
                           </div>
                         )}
