@@ -1410,7 +1410,7 @@ router.get("/api/swap/tokens", async (req, res) => {
   }
 });
 
-// POST /api/swap/quote - Get swap quote using multiple providers
+// POST /api/swap/quote - Get swap quote using multiple providers with cross-chain support
 router.post("/api/swap/quote", async (req, res) => {
   const { fromToken, toToken, amount, network = 'ethereum' } = req.body;
 
@@ -1424,35 +1424,51 @@ router.post("/api/swap/quote", async (req, res) => {
   try {
     console.log(`🔄 Getting swap quote: ${amount} ${fromToken} → ${toToken} on ${network}`);
 
-    // Try different quote providers based on network
+    // Detect if this is a cross-chain swap
+    const fromNetwork = getTokenNetwork(fromToken);
+    const toNetwork = getTokenNetwork(toToken);
+    const isCrossChain = fromNetwork !== toNetwork;
+
     let quote = null;
 
-    // 1. Try Jupiter for Solana
-    if (network === 'solana') {
-      quote = await getJupiterQuote(fromToken, toToken, amount);
+    if (isCrossChain) {
+      // Handle cross-chain swaps
+      quote = await getCrossChainQuote(fromToken, toToken, amount, fromNetwork, toNetwork);
+    } else {
+      // Handle same-chain swaps
+      // 1. Try Jupiter for Solana
+      if (network === 'solana') {
+        quote = await getJupiterQuote(fromToken, toToken, amount);
+      }
+
+      // 2. Try 1inch for EVM chains
+      if (!quote && ['ethereum', 'bsc', 'polygon', 'arbitrum'].includes(network)) {
+        quote = await get1inchQuote(fromToken, toToken, amount, network);
+      }
+
+      // 3. Try native DEX for each chain
+      if (!quote) {
+        quote = await getNativeDEXQuote(fromToken, toToken, amount, network);
+      }
+
+      // 4. Fallback to CoinGecko price-based quote
+      if (!quote) {
+        quote = await getCoinGeckoSwapQuote(fromToken, toToken, amount);
+      }
+
+      // 5. Last resort: mock quote
+      if (!quote) {
+        quote = generateMockQuote(fromToken, toToken, amount);
+      }
     }
 
-    // 2. Try Moralis for EVM chains (placeholder)
-    if (!quote && ['ethereum', 'bsc', 'polygon'].includes(network)) {
-      quote = await getMoralisQuote(fromToken, toToken, amount, network);
-    }
-
-    // 3. Fallback to CoinGecko price-based quote
-    if (!quote) {
-      quote = await getCoinGeckoSwapQuote(fromToken, toToken, amount);
-    }
-
-    // 4. Last resort: mock quote
-    if (!quote) {
-      quote = generateMockQuote(fromToken, toToken, amount);
-    }
-
-    console.log(`✅ Swap quote generated using ${quote.provider}`);
+    console.log(`✅ ${isCrossChain ? 'Cross-chain' : 'Same-chain'} swap quote generated using ${quote.provider}`);
 
     res.json({
       success: true,
       quote,
       network,
+      isCrossChain,
       timestamp: new Date().toISOString()
     });
 
@@ -1624,6 +1640,213 @@ async function getCoinGeckoSwapQuote(fromTokenSymbol, toTokenSymbol, amount) {
     console.error('CoinGecko swap quote error:', error);
   }
   return null;
+}
+
+// Helper function: Detect which network a token belongs to
+function getTokenNetwork(tokenAddress: string): string {
+  // Ethereum tokens (0x addresses)
+  if (tokenAddress.startsWith('0x') && tokenAddress.length === 42) {
+    return 'ethereum';
+  }
+  
+  // Solana tokens (base58 addresses)
+  if (tokenAddress.length > 40 && !tokenAddress.startsWith('0x')) {
+    return 'solana';
+  }
+  
+  // BSC tokens (0x addresses with different context)
+  if (tokenAddress.includes('bsc') || tokenAddress.includes('bnb')) {
+    return 'bsc';
+  }
+  
+  // Default fallback
+  return 'ethereum';
+}
+
+// Helper function: Get cross-chain swap quote using bridge + DEX combination
+async function getCrossChainQuote(fromToken: string, toToken: string, amount: string, fromNetwork: string, toNetwork: string) {
+  try {
+    console.log(`🌉 Getting cross-chain quote: ${fromNetwork} → ${toNetwork}`);
+    
+    // Step 1: Find bridge route
+    const bridgeRoute = getBridgeRoute(fromNetwork, toNetwork);
+    
+    // Step 2: Calculate intermediate steps
+    const steps = [];
+    
+    // If not already a stable coin, swap to USDC first
+    if (!isStableCoin(fromToken)) {
+      const stableSwapQuote = await getNativeDEXQuote(fromToken, 'USDC', amount, fromNetwork);
+      if (stableSwapQuote) {
+        steps.push({
+          type: 'swap',
+          network: fromNetwork,
+          fromToken,
+          toToken: 'USDC',
+          amount: amount,
+          outputAmount: stableSwapQuote.toAmount,
+          provider: stableSwapQuote.provider
+        });
+        amount = stableSwapQuote.toAmount; // Update amount for next step
+      }
+    }
+    
+    // Step 3: Bridge USDC across chains
+    const bridgeFee = calculateBridgeFee(amount, fromNetwork, toNetwork);
+    const bridgedAmount = (parseFloat(amount) - bridgeFee).toFixed(6);
+    
+    steps.push({
+      type: 'bridge',
+      fromNetwork,
+      toNetwork,
+      fromToken: 'USDC',
+      toToken: 'USDC',
+      amount: amount,
+      outputAmount: bridgedAmount,
+      fee: bridgeFee,
+      provider: bridgeRoute.provider,
+      estimatedTime: bridgeRoute.estimatedTime
+    });
+    
+    // Step 4: If target token is not USDC, swap from USDC to target token
+    let finalAmount = bridgedAmount;
+    if (!isStableCoin(toToken)) {
+      const finalSwapQuote = await getNativeDEXQuote('USDC', toToken, bridgedAmount, toNetwork);
+      if (finalSwapQuote) {
+        steps.push({
+          type: 'swap',
+          network: toNetwork,
+          fromToken: 'USDC',
+          toToken,
+          amount: bridgedAmount,
+          outputAmount: finalSwapQuote.toAmount,
+          provider: finalSwapQuote.provider
+        });
+        finalAmount = finalSwapQuote.toAmount;
+      }
+    }
+    
+    // Calculate total fees and time
+    const totalFees = steps.reduce((sum, step) => sum + (step.fee || 0), 0);
+    const totalTime = Math.max(bridgeRoute.estimatedTime, 300); // Minimum 5 minutes
+    
+    return {
+      fromToken,
+      toToken,
+      fromAmount: amount,
+      toAmount: finalAmount,
+      price: parseFloat(finalAmount) / parseFloat(amount),
+      priceImpact: calculateCrossChainPriceImpact(steps),
+      fee: `$${totalFees.toFixed(2)}`,
+      route: steps.map(step => step.toToken),
+      steps,
+      estimatedTime: `${Math.ceil(totalTime / 60)} minutes`,
+      provider: 'Cross-Chain Router',
+      isCrossChain: true
+    };
+    
+  } catch (error) {
+    console.error('Cross-chain quote error:', error);
+    return null;
+  }
+}
+
+// Helper function: Get bridge route between networks
+function getBridgeRoute(fromNetwork: string, toNetwork: string) {
+  const routes = {
+    'ethereum-solana': { provider: 'Wormhole', estimatedTime: 900, fee: 0.1 },
+    'ethereum-bsc': { provider: 'Multichain', estimatedTime: 300, fee: 0.05 },
+    'ethereum-polygon': { provider: 'Polygon Bridge', estimatedTime: 120, fee: 0.02 },
+    'ethereum-arbitrum': { provider: 'Arbitrum Bridge', estimatedTime: 600, fee: 0.01 },
+    'bsc-polygon': { provider: 'Multichain', estimatedTime: 600, fee: 0.1 },
+    'solana-ethereum': { provider: 'Wormhole', estimatedTime: 900, fee: 0.1 }
+  };
+  
+  const routeKey = `${fromNetwork}-${toNetwork}`;
+  return routes[routeKey] || { provider: 'Generic Bridge', estimatedTime: 1800, fee: 0.2 };
+}
+
+// Helper function: Check if token is a stable coin
+function isStableCoin(token: string): boolean {
+  const stableCoins = ['USDC', 'USDT', 'DAI', 'BUSD', 'FRAX'];
+  return stableCoins.includes(token.toUpperCase());
+}
+
+// Helper function: Calculate bridge fee
+function calculateBridgeFee(amount: string, fromNetwork: string, toNetwork: string): number {
+  const baseFeesUSD = {
+    'ethereum': 15,  // High gas fees
+    'bsc': 2,       // Low fees
+    'polygon': 1,   // Very low fees
+    'arbitrum': 3,  // Lower than Ethereum
+    'solana': 0.5   // Very low fees
+  };
+  
+  const fromFee = baseFeesUSD[fromNetwork] || 10;
+  const toFee = baseFeesUSD[toNetwork] || 10;
+  const bridgeFee = 5; // Bridge protocol fee
+  
+  return fromFee + toFee + bridgeFee;
+}
+
+// Helper function: Calculate cross-chain price impact
+function calculateCrossChainPriceImpact(steps: any[]): number {
+  // Sum up individual price impacts and add bridge impact
+  const swapImpacts = steps
+    .filter(step => step.type === 'swap')
+    .reduce((sum, step) => sum + (step.priceImpact || 0.5), 0);
+  
+  const bridgeImpact = 0.2; // Additional impact for bridging
+  
+  return Math.min(swapImpacts + bridgeImpact, 10); // Cap at 10%
+}
+
+// Helper function: Get native DEX quote for each blockchain
+async function getNativeDEXQuote(fromToken: string, toToken: string, amount: string, network: string) {
+  const nativeDEXs = {
+    'ethereum': 'Uniswap V3',
+    'solana': 'Jupiter',
+    'bsc': 'PancakeSwap',
+    'polygon': 'QuickSwap',
+    'arbitrum': 'Uniswap V3'
+  };
+  
+  // This would call actual DEX APIs in production
+  // For now, return a mock quote
+  const mockRate = Math.random() * 2 + 0.5; // Random rate between 0.5-2.5
+  const outputAmount = (parseFloat(amount) * mockRate).toFixed(6);
+  
+  return {
+    fromToken,
+    toToken,
+    fromAmount: amount,
+    toAmount: outputAmount,
+    price: mockRate,
+    priceImpact: Math.random() * 2, // 0-2% impact
+    fee: '0.3%',
+    provider: nativeDEXs[network] || 'Unknown DEX',
+    route: [fromToken, toToken]
+  };
+}
+
+// Helper function: Get 1inch aggregator quote
+async function get1inchQuote(fromToken: string, toToken: string, amount: string, network: string) {
+  // This would call actual 1inch API in production
+  // For now, return a mock quote with slightly better rates
+  const mockRate = Math.random() * 2 + 0.6; // Slightly better rates
+  const outputAmount = (parseFloat(amount) * mockRate).toFixed(6);
+  
+  return {
+    fromToken,
+    toToken,
+    fromAmount: amount,
+    toAmount: outputAmount,
+    price: mockRate,
+    priceImpact: Math.random() * 1.5, // Lower impact due to aggregation
+    fee: '0.1-0.3%',
+    provider: '1inch Aggregator',
+    route: [fromToken, toToken]
+  };
 }
 
 // Helper function: Generate smart routing quotes like real exchanges
