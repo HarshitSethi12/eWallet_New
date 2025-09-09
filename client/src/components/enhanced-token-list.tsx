@@ -103,6 +103,7 @@ export function EnhancedTokenList() {
       { name: 'OurAMM', fetchFn: fetchOurAMMPrices, weight: 0.5 },
       { name: 'Jupiter', fetchFn: fetchJupiterPrices, weight: 0.3 },
       { name: 'Uniswap', fetchFn: fetchUniswapPrices, weight: 0.2 },
+      { name: 'TokenList', fetchFn: fetchTokenListData, weight: 0.4 },
     ];
 
     const allTokenData = [];
@@ -177,6 +178,66 @@ export function EnhancedTokenList() {
       }
     } catch (error) {
       console.error('Uniswap prices error:', error);
+    }
+    return [];
+  };
+
+  // Fetch comprehensive token list with SushiSwap support
+  const fetchTokenListData = async (): Promise<TokenData[]> => {
+    try {
+      // Use Uniswap's community token list (includes SushiSwap-supported tokens)
+      const response = await fetch('https://tokens.uniswap.org/');
+      if (response.ok) {
+        const tokenList = await response.json();
+        
+        // Filter for Ethereum mainnet tokens and get prices from CoinGecko
+        const ethereumTokens = tokenList.tokens
+          .filter(token => token.chainId === 1)
+          .slice(0, 100); // Limit to top 100 tokens
+        
+        // Get prices for these tokens from CoinGecko
+        const tokensWithPrices = await Promise.all(
+          ethereumTokens.map(async (token) => {
+            try {
+              const priceResponse = await fetch(`/api/tokens`);
+              const priceData = await priceResponse.json();
+              const tokenPrice = priceData.tokens?.find(t => 
+                t.symbol.toLowerCase() === token.symbol.toLowerCase()
+              );
+              
+              return {
+                symbol: token.symbol,
+                name: token.name,
+                address: token.address,
+                price: tokenPrice?.price || 0,
+                change24h: tokenPrice?.change24h || 0,
+                marketCap: tokenPrice?.marketCap || 0,
+                volume24h: tokenPrice?.volume24h || 0,
+                logoURI: token.logoURI,
+                chainId: 1,
+                decimals: token.decimals
+              };
+            } catch (error) {
+              return {
+                symbol: token.symbol,
+                name: token.name,
+                address: token.address,
+                price: 0,
+                change24h: 0,
+                marketCap: 0,
+                volume24h: 0,
+                logoURI: token.logoURI,
+                chainId: 1,
+                decimals: token.decimals
+              };
+            }
+          })
+        );
+        
+        return tokensWithPrices.filter(token => token.price > 0);
+      }
+    } catch (error) {
+      console.error('Token list fetch error:', error);
     }
     return [];
   };
