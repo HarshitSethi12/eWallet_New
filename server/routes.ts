@@ -938,10 +938,10 @@ router.post("/api/exchange/quote", (req, res) => {
   try {
     const pairId = `${fromToken}-${toToken}`;
     const reversePairId = `${toToken}-${fromToken}`;
-    
+
     let pool = liquidityPools.get(pairId);
     let isReversed = false;
-    
+
     if (!pool) {
       pool = liquidityPools.get(reversePairId);
       isReversed = true;
@@ -955,22 +955,22 @@ router.post("/api/exchange/quote", (req, res) => {
     }
 
     const inputAmount = parseFloat(amount);
-    
+
     // Proper AMM calculation using constant product formula (x * y = k)
     const [reserveIn, reserveOut] = isReversed ? 
       [pool.reserveB, pool.reserveA] : [pool.reserveA, pool.reserveB];
-    
+
     // Apply trading fee (e.g., 0.3%)
     const amountInWithFee = inputAmount * (1 - pool.fee);
-    
+
     // AMM Formula: amountOut = (reserveOut * amountInWithFee) / (reserveIn + amountInWithFee)
     const outputAmount = (reserveOut * amountInWithFee) / (reserveIn + amountInWithFee);
-    
+
     // Calculate price impact
     const currentPrice = reserveOut / reserveIn;
     const executionPrice = outputAmount / inputAmount;
     const priceImpact = Math.abs((executionPrice - currentPrice) / currentPrice) * 100;
-    
+
     // Calculate slippage protection (minimum tokens received)
     const slippageTolerance = 0.5; // 0.5%
     const minReceived = outputAmount * (1 - slippageTolerance / 100);
@@ -1038,11 +1038,11 @@ router.post("/api/trade/buy-inr", async (req, res) => {
     }
 
     const amountINRNum = parseFloat(amountINR);
-    
+
     // Calculate tokens to receive using AMM formula
     const amountInWithFee = amountINRNum * (1 - pool.fee);
     const tokensToReceive = (pool.reserveA * amountInWithFee) / (pool.reserveB + amountInWithFee);
-    
+
     // Update pool reserves
     pool.reserveA -= tokensToReceive;
     pool.reserveB += amountINRNum;
@@ -1107,10 +1107,10 @@ router.post("/api/exchange/execute-swap", async (req, res) => {
     const toSymbol = getTokenSymbol(toToken);
     const pairId = `${fromSymbol}-${toSymbol}`;
     const reversePairId = `${toSymbol}-${fromSymbol}`;
-    
+
     let pool = liquidityPools.get(pairId);
     let isReversed = false;
-    
+
     if (!pool) {
       pool = liquidityPools.get(reversePairId);
       isReversed = true;
@@ -1121,14 +1121,14 @@ router.post("/api/exchange/execute-swap", async (req, res) => {
     }
 
     const inputAmount = parseFloat(fromAmount);
-    
+
     // Recalculate quote to ensure it's still valid
     const [reserveIn, reserveOut] = isReversed ? 
       [pool.reserveB, pool.reserveA] : [pool.reserveA, pool.reserveB];
-    
+
     const amountInWithFee = inputAmount * (1 - pool.fee);
     const calculatedOutput = (reserveOut * amountInWithFee) / (reserveIn + amountInWithFee);
-    
+
     // Check if the calculated output matches expected output (within 1% tolerance)
     const outputDifference = Math.abs(calculatedOutput - parseFloat(expectedOutput)) / parseFloat(expectedOutput);
     if (outputDifference > 0.01) {
@@ -1143,7 +1143,7 @@ router.post("/api/exchange/execute-swap", async (req, res) => {
       pool.reserveA -= calculatedOutput;
       pool.reserveB += inputAmount;
     }
-    
+
     pool.volume24h += inputAmount * pool.priceA;
     pool.priceA = pool.reserveB / pool.reserveA;
 
@@ -1155,7 +1155,7 @@ router.post("/api/exchange/execute-swap", async (req, res) => {
       id: `swap_${Date.now()}`,
       type: 'swap',
       fromToken: fromSymbol,
-      toToken: toSymbol,
+      toToken: toToken,
       fromAmount: inputAmount,
       toAmount: calculatedOutput,
       userAddress,
@@ -1221,11 +1221,11 @@ router.post("/api/trade/sell-inr", async (req, res) => {
     }
 
     const tokenAmount = parseFloat(amount);
-    
+
     // Calculate INR to receive using AMM formula
     const amountInWithFee = tokenAmount * (1 - pool.fee);
     const inrToReceive = (pool.reserveB * amountInWithFee) / (pool.reserveA + amountInWithFee);
-    
+
     // Update pool reserves
     pool.reserveA += tokenAmount;
     pool.reserveB -= inrToReceive;
@@ -1353,7 +1353,7 @@ function getTokenSymbol(address: string): string {
     '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599': 'WBTC',
     'bitcoin': 'BTC'
   };
-  
+
   return tokenMap[address] || address.slice(0, 6);
 }
 
@@ -1437,12 +1437,12 @@ router.post("/api/swap/quote", async (req, res) => {
     } else {
       // Enhanced same-chain routing (1inch alternatives)
       const quoteProviders = getProvidersForNetwork(network);
-      
+
       for (const provider of quoteProviders) {
         try {
           console.log(`🔄 Trying ${provider.name} for ${network}...`);
           quote = await provider.getQuote(fromToken, toToken, amount, network);
-          
+
           if (quote) {
             console.log(`✅ Got quote from ${provider.name}`);
             break;
@@ -1651,32 +1651,32 @@ function getTokenNetwork(tokenAddress: string): string {
   if (tokenAddress.startsWith('0x') && tokenAddress.length === 42) {
     return 'ethereum';
   }
-  
+
   // Solana tokens (base58 addresses)
   if (tokenAddress.length > 40 && !tokenAddress.startsWith('0x')) {
     return 'solana';
   }
-  
+
   // BSC tokens (0x addresses with different context)
   if (tokenAddress.includes('bsc') || tokenAddress.includes('bnb')) {
     return 'bsc';
   }
-  
+
   // Default fallback
   return 'ethereum';
 }
 
-// Helper function: Get cross-chain swap quote using bridge + DEX combination
+// Helper function: Get cross-chain quote using bridge + DEX combination
 async function getCrossChainQuote(fromToken: string, toToken: string, amount: string, fromNetwork: string, toNetwork: string) {
   try {
     console.log(`🌉 Getting cross-chain quote: ${fromNetwork} → ${toNetwork}`);
-    
+
     // Step 1: Find bridge route
     const bridgeRoute = getBridgeRoute(fromNetwork, toNetwork);
-    
+
     // Step 2: Calculate intermediate steps
     const steps = [];
-    
+
     // If not already a stable coin, swap to USDC first
     if (!isStableCoin(fromToken)) {
       const stableSwapQuote = await getNativeDEXQuote(fromToken, 'USDC', amount, fromNetwork);
@@ -1693,11 +1693,11 @@ async function getCrossChainQuote(fromToken: string, toToken: string, amount: st
         amount = stableSwapQuote.toAmount; // Update amount for next step
       }
     }
-    
+
     // Step 3: Bridge USDC across chains
     const bridgeFee = calculateBridgeFee(amount, fromNetwork, toNetwork);
     const bridgedAmount = (parseFloat(amount) - bridgeFee).toFixed(6);
-    
+
     steps.push({
       type: 'bridge',
       fromNetwork,
@@ -1710,7 +1710,7 @@ async function getCrossChainQuote(fromToken: string, toToken: string, amount: st
       provider: bridgeRoute.provider,
       estimatedTime: bridgeRoute.estimatedTime
     });
-    
+
     // Step 4: If target token is not USDC, swap from USDC to target token
     let finalAmount = bridgedAmount;
     if (!isStableCoin(toToken)) {
@@ -1728,11 +1728,11 @@ async function getCrossChainQuote(fromToken: string, toToken: string, amount: st
         finalAmount = finalSwapQuote.toAmount;
       }
     }
-    
+
     // Calculate total fees and time
     const totalFees = steps.reduce((sum, step) => sum + (step.fee || 0), 0);
     const totalTime = Math.max(bridgeRoute.estimatedTime, 300); // Minimum 5 minutes
-    
+
     return {
       fromToken,
       toToken,
@@ -1747,7 +1747,7 @@ async function getCrossChainQuote(fromToken: string, toToken: string, amount: st
       provider: 'Cross-Chain Router',
       isCrossChain: true
     };
-    
+
   } catch (error) {
     console.error('Cross-chain quote error:', error);
     return null;
@@ -1764,7 +1764,7 @@ function getBridgeRoute(fromNetwork: string, toNetwork: string) {
     'bsc-polygon': { provider: 'Multichain', estimatedTime: 600, fee: 0.1 },
     'solana-ethereum': { provider: 'Wormhole', estimatedTime: 900, fee: 0.1 }
   };
-  
+
   const routeKey = `${fromNetwork}-${toNetwork}`;
   return routes[routeKey] || { provider: 'Generic Bridge', estimatedTime: 1800, fee: 0.2 };
 }
@@ -1784,11 +1784,11 @@ function calculateBridgeFee(amount: string, fromNetwork: string, toNetwork: stri
     'arbitrum': 3,  // Lower than Ethereum
     'solana': 0.5   // Very low fees
   };
-  
+
   const fromFee = baseFeesUSD[fromNetwork] || 10;
   const toFee = baseFeesUSD[toNetwork] || 10;
   const bridgeFee = 5; // Bridge protocol fee
-  
+
   return fromFee + toFee + bridgeFee;
 }
 
@@ -1798,9 +1798,9 @@ function calculateCrossChainPriceImpact(steps: any[]): number {
   const swapImpacts = steps
     .filter(step => step.type === 'swap')
     .reduce((sum, step) => sum + (step.priceImpact || 0.5), 0);
-  
+
   const bridgeImpact = 0.2; // Additional impact for bridging
-  
+
   return Math.min(swapImpacts + bridgeImpact, 10); // Cap at 10%
 }
 
@@ -1813,12 +1813,12 @@ async function getNativeDEXQuote(fromToken: string, toToken: string, amount: str
     'polygon': 'QuickSwap',
     'arbitrum': 'Uniswap V3'
   };
-  
+
   // This would call actual DEX APIs in production
   // For now, return a mock quote
   const mockRate = Math.random() * 2 + 0.5; // Random rate between 0.5-2.5
   const outputAmount = (parseFloat(amount) * mockRate).toFixed(6);
-  
+
   return {
     fromToken,
     toToken,
@@ -1914,29 +1914,73 @@ function getProvidersForNetwork(network: string) {
   return providers[network] || providers.ethereum;
 }
 
-// SushiSwap quote (available globally, great Uniswap alternative)
+// SushiSwap quote function (available globally, great Uniswap alternative)
 async function getSushiSwapEthereumQuote(fromToken: string, toToken: string, amount: string, network: string) {
   try {
-    // SushiSwap has global availability and competitive rates
-    const baseRate = Math.random() * 2 + 0.72;
-    const slippage = Math.random() * 0.4; // Good liquidity
-    const outputAmount = (parseFloat(amount) * baseRate * (1 - slippage/100)).toFixed(6);
-    
+    console.log(`🍣 Getting SushiSwap quote: ${amount} ${fromToken} → ${toToken} on ${network}`);
+
+    const chainIds = {
+      'ethereum': 1,
+      'polygon': 137,
+      'arbitrum': 42161,
+      'bsc': 56
+    };
+
+    const chainId = chainIds[network] || 1;
+
+    // Try SushiSwap's routing API
+    const response = await fetch(
+      `https://api.sushi.com/swap/v4/${chainId}/swap?tokenIn=${fromToken}&tokenOut=${toToken}&amount=${amount}&maxPriceImpact=0.05&to=0x0000000000000000000000000000000000000000`,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BitWallet/1.0'
+        },
+        timeout: 10000
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`✅ SushiSwap quote successful`);
+
+      return {
+        fromToken,
+        toToken,
+        fromAmount: amount,
+        toAmount: data.amountOut || (parseFloat(amount) * 0.95).toFixed(6),
+        price: data.price || 0.95,
+        priceImpact: data.priceImpact || Math.random() * 0.5,
+        fee: '0.3%',
+        route: data.route || [fromToken, toToken],
+        provider: 'SushiSwap',
+        estimatedGas: data.gasEstimate || '180000',
+        liquiditySource: 'SushiSwap Pools'
+      };
+    } else {
+      throw new Error(`SushiSwap API error: ${response.status}`);
+    }
+  } catch (error) {
+    console.warn('SushiSwap quote failed, using calculated estimate:', error.message);
+
+    // Fallback to calculated estimate based on SushiSwap's typical behavior
+    const estimatedRate = Math.random() * 0.1 + 0.94; // 94-104% of input (accounting for fees and slippage)
+    const priceImpact = Math.random() * 0.8; // 0-0.8% impact
+    const outputAmount = (parseFloat(amount) * estimatedRate).toFixed(6);
+
     return {
       fromToken,
       toToken,
       fromAmount: amount,
       toAmount: outputAmount,
-      price: baseRate * (1 - slippage/100),
-      priceImpact: slippage,
+      price: estimatedRate,
+      priceImpact,
       fee: '0.3%',
-      provider: 'SushiSwap',
       route: [fromToken, toToken],
-      estimatedGas: '160000',
-      globallyAvailable: true
+      provider: 'SushiSwap (Estimated)',
+      estimatedGas: '180000',
+      liquiditySource: 'SushiSwap Estimated'
     };
-  } catch (error) {
-    return null;
   }
 }
 
@@ -1947,7 +1991,7 @@ async function getBalancerQuote(fromToken: string, toToken: string, amount: stri
     const baseRate = Math.random() * 2 + 0.75;
     const slippage = Math.random() * 0.3; // Low slippage due to weighted pools
     const outputAmount = (parseFloat(amount) * baseRate * (1 - slippage/100)).toFixed(6);
-    
+
     return {
       fromToken,
       toToken,
@@ -1974,7 +2018,7 @@ async function getCurveQuote(fromToken: string, toToken: string, amount: string,
     const baseRate = isStableSwap ? Math.random() * 0.02 + 0.998 : Math.random() * 2 + 0.73;
     const slippage = isStableSwap ? Math.random() * 0.1 : Math.random() * 0.4;
     const outputAmount = (parseFloat(amount) * baseRate * (1 - slippage/100)).toFixed(6);
-    
+
     return {
       fromToken,
       toToken,
@@ -1994,14 +2038,14 @@ async function getCurveQuote(fromToken: string, toToken: string, amount: string,
   }
 }
 
-// 0x Protocol aggregator quote (excellent 1inch alternative)
+// 0x Protocol quote (excellent 1inch alternative)
 async function get0xQuote(fromToken: string, toToken: string, amount: string, network: string) {
   try {
     // 0x provides great aggregation across multiple DEXs
     const baseRate = Math.random() * 2 + 0.75; // Slightly better due to aggregation
     const slippage = Math.random() * 0.3; // Lower due to routing
     const outputAmount = (parseFloat(amount) * baseRate * (1 - slippage/100)).toFixed(6);
-    
+
     return {
       fromToken,
       toToken,
@@ -2025,7 +2069,7 @@ async function getParaswapQuote(fromToken: string, toToken: string, amount: stri
     const baseRate = Math.random() * 2 + 0.73;
     const slippage = Math.random() * 0.4;
     const outputAmount = (parseFloat(amount) * baseRate * (1 - slippage/100)).toFixed(6);
-    
+
     return {
       fromToken,
       toToken,
@@ -2049,7 +2093,7 @@ async function getCowSwapQuote(fromToken: string, toToken: string, amount: strin
     const baseRate = Math.random() * 2 + 0.78; // Better rates due to MEV protection
     const slippage = Math.random() * 0.2; // Very low slippage
     const outputAmount = (parseFloat(amount) * baseRate * (1 - slippage/100)).toFixed(6);
-    
+
     return {
       fromToken,
       toToken,
@@ -2074,7 +2118,7 @@ async function getPancakeSwapQuote(fromToken: string, toToken: string, amount: s
     const baseRate = Math.random() * 2 + 0.72;
     const slippage = Math.random() * 0.6;
     const outputAmount = (parseFloat(amount) * baseRate * (1 - slippage/100)).toFixed(6);
-    
+
     return {
       fromToken,
       toToken,
@@ -2103,7 +2147,7 @@ async function getQuickSwapQuote(fromToken: string, toToken: string, amount: str
     const baseRate = Math.random() * 2 + 0.74;
     const slippage = Math.random() * 0.4;
     const outputAmount = (parseFloat(amount) * baseRate * (1 - slippage/100)).toFixed(6);
-    
+
     return {
       fromToken,
       toToken,
@@ -2130,7 +2174,7 @@ async function getOrcaQuote(fromToken: string, toToken: string, amount: string, 
     const baseRate = Math.random() * 2 + 0.76;
     const slippage = Math.random() * 0.3;
     const outputAmount = (parseFloat(amount) * baseRate * (1 - slippage/100)).toFixed(6);
-    
+
     return {
       fromToken,
       toToken,
@@ -2151,13 +2195,13 @@ async function getOrcaQuote(fromToken: string, toToken: string, amount: string, 
 // Helper function: Generate smart routing quotes like real exchanges
 function generateMockQuote(fromToken, toToken, amount) {
   const fromAmountNum = parseFloat(amount);
-  
+
   // Simulate smart routing through stable coins (like real exchanges do)
   const stableCoins = ['USDT', 'USDC', 'BUSD'];
   const isDirectPair = Math.random() > 0.3; // 70% chance of direct pair
-  
+
   let route, fee, priceImpact;
-  
+
   if (isDirectPair) {
     // Direct swap
     route = [fromToken, toToken];
@@ -2170,7 +2214,7 @@ function generateMockQuote(fromToken, toToken, amount) {
     fee = '0.5%'; // Higher fee for routed swaps
     priceImpact = Math.random() * 1.5; // Higher impact for routed swaps
   }
-  
+
   // Price calculation with market depth simulation
   const baseRate = Math.random() * 100 + 1;
   const slippage = 1 - (priceImpact / 100);
@@ -2500,7 +2544,7 @@ router.post("/api/paraswap/quote", async (req, res) => {
 router.get("/api/jupiter/prices", async (req, res) => {
   try {
     console.log('🔄 Fetching Jupiter token prices...');
-    
+
     // Popular Solana tokens
     const solanaTokens = [
       { mint: 'So11111111111111111111111111111111111111112', symbol: 'SOL' },
@@ -2509,18 +2553,18 @@ router.get("/api/jupiter/prices", async (req, res) => {
     ];
 
     const tokens = [];
-    
+
     for (const token of solanaTokens) {
       try {
         const response = await fetch(
           `https://price.jup.ag/v4/price?ids=${token.mint}`,
           { timeout: 5000 }
         );
-        
+
         if (response.ok) {
           const data = await response.json();
           const price = data.data?.[token.mint]?.price;
-          
+
           if (price) {
             tokens.push({
               symbol: token.symbol,
@@ -2560,7 +2604,7 @@ router.get("/api/jupiter/prices", async (req, res) => {
 router.get("/api/uniswap/prices", async (req, res) => {
   try {
     console.log('🔄 Fetching Uniswap token prices...');
-    
+
     // Mock Uniswap prices - in production, use Uniswap V3 SDK
     const tokens = [
       {

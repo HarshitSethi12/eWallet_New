@@ -97,37 +97,83 @@ export function EnhancedTokenList() {
     }
   };
 
-  // Fetch tokens using exchange-specific pricing (alternative approach)
+  // Fetch tokens using SushiSwap as primary source
   const fetchTokensFromAPIs = async (): Promise<TokenData[]> => {
     const exchangeProviders = [
-      { name: 'OurAMM', fetchFn: fetchOurAMMPrices, weight: 0.5 },
-      { name: 'Jupiter', fetchFn: fetchJupiterPrices, weight: 0.3 },
-      { name: 'Uniswap', fetchFn: fetchUniswapPrices, weight: 0.2 },
-      { name: 'TokenList', fetchFn: fetchTokenListData, weight: 0.4 },
+      { name: 'SushiSwap', fetchFn: fetchSushiSwapPrices, weight: 1.0, priority: 1 },
+      { name: 'OurAMM', fetchFn: fetchOurAMMPrices, weight: 0.3, priority: 2 },
+      { name: 'Jupiter', fetchFn: fetchJupiterPrices, weight: 0.2, priority: 3 },
+      { name: 'Uniswap', fetchFn: fetchUniswapPrices, weight: 0.1, priority: 4 },
     ];
 
-    const allTokenData = [];
+    let sushiSwapData = null;
+    const fallbackData = [];
     
-    // Fetch from exchange providers
-    for (const provider of exchangeProviders) {
+    // Try SushiSwap first (primary source)
+    try {
+      console.log(`🍣 Fetching prices from SushiSwap (primary source)...`);
+      sushiSwapData = await fetchSushiSwapPrices();
+      if (sushiSwapData && sushiSwapData.length > 0) {
+        console.log(`✅ SushiSwap provided ${sushiSwapData.length} token prices`);
+        return sushiSwapData.map(token => ({
+          ...token,
+          provider: 'SushiSwap DEX',
+          source: 'sushiswap'
+        }));
+      }
+    } catch (error) {
+      console.warn(`❌ SushiSwap failed, trying fallback providers:`, error);
+    }
+    
+    // If SushiSwap fails, try other exchange providers
+    for (const provider of exchangeProviders.slice(1)) {
       try {
         console.log(`🔄 Fetching exchange prices from ${provider.name}...`);
         const tokens = await provider.fetchFn();
         if (tokens && tokens.length > 0) {
-          allTokenData.push({ provider: provider.name, tokens, weight: provider.weight });
+          fallbackData.push({ provider: provider.name, tokens, weight: provider.weight });
         }
       } catch (error) {
         console.warn(`❌ ${provider.name} failed:`, error);
       }
     }
     
-    // If exchange data available, use it
-    if (allTokenData.length > 0) {
-      return calculateExchangeWeightedPrices(allTokenData);
+    // If fallback exchange data available, use it
+    if (fallbackData.length > 0) {
+      return calculateExchangeWeightedPrices(fallbackData);
     }
     
-    // Fallback to market data if exchanges fail
+    // Final fallback to market data
     return await fetchMarketDataFallback();
+  };
+
+  // Fetch prices from SushiSwap DEX (primary source)
+  const fetchSushiSwapPrices = async (): Promise<TokenData[]> => {
+    try {
+      console.log('🍣 Fetching SushiSwap prices...');
+      const response = await fetch(`/api/sushiswap/prices?network=${selectedChain}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ SushiSwap prices fetched:', data.prices?.length || 0, 'tokens');
+        
+        return data.prices?.map(price => ({
+          symbol: price.symbol,
+          name: price.name,
+          address: price.address,
+          price: price.price || 0,
+          change24h: price.change24h || 0,
+          marketCap: price.marketCap || 0,
+          volume24h: price.volume24h || 0,
+          logoURI: price.logoURI || `https://tokens.1inch.io/${price.address.toLowerCase()}.png`,
+          chainId: selectedChain === 'ethereum' ? 1 : selectedChain === 'bsc' ? 56 : 137,
+          provider: 'SushiSwap',
+          source: 'sushiswap'
+        })) || [];
+      }
+    } catch (error) {
+      console.error('SushiSwap prices error:', error);
+    }
+    return [];
   };
 
   // Fetch prices from your own AMM pools
@@ -757,7 +803,8 @@ export function EnhancedTokenList() {
                 <div className="text-right">
                   <p className="font-semibold">${token.price.toFixed(6)}</p>
                   <p className="text-xs text-gray-400">
-                    {token.provider ? `${token.provider} Price` : 'Exchange Price'}
+                    {token.provider === 'SushiSwap' ? '🍣 SushiSwap Price' : 
+                     token.provider ? `${token.provider} Price` : 'Live Exchange Price'}
                   </p>
                 </div>
                 <Badge variant={token.change24h >= 0 ? "default" : "destructive"}>
