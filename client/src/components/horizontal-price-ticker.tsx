@@ -143,45 +143,33 @@ export function HorizontalPriceTicker() {
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   const { data: prices = [], isLoading, error } = useQuery({
-    queryKey: ['horizontal-crypto-prices'],
+    queryKey: ['horizontal-sushiswap-prices'],
     queryFn: async () => {
       try {
-        console.log('🔄 Fetching horizontal ticker prices...');
+        console.log('🍣 Fetching SushiSwap prices for horizontal ticker...');
 
-        // Try the crypto-prices endpoint first (for HorizontalPriceTicker)
-        let response = await fetch('/api/crypto-prices');
+        // Try SushiSwap prices endpoint first
+        let response = await fetch('/api/sushiswap/prices');
         if (response.ok) {
           const data = await response.json();
-          console.log('📊 Crypto prices API response:', data);
+          console.log('📊 SushiSwap prices API response:', data);
 
-          // Transform CoinGecko format to our format
-          const cryptoList = [
-            { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', current_price: data.bitcoin?.usd || 0, price_change_percentage_24h: data.bitcoin?.usd_24h_change || 0 },
-            { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', current_price: data.ethereum?.usd || 0, price_change_percentage_24h: data.ethereum?.usd_24h_change || 0 },
-            { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin', current_price: data['usd-coin']?.usd || 0, price_change_percentage_24h: data['usd-coin']?.usd_24h_change || 0 },
-            { id: 'tether', symbol: 'USDT', name: 'Tether', current_price: data.tether?.usd || 0, price_change_percentage_24h: data.tether?.usd_24h_change || 0 },
-            { id: 'chainlink', symbol: 'LINK', name: 'Chainlink', current_price: data.chainlink?.usd || 0, price_change_percentage_24h: data.chainlink?.usd_24h_change || 0 },
-            { id: 'uniswap', symbol: 'UNI', name: 'Uniswap', current_price: data.uniswap?.usd || 0, price_change_percentage_24h: data.uniswap?.usd_24h_change || 0 },
-            { id: 'wrapped-bitcoin', symbol: 'WBTC', name: 'Wrapped Bitcoin', current_price: data['wrapped-bitcoin']?.usd || 0, price_change_percentage_24h: data['wrapped-bitcoin']?.usd_24h_change || 0 },
-            { id: 'cardano', symbol: 'ADA', name: 'Cardano', current_price: data.cardano?.usd || 0, price_change_percentage_24h: data.cardano?.usd_24h_change || 0 },
-            { id: 'polkadot', symbol: 'DOT', name: 'Polkadot', current_price: data.polkadot?.usd || 0, price_change_percentage_24h: data.polkadot?.usd_24h_change || 0 },
-            { id: 'litecoin', symbol: 'LTC', name: 'Litecoin', current_price: data.litecoin?.usd || 0, price_change_percentage_24h: data.litecoin?.usd_24h_change || 0 }
-          ];
+          if (data.success && data.prices) {
+            const formattedPrices = data.prices.slice(0, 10).map(token => ({
+              id: token.symbol.toLowerCase(),
+              symbol: token.symbol,
+              name: token.name,
+              price: token.price,
+              change: token.change24h,
+              logoURI: token.logoURI || getCoinImageUrl(token.symbol.toLowerCase())
+            }));
 
-          const formattedPrices = cryptoList.filter(crypto => crypto.current_price > 0).map(crypto => ({
-            id: crypto.id,
-            symbol: crypto.symbol,
-            name: crypto.name,
-            price: crypto.current_price,
-            change: crypto.price_change_percentage_24h,
-            logoURI: getCoinImageUrl(crypto.id)
-          }));
-
-          console.log('✅ Formatted prices for horizontal ticker:', formattedPrices.length, 'items');
-          return formattedPrices;
+            console.log('✅ Formatted SushiSwap prices for horizontal ticker:', formattedPrices.length, 'items');
+            return formattedPrices;
+          }
         }
 
-        // Fallback to tokens endpoint
+        // Fallback to tokens endpoint (which also has SushiSwap data)
         console.log('🔄 Falling back to /api/tokens...');
         response = await fetch('/api/tokens');
         if (response.ok) {
@@ -198,21 +186,24 @@ export function HorizontalPriceTicker() {
               logoURI: token.logoURI || getCoinImageUrl(token.symbol.toLowerCase())
             }));
 
-            console.log('✅ Formatted prices from tokens API:', formattedPrices.length, 'items');
+            console.log('✅ Formatted prices from SushiSwap tokens API:', formattedPrices.length, 'items');
             return formattedPrices;
           }
         }
 
-        throw new Error('All APIs failed');
+        throw new Error('All SushiSwap APIs failed');
       } catch (error) {
-        console.error('❌ Horizontal ticker fetch error:', error);
-        // Return hardcoded fallback data
+        console.error('❌ SushiSwap horizontal ticker fetch error:', error);
+        // Return SushiSwap-focused fallback data
         return [
-          { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', price: 43250.00, change: 1.8, logoURI: getCoinImageUrl('bitcoin') },
           { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', price: 2450.50, change: 2.1, logoURI: getCoinImageUrl('ethereum') },
           { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin', price: 1.00, change: 0.01, logoURI: getCoinImageUrl('usd-coin') },
+          { id: 'tether', symbol: 'USDT', name: 'Tether USD', price: 1.00, change: 0.00, logoURI: getCoinImageUrl('tether') },
+          { id: 'wrapped-bitcoin', symbol: 'WBTC', name: 'Wrapped Bitcoin', price: 43250.00, change: 1.8, logoURI: getCoinImageUrl('wrapped-bitcoin') },
           { id: 'chainlink', symbol: 'LINK', name: 'Chainlink', price: 14.25, change: 3.2, logoURI: getCoinImageUrl('chainlink') },
-          { id: 'uniswap', symbol: 'UNI', name: 'Uniswap', price: 6.80, change: -2.1, logoURI: getCoinImageUrl('uniswap') }
+          { id: 'uniswap', symbol: 'UNI', name: 'Uniswap', price: 6.80, change: -2.1, logoURI: getCoinImageUrl('uniswap') },
+          { id: 'sushi', symbol: 'SUSHI', name: 'SushiSwap', price: 1.25, change: 4.5, logoURI: getCoinImageUrl('sushi') },
+          { id: 'aave', symbol: 'AAVE', name: 'Aave', price: 85.30, change: 2.3, logoURI: getCoinImageUrl('aave') }
         ];
       }
     },
@@ -351,7 +342,7 @@ export function HorizontalPriceTicker() {
       {/* Bottom info bar */}
       <div className="bg-gray-50 px-4 sm:px-6 py-2 sm:py-3 border-t border-gray-100">
         <p className="text-xs text-gray-500 text-center">
-          Live market data • Updates every 30 seconds
+          🍣 SushiSwap prices • Updates every 30 seconds
         </p>
       </div>
     </div>
