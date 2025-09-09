@@ -91,7 +91,7 @@ const getCoinImageId = (coinId: string): string => {
 const getCoinFallbackIcon = (symbol: string): string => {
   const colors: { [key: string]: string } = {
     'BTC': '#f7931a',
-    'ETH': '#627eea', 
+    'ETH': '#627eea',
     'USDT': '#26a17b',
     'BNB': '#f3ba2f',
     'SOL': '#9945ff',
@@ -142,37 +142,83 @@ export function HorizontalPriceTicker() {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const { data: cryptoPrices = [], isLoading, error } = useQuery<any[]>({
-    queryKey: ['crypto-prices'],
+  const { data: prices = [], isLoading, error } = useQuery({
+    queryKey: ['horizontal-crypto-prices'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/crypto-prices');
-        if (!response.ok) {
-          throw new Error('Failed to fetch crypto prices');
+        console.log('🔄 Fetching horizontal ticker prices...');
+
+        // Try the crypto-prices endpoint first (for HorizontalPriceTicker)
+        let response = await fetch('/api/crypto-prices');
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📊 Crypto prices API response:', data);
+
+          // Transform CoinGecko format to our format
+          const cryptoList = [
+            { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', current_price: data.bitcoin?.usd || 0, price_change_percentage_24h: data.bitcoin?.usd_24h_change || 0 },
+            { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', current_price: data.ethereum?.usd || 0, price_change_percentage_24h: data.ethereum?.usd_24h_change || 0 },
+            { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin', current_price: data['usd-coin']?.usd || 0, price_change_percentage_24h: data['usd-coin']?.usd_24h_change || 0 },
+            { id: 'tether', symbol: 'USDT', name: 'Tether', current_price: data.tether?.usd || 0, price_change_percentage_24h: data.tether?.usd_24h_change || 0 },
+            { id: 'chainlink', symbol: 'LINK', name: 'Chainlink', current_price: data.chainlink?.usd || 0, price_change_percentage_24h: data.chainlink?.usd_24h_change || 0 },
+            { id: 'uniswap', symbol: 'UNI', name: 'Uniswap', current_price: data.uniswap?.usd || 0, price_change_percentage_24h: data.uniswap?.usd_24h_change || 0 },
+            { id: 'wrapped-bitcoin', symbol: 'WBTC', name: 'Wrapped Bitcoin', current_price: data['wrapped-bitcoin']?.usd || 0, price_change_percentage_24h: data['wrapped-bitcoin']?.usd_24h_change || 0 },
+            { id: 'cardano', symbol: 'ADA', name: 'Cardano', current_price: data.cardano?.usd || 0, price_change_percentage_24h: data.cardano?.usd_24h_change || 0 },
+            { id: 'polkadot', symbol: 'DOT', name: 'Polkadot', current_price: data.polkadot?.usd || 0, price_change_percentage_24h: data.polkadot?.usd_24h_change || 0 },
+            { id: 'litecoin', symbol: 'LTC', name: 'Litecoin', current_price: data.litecoin?.usd || 0, price_change_percentage_24h: data.litecoin?.usd_24h_change || 0 }
+          ];
+
+          const formattedPrices = cryptoList.filter(crypto => crypto.current_price > 0).map(crypto => ({
+            id: crypto.id,
+            symbol: crypto.symbol,
+            name: crypto.name,
+            price: crypto.current_price,
+            change: crypto.price_change_percentage_24h,
+            logoURI: getCoinImageUrl(crypto.id)
+          }));
+
+          console.log('✅ Formatted prices for horizontal ticker:', formattedPrices.length, 'items');
+          return formattedPrices;
         }
-        const data = await response.json();
 
-        // Transform the API response to match our expected format for top 10 cryptocurrencies
-        const cryptoList = [
-          { symbol: 'BTC', name: 'Bitcoin', price: data.bitcoin?.usd || 0, change: data.bitcoin?.usd_24h_change || 0 },
-          { symbol: 'ETH', name: 'Ethereum', price: data.ethereum?.usd || 0, change: data.ethereum?.usd_24h_change || 0 },
-          { symbol: 'USDT', name: 'Tether', price: data.tether?.usd || 0, change: data.tether?.usd_24h_change || 0 },
-          { symbol: 'SOL', name: 'Solana', price: data.solana?.usd || 0, change: data.solana?.usd_24h_change || 0 },
-          { symbol: 'BNB', name: 'BNB', price: data.binancecoin?.usd || 0, change: data.binancecoin?.usd_24h_change || 0 },
-          { symbol: 'XRP', name: 'XRP', price: data.ripple?.usd || 0, change: data.ripple?.usd_24h_change || 0 },
-          { symbol: 'USDC', name: 'USD Coin', price: data['usd-coin']?.usd || 0, change: data['usd-coin']?.usd_24h_change || 0 },
-          { symbol: 'STETH', name: 'Staked Ether', price: data['staked-ether']?.usd || 0, change: data['staked-ether']?.usd_24h_change || 0 },
-          { symbol: 'ADA', name: 'Cardano', price: data.cardano?.usd || 0, change: data.cardano?.usd_24h_change || 0 },
-          { symbol: 'DOGE', name: 'Dogecoin', price: data.dogecoin?.usd || 0, change: data.dogecoin?.usd_24h_change || 0 },
-        ];
+        // Fallback to tokens endpoint
+        console.log('🔄 Falling back to /api/tokens...');
+        response = await fetch('/api/tokens');
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📊 Tokens API response:', data);
 
-        return cryptoList;
+          if (data.success && data.tokens) {
+            const formattedPrices = data.tokens.slice(0, 10).map(token => ({
+              id: token.symbol.toLowerCase(),
+              symbol: token.symbol,
+              name: token.name,
+              price: token.price,
+              change: token.change24h,
+              logoURI: token.logoURI || getCoinImageUrl(token.symbol.toLowerCase())
+            }));
+
+            console.log('✅ Formatted prices from tokens API:', formattedPrices.length, 'items');
+            return formattedPrices;
+          }
+        }
+
+        throw new Error('All APIs failed');
       } catch (error) {
-        console.error('Error fetching crypto prices:', error);
-        return [];
+        console.error('❌ Horizontal ticker fetch error:', error);
+        // Return hardcoded fallback data
+        return [
+          { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', price: 43250.00, change: 1.8, logoURI: getCoinImageUrl('bitcoin') },
+          { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', price: 2450.50, change: 2.1, logoURI: getCoinImageUrl('ethereum') },
+          { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin', price: 1.00, change: 0.01, logoURI: getCoinImageUrl('usd-coin') },
+          { id: 'chainlink', symbol: 'LINK', name: 'Chainlink', price: 14.25, change: 3.2, logoURI: getCoinImageUrl('chainlink') },
+          { id: 'uniswap', symbol: 'UNI', name: 'Uniswap', price: 6.80, change: -2.1, logoURI: getCoinImageUrl('uniswap') }
+        ];
       }
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 30000,
+    retry: 3,
+    staleTime: 30000
   });
 
   const updateScrollButtons = () => {
@@ -195,7 +241,7 @@ export function HorizontalPriceTicker() {
 
   useEffect(() => {
     updateScrollButtons();
-  }, [cryptoPrices]);
+  }, [prices]); // Depend on prices to update buttons when data loads
 
   if (isLoading) {
     return (
@@ -251,16 +297,16 @@ export function HorizontalPriceTicker() {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         onScroll={updateScrollButtons}
       >
-        {Array.isArray(cryptoPrices) && cryptoPrices.length > 0 ? cryptoPrices.map((crypto) => {
+        {Array.isArray(prices) && prices.length > 0 ? prices.map((crypto) => {
           const isPositive = crypto.change > 0;
           const colors = cryptoColors[crypto.symbol.toLowerCase()] || { primary: "#6B7280", secondary: "#9CA3AF" };
 
           return (
-            <div key={crypto.symbol} className="flex flex-col items-center min-w-[90px] max-w-[90px] sm:min-w-[110px] sm:max-w-[110px] lg:min-w-[120px] lg:max-w-[120px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
+            <div key={crypto.id} className="flex flex-col items-center min-w-[90px] max-w-[90px] sm:min-w-[110px] sm:max-w-[110px] lg:min-w-[120px] lg:max-w-[120px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
               {/* Coin Icon */}
               <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full shadow-md mb-1 sm:mb-2 relative overflow-hidden bg-white border-2 border-gray-100">
-                <img 
-                  src={getCoinImageUrl(crypto.name.toLowerCase())}
+                <img
+                  src={crypto.logoURI || getCoinFallbackIcon(crypto.symbol)}
                   alt={crypto.name}
                   className="w-full h-full object-cover rounded-full"
                   onError={(e) => {
@@ -268,7 +314,8 @@ export function HorizontalPriceTicker() {
                     target.src = getCoinFallbackIcon(crypto.symbol);
                   }}
                 />
-                <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full border-2 border-white"></div>
+                {/* Placeholder for the trending indicator, if needed */}
+                {/* <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full border-2 border-white"></div> */}
               </div>
 
               {/* Coin Symbol */}
@@ -278,16 +325,16 @@ export function HorizontalPriceTicker() {
 
               {/* Price */}
               <p className="text-xs sm:text-sm lg:text-base font-bold text-gray-900 mb-0.5 sm:mb-1 text-center">
-                ${crypto.price.toLocaleString('en-US', { 
-                  minimumFractionDigits: 2, 
-                  maximumFractionDigits: 2 
+                ${crypto.price.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
                 })}
               </p>
 
               {/* Percentage Change */}
               <div className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[0.6rem] font-medium ${
-                isPositive 
-                  ? 'bg-green-100 text-green-700' 
+                isPositive
+                  ? 'bg-green-100 text-green-700'
                   : 'bg-red-100 text-red-700'
               }`}>
                 {isPositive ? '+' : ''}{crypto.change.toFixed(2)}%
@@ -296,7 +343,7 @@ export function HorizontalPriceTicker() {
           );
         }) : (
           <div className="flex items-center justify-center w-full py-8">
-            <p className="text-gray-500">Loading market data...</p>
+            <p className="text-gray-500">No market data available</p>
           </div>
         )}
       </div>

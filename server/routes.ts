@@ -122,7 +122,7 @@ router.get("/api/tokens", async (req, res) => {
 
   try {
     console.log('🍣 Fetching prices from SushiSwap...');
-    
+
     // Popular Ethereum tokens supported by SushiSwap
     const sushiTokens = [
       { symbol: 'ETH', name: 'Ethereum', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', price: 2450.00, change24h: 2.1, marketCap: 294500000000, volume24h: 15600000000 },
@@ -164,7 +164,7 @@ router.get("/api/tokens", async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error fetching SushiSwap prices:', error);
-    
+
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch token prices from SushiSwap',
@@ -226,7 +226,7 @@ router.get("/api/debug/test-sushiswap", async (req, res) => {
   try {
     // Test our SushiSwap endpoint
     const response = await fetch(`${req.protocol}://${req.get('host')}/api/sushiswap/prices`);
-    
+
     if (response.ok) {
       const data = await response.json();
       res.json({
@@ -423,10 +423,10 @@ router.post("/auth/metamask", async (req, res) => {
 
     // Validate required fields
     if (!message || !signature || !address) {
-      console.error('❌ Missing required fields:', { 
-        message: !!message, 
-        signature: !!signature, 
-        address: !!address 
+      console.error('❌ Missing required fields:', {
+        message: !!message,
+        signature: !!signature,
+        address: !!address
       });
       return sendJsonError(400, 'Missing required fields: message, signature, and address are required');
     }
@@ -437,10 +437,10 @@ router.post("/auth/metamask", async (req, res) => {
       return sendJsonError(400, 'Invalid Ethereum address format');
     }
 
-    console.log('🦊 MetaMask authentication data validated:', { 
+    console.log('🦊 MetaMask authentication data validated:', {
       address: address,
       messageLength: message.length,
-      signatureLength: signature.length 
+      signatureLength: signature.length
     });
 
     // Ensure session exists and initialize if needed
@@ -506,8 +506,8 @@ router.post("/auth/metamask", async (req, res) => {
     }
 
     // Return success response with user data
-    const responseData = { 
-      success: true, 
+    const responseData = {
+      success: true,
       message: 'MetaMask authentication successful',
       user: metamaskUser
     };
@@ -728,7 +728,7 @@ router.post("/api/exchange/quote", (req, res) => {
     const inputAmount = parseFloat(amount);
 
     // Proper AMM calculation using constant product formula (x * y = k)
-    const [reserveIn, reserveOut] = isReversed ? 
+    const [reserveIn, reserveOut] = isReversed ?
       [pool.reserveB, pool.reserveA] : [pool.reserveA, pool.reserveB];
 
     // Apply trading fee (e.g., 0.3%)
@@ -894,7 +894,7 @@ router.post("/api/exchange/execute-swap", async (req, res) => {
     const inputAmount = parseFloat(fromAmount);
 
     // Recalculate quote to ensure it's still valid
-    const [reserveIn, reserveOut] = isReversed ? 
+    const [reserveIn, reserveOut] = isReversed ?
       [pool.reserveB, pool.reserveA] : [pool.reserveA, pool.reserveB];
 
     const amountInWithFee = inputAmount * (1 - pool.fee);
@@ -2021,7 +2021,7 @@ router.post("/api/test-moralis", async (req, res) => {
 
     if (!process.env.MORALIS_API_KEY) {
       console.log('❌ MORALIS_API_KEY not found in environment variables');
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'Moralis API key not configured',
         details: 'Please add MORALIS_API_KEY to your environment variables'
       });
@@ -2136,9 +2136,9 @@ router.get("/api/crypto-prices", async (req, res) => {
     res.json(transformedData);
   } catch (error) {
     console.error('❌ Error fetching crypto prices:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch cryptocurrency prices',
-      details: error.message 
+      details: error.message
     });
   }
 });
