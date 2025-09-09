@@ -145,9 +145,9 @@ export function HorizontalPriceTicker() {
   const { data: prices = [], isLoading, error } = useQuery({
     queryKey: ['horizontal-sushiswap-prices'],
     queryFn: async () => {
-      try {
-        console.log('🍣 Fetching SushiSwap prices for horizontal ticker...');
+      console.log('🍣 Fetching SushiSwap prices for horizontal ticker (NO FALLBACK)...');
 
+      try {
         // Try SushiSwap prices endpoint first
         let response = await fetch('/api/sushiswap/prices');
         if (response.ok) {
@@ -159,18 +159,18 @@ export function HorizontalPriceTicker() {
               id: token.symbol.toLowerCase(),
               symbol: token.symbol,
               name: token.name,
-              price: token.price,
-              change: token.change24h,
+              price: token.price || 0, // Show 0 if no price
+              change: token.change24h || 0,
               logoURI: token.logoURI || getCoinImageUrl(token.symbol.toLowerCase())
             }));
 
-            console.log('✅ Formatted SushiSwap prices for horizontal ticker:', formattedPrices.length, 'items');
+            console.log('✅ SushiSwap prices loaded:', formattedPrices.length, 'items');
             return formattedPrices;
           }
         }
 
-        // Fallback to tokens endpoint (which also has SushiSwap data)
-        console.log('🔄 Falling back to /api/tokens...');
+        // Try tokens endpoint (which also has SushiSwap data)
+        console.log('🔄 Trying /api/tokens for SushiSwap data...');
         response = await fetch('/api/tokens');
         if (response.ok) {
           const data = await response.json();
@@ -181,72 +181,28 @@ export function HorizontalPriceTicker() {
               id: token.symbol.toLowerCase(),
               symbol: token.symbol,
               name: token.name,
-              price: token.price,
-              change: token.change24h,
+              price: token.price || 0, // Show 0 if no price
+              change: token.change24h || 0,
               logoURI: token.logoURI || getCoinImageUrl(token.symbol.toLowerCase())
             }));
 
-            console.log('✅ Formatted prices from SushiSwap tokens API:', formattedPrices.length, 'items');
+            console.log('✅ SushiSwap tokens loaded:', formattedPrices.length, 'items');
             return formattedPrices;
           }
         }
 
-        throw new Error('All SushiSwap APIs failed');
+        console.error('❌ All SushiSwap endpoints failed');
+        throw new Error('SushiSwap data unavailable');
       } catch (error) {
         console.error('❌ SushiSwap horizontal ticker fetch error:', error);
         
-        // Try CoinGecko as final fallback for real prices
-        try {
-          const coinGeckoResponse = await fetch('/api/crypto-prices');
-          if (coinGeckoResponse.ok) {
-            const coinGeckoData = await coinGeckoResponse.json();
-            console.log('✅ Using CoinGecko fallback for horizontal ticker');
-            
-            const mappedPrices = Object.entries(coinGeckoData).slice(0, 8).map(([id, data]: [string, any]) => {
-              const symbolMap: { [key: string]: string } = {
-                'bitcoin': 'BTC',
-                'ethereum': 'ETH',
-                'tether': 'USDT',
-                'binancecoin': 'BNB',
-                'solana': 'SOL',
-                'usd-coin': 'USDC',
-                'ripple': 'XRP',
-                'cardano': 'ADA',
-                'chainlink': 'LINK',
-                'uniswap': 'UNI'
-              };
-              
-              return {
-                id,
-                symbol: symbolMap[id] || id.toUpperCase(),
-                name: id.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                price: data.usd || data.price || 0,
-                change: data.usd_24h_change || data.change24h || 0,
-                logoURI: getCoinImageUrl(id)
-              };
-            });
-            
-            return mappedPrices;
-          }
-        } catch (coinGeckoError) {
-          console.warn('CoinGecko fallback also failed:', coinGeckoError);
-        }
-        
-        // Return SushiSwap-focused fallback data with updated realistic prices
-        return [
-          { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', price: 3650.25, change: 2.1, logoURI: getCoinImageUrl('ethereum') },
-          { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin', price: 1.00, change: 0.01, logoURI: getCoinImageUrl('usd-coin') },
-          { id: 'tether', symbol: 'USDT', name: 'Tether USD', price: 1.00, change: 0.00, logoURI: getCoinImageUrl('tether') },
-          { id: 'wrapped-bitcoin', symbol: 'WBTC', name: 'Wrapped Bitcoin', price: 95420.00, change: 1.8, logoURI: getCoinImageUrl('wrapped-bitcoin') },
-          { id: 'chainlink', symbol: 'LINK', name: 'Chainlink', price: 22.45, change: 3.2, logoURI: getCoinImageUrl('chainlink') },
-          { id: 'uniswap', symbol: 'UNI', name: 'Uniswap', price: 15.80, change: -2.1, logoURI: getCoinImageUrl('uniswap') },
-          { id: 'sushi', symbol: 'SUSHI', name: 'SushiSwap', price: 1.25, change: 4.5, logoURI: getCoinImageUrl('sushi') },
-          { id: 'aave', symbol: 'AAVE', name: 'Aave', price: 285.30, change: 2.3, logoURI: getCoinImageUrl('aave') }
-        ];
+        // Return empty array instead of fallback data
+        console.log('⚠️ No fallback - returning empty data');
+        return [];
       }
     },
     refetchInterval: 30000,
-    retry: 3,
+    retry: 2, // Reduced retries since we don't want fallbacks
     staleTime: 30000
   });
 
@@ -292,7 +248,7 @@ export function HorizontalPriceTicker() {
   if (error) {
     return (
       <div className="w-full bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        <p className="text-center text-gray-500">Unable to load market data</p>
+        <p className="text-center text-red-500">🍣 SushiSwap data unavailable - No fallback enabled</p>
       </div>
     );
   }
@@ -372,7 +328,7 @@ export function HorizontalPriceTicker() {
           );
         }) : (
           <div className="flex items-center justify-center w-full py-8">
-            <p className="text-gray-500">No market data available</p>
+            <p className="text-red-500">🍣 No SushiSwap data available - Zero prices displayed</p>
           </div>
         )}
       </div>
