@@ -240,42 +240,51 @@ router.get("/api/tokens", async (req, res) => {
 // GET /api/crypto-prices - Separate endpoint for market overview
 router.get("/api/crypto-prices", async (req, res) => {
   try {
+    console.log('🔄 Fetching real-time crypto prices from CoinGecko...');
+    
     const response = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,binancecoin,solana,usd-coin,ripple,dogecoin,cardano,avalanche-2,shiba-inu,chainlink,polkadot,bitcoin-cash,polygon,litecoin,near,uniswap,internet-computer,ethereum-classic,stellar,filecoin,cosmos,monero,hedera-hashgraph,tron,staked-ether,wrapped-bitcoin,sui,wrapped-steth,leo-token,the-open-network,usds&vs_currencies=usd&include_24hr_change=true',
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,binancecoin,solana,usd-coin,ripple,dogecoin,cardano,avalanche-2,shiba-inu,chainlink,polkadot,bitcoin-cash,polygon,litecoin,near,uniswap,internet-computer,ethereum-classic,stellar,filecoin,cosmos,monero,hedera-hashgraph,tron,lido-staked-ether,wrapped-bitcoin,sui,aave,sushi&vs_currencies=usd&include_24hr_change=true',
       {
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'BitWallet/1.0'
         },
-        timeout: 10000
+        timeout: 15000
       }
     );
 
     if (response.ok) {
       const data = await response.json();
+      console.log('✅ CoinGecko prices fetched successfully:', Object.keys(data).length, 'tokens');
+      console.log('📊 ETH price from CoinGecko:', data.ethereum?.usd);
       return res.json(data);
     } else {
       throw new Error(`HTTP ${response.status}`);
     }
   } catch (error) {
-    console.error('CoinGecko API error:', error);
+    console.error('❌ CoinGecko API error:', error);
 
-    // Return fallback data
+    // Return updated fallback data with current realistic prices
     const fallbackData = {
-      bitcoin: { usd: 43250.50, usd_24h_change: 2.34 },
+      bitcoin: { usd: 95420.50, usd_24h_change: 2.34 },
       ethereum: { usd: 3650.25, usd_24h_change: 1.45 },
       tether: { usd: 1.00, usd_24h_change: 0.01 },
-      binancecoin: { usd: 305.20, usd_24h_change: 0.87 },
-      solana: { usd: 95.40, usd_24h_change: 3.21 },
+      binancecoin: { usd: 690.20, usd_24h_change: 0.87 },
+      solana: { usd: 235.40, usd_24h_change: 3.21 },
       'usd-coin': { usd: 1.00, usd_24h_change: 0.00 },
-      ripple: { usd: 0.52, usd_24h_change: 1.92 },
-      dogecoin: { usd: 0.08, usd_24h_change: 2.15 },
-      cardano: { usd: 0.42, usd_24h_change: 1.67 },
+      ripple: { usd: 2.52, usd_24h_change: 1.92 },
+      dogecoin: { usd: 0.38, usd_24h_change: 2.15 },
+      cardano: { usd: 1.02, usd_24h_change: 1.67 },
       chainlink: { usd: 22.45, usd_24h_change: 2.08 },
       polkadot: { usd: 7.25, usd_24h_change: 1.34 },
-      litecoin: { usd: 85.30, usd_24h_change: 0.95 }
+      litecoin: { usd: 105.30, usd_24h_change: 0.95 },
+      uniswap: { usd: 15.80, usd_24h_change: -1.2 },
+      aave: { usd: 285.30, usd_24h_change: 2.3 },
+      sushi: { usd: 1.25, usd_24h_change: 4.5 },
+      'wrapped-bitcoin': { usd: 95420.00, usd_24h_change: 2.34 }
     };
 
+    console.log('📊 Using fallback prices - ETH fallback price:', fallbackData.ethereum.usd);
     return res.json(fallbackData);
   }
 });
