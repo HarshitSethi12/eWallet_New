@@ -97,13 +97,45 @@ export function EnhancedTokenList() {
     }
   };
 
-  // Fetch tokens using SushiSwap as primary source
+  // Fetch tokens using SushiSwap only
   const fetchTokensFromAPIs = async (): Promise<TokenData[]> => {
-    const exchangeProviders = [
-      { name: 'SushiSwap', fetchFn: fetchSushiSwapPrices, weight: 1.0, priority: 1 },
-      { name: 'OurAMM', fetchFn: fetchOurAMMPrices, weight: 0.3, priority: 2 },
-      { name: 'Jupiter', fetchFn: fetchJupiterPrices, weight: 0.2, priority: 3 },
-      { name: 'Uniswap', fetchFn: fetchUniswapPrices, weight: 0.1, priority: 4 },
+    try {
+      console.log('🍣 Fetching token data from SushiSwap...');
+      
+      // Primary source: SushiSwap
+      const sushiTokens = await fetchSushiSwapPrices();
+      
+      if (sushiTokens && sushiTokens.length > 0) {
+        console.log('✅ Successfully fetched from SushiSwap:', sushiTokens.length, 'tokens');
+        return sushiTokens;
+      }
+
+      // Fallback: Use our main API endpoint
+      console.log('🔄 Fallback to main API...');
+      const response = await fetch('/api/tokens');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.tokens) {
+          return data.tokens.map(token => ({
+            symbol: token.symbol,
+            name: token.name,
+            address: token.address,
+            price: token.price,
+            change24h: token.change24h,
+            marketCap: token.marketCap,
+            volume24h: token.volume24h,
+            logoURI: token.logoURI,
+            chainId: 1,
+            provider: 'SushiSwap',
+            source: 'fallback'
+          }));
+        }
+      }
+
+      throw new Error('All data sources failed');
+    } catch (error) {
+      console.error('Error fetching token data:', error);
+      return [];
     ];
 
     let sushiSwapData = null;
@@ -151,7 +183,7 @@ export function EnhancedTokenList() {
   const fetchSushiSwapPrices = async (): Promise<TokenData[]> => {
     try {
       console.log('🍣 Fetching SushiSwap prices...');
-      const response = await fetch(`/api/sushiswap/prices?network=${selectedChain}`);
+      const response = await fetch(`/api/sushiswap/prices`);
       if (response.ok) {
         const data = await response.json();
         console.log('✅ SushiSwap prices fetched:', data.prices?.length || 0, 'tokens');
