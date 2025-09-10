@@ -195,7 +195,7 @@ export function HorizontalPriceTicker() {
         throw new Error('SushiSwap data unavailable');
       } catch (error) {
         console.error('❌ SushiSwap horizontal ticker fetch error:', error);
-        
+
         // Return empty array instead of fallback data
         console.log('⚠️ No fallback - returning empty data');
         return [];
@@ -283,15 +283,15 @@ export function HorizontalPriceTicker() {
         onScroll={updateScrollButtons}
       >
         {Array.isArray(prices) && prices.length > 0 ? prices.map((crypto) => {
-          const isPositive = crypto.change > 0;
+          const isPositive = (crypto.change24h || 0) > 0;
           const colors = cryptoColors[crypto.symbol.toLowerCase()] || { primary: "#6B7280", secondary: "#9CA3AF" };
 
           return (
-            <div key={crypto.id} className="flex flex-col items-center min-w-[90px] max-w-[90px] sm:min-w-[110px] sm:max-w-[110px] lg:min-w-[120px] lg:max-w-[120px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
+            <div key={crypto.symbol || crypto.id} className="flex flex-col items-center min-w-[90px] max-w-[90px] sm:min-w-[110px] sm:max-w-[110px] lg:min-w-[120px] lg:max-w-[120px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
               {/* Coin Icon */}
               <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full shadow-md mb-1 sm:mb-2 relative overflow-hidden bg-white border-2 border-gray-100">
                 <img
-                  src={crypto.logoURI || getCoinFallbackIcon(crypto.symbol)}
+                  src={crypto.logoURI || getCoinImageUrl(crypto.symbol)}
                   alt={crypto.name}
                   className="w-full h-full object-cover rounded-full"
                   onError={(e) => {
@@ -299,8 +299,6 @@ export function HorizontalPriceTicker() {
                     target.src = getCoinFallbackIcon(crypto.symbol);
                   }}
                 />
-                {/* Placeholder for the trending indicator, if needed */}
-                {/* <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full border-2 border-white"></div> */}
               </div>
 
               {/* Coin Symbol */}
@@ -310,10 +308,10 @@ export function HorizontalPriceTicker() {
 
               {/* Price */}
               <p className="text-xs sm:text-sm lg:text-base font-bold text-gray-900 mb-0.5 sm:mb-1 text-center">
-                ${crypto.price.toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })}
+                ${crypto.price?.toLocaleString('en-US', {
+                  minimumFractionDigits: crypto.price < 1 ? 4 : 2,
+                  maximumFractionDigits: crypto.price < 1 ? 4 : 2
+                }) || '0.00'}
               </p>
 
               {/* Percentage Change */}
@@ -322,13 +320,13 @@ export function HorizontalPriceTicker() {
                   ? 'bg-green-100 text-green-700'
                   : 'bg-red-100 text-red-700'
               }`}>
-                {isPositive ? '+' : ''}{crypto.change.toFixed(2)}%
+                {isPositive ? '+' : ''}{(crypto.change24h || 0).toFixed(2)}%
               </div>
             </div>
           );
         }) : (
           <div className="flex items-center justify-center w-full py-8">
-            <p className="text-red-500">🍣 No SushiSwap data available - Zero prices displayed</p>
+            <p className="text-red-500">🍣 No SushiSwap data available - Please refresh</p>
           </div>
         )}
       </div>
