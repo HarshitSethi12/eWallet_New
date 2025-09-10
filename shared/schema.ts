@@ -62,12 +62,23 @@ export const metamaskUsers = pgTable("metamask_users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true });
 export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true });
 export const insertContactSchema = createInsertSchema(contacts).omit({ id: true });
 export const insertUserSessionSchema = createInsertSchema(userSessions).omit({ id: true });
 export const insertMetaMaskUserSchema = createInsertSchema(metamaskUsers).omit({ id: true });
 
+export const selectUserSchema = z.object({
+  id: z.number(),
+  googleId: z.string().nullable(),
+  email: z.string().nullable(),
+  name: z.string().nullable(),
+  createdAt: z.date().nullable(),
+});
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Wallet = typeof wallets.$inferSelect;
 export type InsertWallet = z.infer<typeof insertWalletSchema>;
 export type Transaction = typeof transactions.$inferSelect;

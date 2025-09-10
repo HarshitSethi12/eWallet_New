@@ -321,17 +321,17 @@ router.get("/api/wallets", authenticateUser, async (req, res) => {
 // POST /api/wallets - Create a new wallet for the authenticated user
 router.post("/api/wallets", authenticateUser, async (req, res) => {
   try {
-    const { type } = req.body;
+    const { chain } = req.body;
     let walletData;
 
-    if (type === 'BTC') {
+    if (chain === 'BTC') {
       // Assuming BlockchainService has a createBitcoinWallet method
       walletData = await BlockchainService.createBitcoinWallet();
-    } else if (type === 'ETH') {
+    } else if (chain === 'ETH') {
       // Assuming BlockchainService has a createEthereumWallet method
       walletData = await BlockchainService.createEthereumWallet();
     } else {
-      return res.status(400).json({ message: "Unsupported wallet type" });
+      return res.status(400).json({ message: "Unsupported wallet chain" });
     }
 
     // Encrypt the private key before storing
@@ -340,9 +340,9 @@ router.post("/api/wallets", authenticateUser, async (req, res) => {
     const [wallet] = await db.insert(wallets).values({
       userId: req.user!.id,
       address: walletData.address,
-      privateKey: encryptedPrivateKey, // Store encrypted private key
-      type: type,
-      balance: "0"
+      encryptedPrivateKey: encryptedPrivateKey, // Store encrypted private key
+      chain: chain,
+      lastBalance: "0"
     }).returning();
 
     // Return wallet details without the private key
@@ -350,9 +350,9 @@ router.post("/api/wallets", authenticateUser, async (req, res) => {
       id: wallet.id,
       userId: wallet.userId,
       address: wallet.address,
-      type: wallet.type,
-      balance: wallet.balance,
-      createdAt: wallet.createdAt
+      chain: wallet.chain,
+      lastBalance: wallet.lastBalance,
+      updatedAt: wallet.updatedAt
     });
   } catch (error: any) {
     console.error('Error creating wallet:', error);
@@ -365,7 +365,20 @@ router.post("/api/wallets", authenticateUser, async (req, res) => {
 // GET /api/transactions - Get all transactions for the authenticated user
 router.get("/api/transactions", authenticateUser, async (req, res) => {
   try {
-    const userTransactions = await db.select().from(transactions).where(eq(transactions.userId, req.user!.id));
+    // Get user's wallets first
+    const userWallets = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+    const userAddresses = userWallets.map(wallet => wallet.address);
+    
+    // Get transactions involving any of the user's addresses
+    let userTransactions = [];
+    if (userAddresses.length > 0) {
+      userTransactions = await db.select().from(transactions).where(
+        or(
+          ...userAddresses.map(address => eq(transactions.fromAddress, address)),
+          ...userAddresses.map(address => eq(transactions.toAddress, address))
+        )
+      );
+    }
     res.json(userTransactions);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -374,42 +387,47 @@ router.get("/api/transactions", authenticateUser, async (req, res) => {
 
 // ===== AUTHENTICATION ENDPOINTS =====
 
-// POST /api/register - Register a new user
+// POST /api/register - Register a new user (OAuth-based)
 router.post("/api/register", async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { email, name, googleId } = req.body;
 
     // Basic validation
-    if (!username || !email || !password) {
-      return res.status(400).json({ message: "Username, email, and password are required" });
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
     }
 
-    // Check if username or email already exists
+    // Check if email already exists
     const existingUser = await db.select()
       .from(users)
-      .where(or(eq(users.username, username), eq(users.email, email)));
+      .where(eq(users.email, email));
 
     if (existingUser.length > 0) {
-      return res.status(409).json({ message: "Username or email already exists" });
+      return res.status(409).json({ message: "Email already exists" });
     }
 
-    const [user] = await db.insert(users).values({ username, email, password }).returning();
-    res.status(201).json({ message: "User registered successfully", user: { id: user.id, username: user.username, email: user.email } });
+    const [user] = await db.insert(users).values({ email, name, googleId }).returning();
+    res.status(201).json({ message: "User registered successfully", user: { id: user.id, name: user.name, email: user.email } });
   } catch (error: any) {
     console.error("Registration error:", error);
     res.status(400).json({ message: error.message });
   }
 });
 
-// POST /api/login - Log in a user
+// POST /api/login - Log in a user (OAuth-based)
 router.post("/api/login", async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, googleId } = req.body;
     const [user] = await db.select()
       .from(users)
-      .where(eq(users.username, username));
+      .where(eq(users.email, email));
 
-    if (!user || user.password !== password) {
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    // For Google OAuth, verify googleId if provided
+    if (googleId && user.googleId !== googleId) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -421,12 +439,9 @@ router.post("/api/login", async (req, res) => {
       }
 
       req.session!.userId = user.id;
-      req.session!.username = user.username;
+      req.session!.user = { id: user.id, email: user.email, name: user.name };
 
-      // Update last login timestamp
-      await db.update(users).set({ lastLogin: new Date() }).where(eq(users.id, user.id));
-
-      res.json({ message: "Login successful", user: { id: user.id, username: user.username } });
+      res.json({ message: "Login successful", user: { id: user.id, name: user.name, email: user.email } });
     });
 
   } catch (error: any) {
