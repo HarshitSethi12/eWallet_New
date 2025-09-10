@@ -3,7 +3,7 @@ import { createServer } from "http";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import router from "./routes";
+// Note: router will be imported dynamically for better error handling
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
@@ -175,8 +175,17 @@ process.on('unhandledRejection', (reason, promise) => {
       next();
     });
 
-    // Register API routes
-    app.use('/api', router);
+    // Register API routes with dynamic import for better error handling
+    try {
+      const { default: router } = await import('./routes');
+      console.log('✅ Routes import OK');
+      console.log('🔍 Router routes count:', (router as any).stack?.length || 0);
+      app.use('/api', router);
+      console.log('✅ Router mounted at /api');
+    } catch (error) {
+      console.error('❌ Failed to import routes:', error);
+      throw error;
+    }
     
     // Import and register auth routes
     try {
