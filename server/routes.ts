@@ -1877,18 +1877,18 @@ async function fetchSushiSwapPrices() {
   try {
     console.log('🍣 Fetching live prices directly from SushiSwap V2 on-chain...');
     
-    const { createPublicClient, http, parseAbi } = await import('viem');
+    const { createPublicClient, http, parseAbi, getAddress } = await import('viem');
     const { mainnet } = await import('viem/chains');
     
-    // SushiSwap V2 factory and constants
-    const FACTORY_ADDRESS = '0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac';
-    const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
-    const USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+    // SushiSwap V2 factory and constants - properly checksummed
+    const FACTORY_ADDRESS = getAddress('0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac');
+    const WETH_ADDRESS = getAddress('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2');
+    const USDC_ADDRESS = getAddress('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
     
-    // Create client with public RPC
+    // Create client with reliable public RPC endpoint
     const client = createPublicClient({
       chain: mainnet,
-      transport: http(process.env.ETH_RPC_URL || 'https://cloudflare-eth.com')
+      transport: http(process.env.ETH_RPC_URL || 'https://ethereum-rpc.publicnode.com')
     });
     
     // ABI snippets for factory and pair contracts
@@ -1916,9 +1916,19 @@ async function fetchSushiSwapPrices() {
     ];
     
     // Use known USDC-WETH pair address (bypass ALL factory calls) - properly checksummed
-    const usdcWethPairAddress = '0x397FF1542f962076d0BFE58eA045FfA2d347aCa0';
+    const usdcWethPairAddress = getAddress('0x397FF1542f962076d0BFE58eA045FfA2d347aCa0');
     
     console.log('🍣 SUSHI-V2 HANDLER ENTER: Using direct USDC-WETH pair address:', usdcWethPairAddress);
+    console.log('🔗 RPC Endpoint:', process.env.ETH_RPC_URL || 'https://ethereum-rpc.publicnode.com');
+    
+    // Test basic blockchain connectivity first
+    try {
+      const blockNumber = await client.getBlockNumber();
+      console.log('✅ Blockchain connectivity test passed. Current block:', blockNumber);
+    } catch (connectError: any) {
+      console.log('❌ Blockchain connectivity test failed:', connectError?.message || 'Unknown error');
+      throw new Error('RPC connection failed');
+    }
     
     let ethPriceUSD = 4405; // Fallback price if on-chain fails
     
@@ -1952,7 +1962,8 @@ async function fetchSushiSwapPrices() {
       
       console.log('💰 ETH price from USDC-WETH on-chain reserves: $', ethPriceUSD.toFixed(2));
     } catch (pairError: any) {
-      console.log('⚠️ USDC-WETH pair call failed, using fallback ETH price:', pairError?.shortMessage || 'Unknown error');
+      console.log('⚠️ USDC-WETH pair call failed, using fallback ETH price:', pairError?.shortMessage || pairError?.message || 'Unknown error');
+      console.log('🔍 Full error details:', pairError);
     }
     const livePrices: any[] = [];
     
