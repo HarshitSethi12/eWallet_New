@@ -155,7 +155,7 @@ export function HorizontalPriceTicker() {
           console.log('📊 SushiSwap prices API response:', data);
 
           if (data.success && data.prices) {
-            const formattedPrices = data.prices.slice(0, 10).map(token => ({
+            const formattedPrices = data.prices.slice(0, 10).map((token: any) => ({
               id: token.symbol.toLowerCase(),
               symbol: token.symbol,
               name: token.name,
@@ -177,7 +177,7 @@ export function HorizontalPriceTicker() {
           console.log('📊 Tokens API response:', data);
 
           if (data.success && data.tokens) {
-            const formattedPrices = data.tokens.slice(0, 10).map(token => ({
+            const formattedPrices = data.tokens.slice(0, 10).map((token: any) => ({
               id: token.symbol.toLowerCase(),
               symbol: token.symbol,
               name: token.name,

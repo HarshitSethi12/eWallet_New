@@ -1951,8 +1951,8 @@ async function fetchSushiSwapPrices() {
       ethPriceUSD = Number(usdcReserves * BigInt(10 ** 18)) / Number(wethReserves * BigInt(10 ** 6));
       
       console.log('💰 ETH price from USDC-WETH on-chain reserves: $', ethPriceUSD.toFixed(2));
-    } catch (pairError) {
-      console.log('⚠️ USDC-WETH pair call failed, using fallback ETH price:', pairError.shortMessage || 'Unknown error');
+    } catch (pairError: any) {
+      console.log('⚠️ USDC-WETH pair call failed, using fallback ETH price:', pairError?.shortMessage || 'Unknown error');
     }
     const livePrices: any[] = [];
     
@@ -1995,8 +1995,8 @@ async function fetchSushiSwapPrices() {
               functionName: 'getPair',
               args: [token.address as `0x${string}`, WETH_ADDRESS as `0x${string}`]
             });
-          } catch (error) {
-            console.log(`⚠️ Factory call failed for ${token.symbol}, will use fallback data:`, error.shortMessage);
+          } catch (error: any) {
+            console.log(`⚠️ Factory call failed for ${token.symbol}, will use fallback data:`, error?.shortMessage || 'Unknown error');
           }
           
           if (pairAddress !== '0x0000000000000000000000000000000000000000') {
@@ -2083,7 +2083,8 @@ router.get("/sushiswap/prices", async (req, res) => {
     priceCache = {
       data: livePrices,
       timestamp: now,
-      cacheDuration: 60000
+      cacheDuration: 60000,
+      lastClearTime: 0
     };
     
     console.log('✅ SushiSwap prices generated:', livePrices.length, 'tokens');
@@ -2095,7 +2096,7 @@ router.get("/sushiswap/prices", async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Live prices failed, using fallback:', error);
     
     // Fallback to reliable static prices when live API fails
