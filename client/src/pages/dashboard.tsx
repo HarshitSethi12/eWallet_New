@@ -493,16 +493,14 @@ export default function Dashboard() {
                   </Button>
                   {tokenData?.source && (
                     <span className={`text-xs font-normal px-2 py-1 rounded ${
-                      tokenData.source === 'SushiSwap DEX'
+                      tokenData.source.toLowerCase().includes('sushiswap') || tokenData.source.toLowerCase().includes('sushi')
                         ? 'text-pink-700 bg-pink-100 border border-pink-200'
-                        : tokenData.source === 'sushiswap'
-                        ? 'text-pink-700 bg-pink-100 border border-pink-200'
-                        : tokenData.source === 'coingecko'
+                        : tokenData.source.toLowerCase().includes('coingecko')
                         ? 'text-blue-700 bg-blue-100 border border-blue-200'
                         : 'text-gray-500 bg-gray-100 border border-gray-200'
                     }`}>
-                      {tokenData.source === 'SushiSwap DEX' || tokenData.source === 'sushiswap' ? '🍣 SushiSwap' : 
-                       tokenData.source === 'coingecko' ? 'CoinGecko' : 'Mock Data'}
+                      {tokenData.source.toLowerCase().includes('sushiswap') || tokenData.source.toLowerCase().includes('sushi') ? '🍣 SushiSwap' : 
+                       tokenData.source.toLowerCase().includes('coingecko') ? 'CoinGecko' : 'Mock Data'}
                     </span>
                   )}
                 </div>

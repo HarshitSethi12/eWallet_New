@@ -32,6 +32,8 @@ interface TokenData {
   userBalanceUSD?: number;
   logoURI?: string;
   chainId: number;
+  provider?: string;
+  source?: string;
 }
 
 interface SwapQuote {
@@ -681,11 +683,20 @@ export function EnhancedTokenList() {
     };
 
     // Load data on component mount and chain change
-    fetchTokenData().then(() => {
-      if (tokens.length > 0) {
-        startRealTimePriceUpdates();
+    const loadData = async () => {
+      try {
+        console.log('🎯 Token List useEffect triggered - fetching data...');
+        await fetchTokenData();
+        console.log('🎯 Token List data fetched, tokens count:', tokens.length);
+        if (tokens.length > 0) {
+          startRealTimePriceUpdates();
+        }
+      } catch (error) {
+        console.error('🎯 Token List useEffect error:', error);
       }
-    });
+    };
+
+    loadData();
 
     return () => {
       if (priceUpdateInterval) {
