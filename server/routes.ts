@@ -226,8 +226,8 @@ router.get("/tokens", async (req, res) => {
 });
 
 
-// GET /api/crypto-prices - Separate endpoint for market overview
-router.get("/api/crypto-prices", async (req, res) => {
+// GET /crypto-prices - Separate endpoint for market overview
+router.get("/crypto-prices", async (req, res) => {
   try {
     console.log('🔄 Fetching real-time crypto prices from CoinGecko...');
     
@@ -281,7 +281,7 @@ router.get("/api/crypto-prices", async (req, res) => {
 // ===== API TESTING ENDPOINTS =====
 
 // GET /api/debug/test-sushiswap - Test SushiSwap integration
-router.get("/api/debug/test-sushiswap", async (req, res) => {
+router.get("/debug/test-sushiswap", async (req, res) => {
   console.log('🧪 Testing SushiSwap integration...');
 
   try {
@@ -602,7 +602,7 @@ router.post("/auth/metamask", async (req, res) => {
 // ===== MORALIS API ENDPOINTS =====
 
 // POST /api/moralis/tokens - Get token prices using Moralis
-router.post("/api/moralis/tokens", async (req, res) => {
+router.post("/moralis/tokens", async (req, res) => {
   const { chain = 'ethereum', limit = 50 } = req.body;
 
   try {
@@ -755,7 +755,7 @@ const initializeLiquidityPools = () => {
 initializeLiquidityPools();
 
 // GET /api/exchange/pools - Get all liquidity pools
-router.get("/api/exchange/pools", (req, res) => {
+router.get("/exchange/pools", (req, res) => {
   const pools = Array.from(liquidityPools.entries()).map(([pairId, pool]) => ({
     pairId,
     ...pool,
@@ -772,7 +772,7 @@ router.get("/api/exchange/pools", (req, res) => {
 });
 
 // POST /api/exchange/quote - Get price quote using proper AMM calculations
-router.post("/api/exchange/quote", (req, res) => {
+router.post("/exchange/quote", (req, res) => {
   const { fromToken, toToken, amount, type } = req.body;
 
   if (!fromToken || !toToken || !amount) {
@@ -963,7 +963,7 @@ router.post("/api/exchange/execute-swap", async (req, res) => {
 
 
 // SushiSwap 24h price tracking endpoint
-router.get("/api/sushiswap/price-changes", async (req, res) => {
+router.get("/sushiswap/price-changes", async (req, res) => {
   try {
     console.log('📊 Fetching SushiSwap 24h price changes...');
 
@@ -1268,7 +1268,7 @@ router.post("/api/exchange/add-liquidity", authenticateUser, async (req, res) =>
 });
 
 // GET /api/exchange/trade-history - Get trade history
-router.get("/api/exchange/trade-history", (req, res) => {
+router.get("/exchange/trade-history", (req, res) => {
   const { limit = 50, type, tokenSymbol } = req.query;
 
   let filteredHistory = tradeHistory;
@@ -1310,7 +1310,7 @@ function getTokenSymbol(address: string): string {
 // ===== SWAP ENDPOINTS =====
 
 // GET /api/swap/tokens - Get supported tokens for swapping
-router.get("/api/swap/tokens", async (req, res) => {
+router.get("/swap/tokens", async (req, res) => {
   const { network = 'ethereum' } = req.query;
 
   try {
@@ -1361,7 +1361,7 @@ router.get("/api/swap/tokens", async (req, res) => {
 });
 
 // POST /api/swap/quote - Get swap quote using multiple providers with enhanced routing (no 1inch dependency)
-router.post("/api/swap/quote", async (req, res) => {
+router.post("/swap/quote", async (req, res) => {
   const { fromToken, toToken, amount, network = 'ethereum' } = req.body;
 
   if (!fromToken || !toToken || !amount) {
@@ -1436,7 +1436,7 @@ router.post("/api/swap/quote", async (req, res) => {
 });
 
 // POST /api/swap/execute - Execute token swap (demo implementation)
-router.post("/api/swap/execute", authenticateUser, async (req, res) => {
+router.post("/swap/execute", authenticateUser, async (req, res) => {
   const { fromToken, toToken, amount, quote, network } = req.body;
 
   if (!fromToken || !toToken || !amount || !quote) {
@@ -2515,48 +2515,10 @@ router.post("/api/test-moralis", async (req, res) => {
 
 // ===== COINGECKO API ENDPOINTS =====
 // Routes for fetching cryptocurrency price data from CoinGecko
-
-router.get("/api/crypto-prices", async (req, res) => {
-  console.log('🔵 Fetching crypto prices...');
-
-  try {
-    // List of popular cryptocurrencies to fetch prices for
-    const cryptoIds = 'bitcoin,ethereum,binancecoin,cardano,solana,polkadot,chainlink,uniswap,aave,maker';
-
-    // Fetch prices from CoinGecko API
-    const response = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd&include_24hr_change=true`
-    );
-
-    if (!response.ok) {
-      throw new Error(`CoinGecko API responded with status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log('✅ CoinGecko prices fetched successfully');
-
-    // Transform the data into a more usable format
-    const transformedData = {};
-    Object.keys(data).forEach(key => {
-      const crypto = data[key];
-      transformedData[key] = {
-        price: crypto.usd,
-        change24h: crypto.usd_24h_change || 0
-      };
-    });
-
-    res.json(transformedData);
-  } catch (error) {
-    console.error('❌ Error fetching crypto prices:', error);
-    res.status(500).json({
-      error: 'Failed to fetch cryptocurrency prices',
-      details: error.message
-    });
-  }
-});
+// NOTE: Main crypto-prices route is already defined above
 
 // CoinGecko token list endpoint
-router.post("/api/coingecko/tokens", async (req, res) => {
+router.post("/coingecko/tokens", async (req, res) => {
   try {
     const { chain, limit = 50 } = req.body;
 
@@ -2597,7 +2559,7 @@ router.post("/api/coingecko/tokens", async (req, res) => {
 });
 
 // CoinMarketCap token list endpoint
-router.post("/api/coinmarketcap/tokens", async (req, res) => {
+router.post("/coinmarketcap/tokens", async (req, res) => {
   try {
     const { chain, limit = 50 } = req.body;
 
@@ -2728,7 +2690,7 @@ router.post("/api/paraswap/quote", async (req, res) => {
 });
 
 // GET /api/jupiter/prices - Get token prices from Jupiter
-router.get("/api/jupiter/prices", async (req, res) => {
+router.get("/jupiter/prices", async (req, res) => {
   try {
     console.log('🔄 Fetching Jupiter token prices...');
 
@@ -2788,7 +2750,7 @@ router.get("/api/jupiter/prices", async (req, res) => {
 });
 
 // GET /api/uniswap/prices - Get token prices from Uniswap
-router.get("/api/uniswap/prices", async (req, res) => {
+router.get("/uniswap/prices", async (req, res) => {
   try {
     console.log('🔄 Fetching Uniswap token prices...');
 
