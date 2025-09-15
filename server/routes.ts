@@ -313,8 +313,8 @@ router.get("/api/debug/test-sushiswap", async (req, res) => {
 
 // ===== WALLET MANAGEMENT ENDPOINTS =====
 
-// GET /api/wallets - Get all wallets for the authenticated user
-router.get("/api/wallets", authenticateUser, async (req, res) => {
+// GET /wallets - Get all wallets for the authenticated user
+router.get("/wallets", authenticateUser, async (req, res) => {
   try {
     const userWallets = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
     res.json(userWallets);
@@ -323,8 +323,8 @@ router.get("/api/wallets", authenticateUser, async (req, res) => {
   }
 });
 
-// POST /api/wallets - Create a new wallet for the authenticated user
-router.post("/api/wallets", authenticateUser, async (req, res) => {
+// POST /wallets - Create a new wallet for the authenticated user
+router.post("/wallets", authenticateUser, async (req, res) => {
   try {
     const { chain } = req.body;
     let walletData;
@@ -367,8 +367,8 @@ router.post("/api/wallets", authenticateUser, async (req, res) => {
 
 // ===== TRANSACTION MANAGEMENT ENDPOINTS =====
 
-// GET /api/transactions - Get all transactions for the authenticated user
-router.get("/api/transactions", authenticateUser, async (req, res) => {
+// GET /transactions - Get all transactions for the authenticated user
+router.get("/transactions", authenticateUser, async (req, res) => {
   try {
     // Get user's wallets first
     const userWallets = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
@@ -392,8 +392,8 @@ router.get("/api/transactions", authenticateUser, async (req, res) => {
 
 // ===== AUTHENTICATION ENDPOINTS =====
 
-// POST /api/register - Register a new user (OAuth-based)
-router.post("/api/register", async (req, res) => {
+// POST /register - Register a new user (OAuth-based)
+router.post("/register", async (req, res) => {
   try {
     const { email, name, googleId } = req.body;
 
@@ -419,8 +419,8 @@ router.post("/api/register", async (req, res) => {
   }
 });
 
-// POST /api/login - Log in a user (OAuth-based)
-router.post("/api/login", async (req, res) => {
+// POST /login - Log in a user (OAuth-based)
+router.post("/login", async (req, res) => {
   try {
     const { email, googleId } = req.body;
     const [user] = await db.select()
@@ -455,8 +455,8 @@ router.post("/api/login", async (req, res) => {
   }
 });
 
-// POST /api/logout - Log out the current user
-router.post("/api/logout", (req, res) => {
+// POST /logout - Log out the current user
+router.post("/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) {
       console.error("Logout error:", err);
