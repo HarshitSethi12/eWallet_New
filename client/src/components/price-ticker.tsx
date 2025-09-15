@@ -189,7 +189,7 @@ export function PriceTicker() {
       </CardHeader>
       <CardContent className="space-y-4">
         {prices?.map((crypto) => {
-          const isPositive = (crypto.price_change_percentage_24h || 0) >= 0;
+          const isPositive = crypto.price_change_percentage_24h > 0;
           const isNeutral = Math.abs(crypto.price_change_percentage_24h) < 0.01;
 
           return (
@@ -216,7 +216,7 @@ export function PriceTicker() {
 
               <div className="text-right">
                 <p className="font-bold text-lg" style={{ color: 'var(--color-heading)' }}>
-                  ${crypto.current_price?.toLocaleString() || 'N/A'}
+                  ${crypto.current_price.toLocaleString()}
                 </p>
                 <div className={`flex items-center gap-1 text-sm ${
                   isNeutral ? 'text-gray-500' : isPositive ? 'text-green-500' : 'text-red-500'
@@ -229,7 +229,7 @@ export function PriceTicker() {
                     <TrendingDown className="h-3 w-3" />
                   )}
                   <span>
-                    {isPositive ? '+' : ''}{(crypto.price_change_percentage_24h || 0).toFixed(2)}%
+                    {isPositive ? '+' : ''}{crypto.price_change_percentage_24h.toFixed(2)}%
                   </span>
                 </div>
               </div>

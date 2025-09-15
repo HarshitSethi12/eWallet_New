@@ -91,7 +91,7 @@ const getCoinImageId = (coinId: string): string => {
 const getCoinFallbackIcon = (symbol: string): string => {
   const colors: { [key: string]: string } = {
     'BTC': '#f7931a',
-    'ETH': '#627eea',
+    'ETH': '#627eea', 
     'USDT': '#26a17b',
     'BNB': '#f3ba2f',
     'SOL': '#9945ff',
@@ -142,68 +142,35 @@ export function HorizontalPriceTicker() {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const { data: prices = [], isLoading, error } = useQuery({
-    queryKey: ['horizontal-sushiswap-prices'],
+  const { data: cryptoPrices = [], isLoading, error } = useQuery<any[]>({
+    queryKey: ['crypto-prices'],
     queryFn: async () => {
-      console.log('🍣 Fetching SushiSwap prices for horizontal ticker (NO FALLBACK)...');
-
       try {
-        // Try SushiSwap prices endpoint first
-        let response = await fetch('/api/sushiswap/prices');
-        if (response.ok) {
-          const data = await response.json();
-          console.log('📊 SushiSwap prices API response:', data);
-
-          if (data.success && data.prices) {
-            const formattedPrices = data.prices.slice(0, 10).map((token: any) => ({
-              id: token.symbol.toLowerCase(),
-              symbol: token.symbol,
-              name: token.name,
-              price: token.price || 0, // Show 0 if no price
-              change: token.change24h || 0,
-              logoURI: token.logoURI || getCoinImageUrl(token.symbol.toLowerCase())
-            }));
-
-            console.log('✅ SushiSwap prices loaded:', formattedPrices.length, 'items');
-            return formattedPrices;
-          }
+        const response = await fetch('/api/crypto-prices');
+        if (!response.ok) {
+          throw new Error('Failed to fetch crypto prices');
         }
+        const data = await response.json();
 
-        // Try tokens endpoint (which also has SushiSwap data)
-        console.log('🔄 Trying /api/tokens for SushiSwap data...');
-        response = await fetch('/api/tokens');
-        if (response.ok) {
-          const data = await response.json();
-          console.log('📊 Tokens API response:', data);
+        // Transform the CoinGecko API response to match our expected format
+        const cryptoList = [
+          { symbol: 'BTC', name: 'Bitcoin', price: data.bitcoin?.usd || 0, change: data.bitcoin?.usd_24h_change || 0 },
+          { symbol: 'ETH', name: 'Ethereum', price: data.ethereum?.usd || 0, change: data.ethereum?.usd_24h_change || 0 },
+          { symbol: 'ADA', name: 'Cardano', price: data.cardano?.usd || 0, change: data.cardano?.usd_24h_change || 0 },
+          { symbol: 'DOT', name: 'Polkadot', price: data.polkadot?.usd || 0, change: data.polkadot?.usd_24h_change || 0 },
+          { symbol: 'LINK', name: 'Chainlink', price: data.chainlink?.usd || 0, change: data.chainlink?.usd_24h_change || 0 },
+          { symbol: 'LTC', name: 'Litecoin', price: data.litecoin?.usd || 0, change: data.litecoin?.usd_24h_change || 0 },
+          { symbol: 'XLM', name: 'Stellar', price: data.stellar?.usd || 0, change: data.stellar?.usd_24h_change || 0 },
+          { symbol: 'TRX', name: 'Tron', price: data.tron?.usd || 0, change: data.tron?.usd_24h_change || 0 },
+        ];
 
-          if (data.success && data.tokens) {
-            const formattedPrices = data.tokens.slice(0, 10).map((token: any) => ({
-              id: token.symbol.toLowerCase(),
-              symbol: token.symbol,
-              name: token.name,
-              price: token.price || 0, // Show 0 if no price
-              change: token.change24h || 0,
-              logoURI: token.logoURI || getCoinImageUrl(token.symbol.toLowerCase())
-            }));
-
-            console.log('✅ SushiSwap tokens loaded:', formattedPrices.length, 'items');
-            return formattedPrices;
-          }
-        }
-
-        console.error('❌ All SushiSwap endpoints failed');
-        throw new Error('SushiSwap data unavailable');
+        return cryptoList;
       } catch (error) {
-        console.error('❌ SushiSwap horizontal ticker fetch error:', error);
-
-        // Return empty array instead of fallback data
-        console.log('⚠️ No fallback - returning empty data');
+        console.error('Error fetching crypto prices:', error);
         return [];
       }
     },
-    refetchInterval: 30000,
-    retry: 2, // Reduced retries since we don't want fallbacks
-    staleTime: 30000
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   const updateScrollButtons = () => {
@@ -226,7 +193,7 @@ export function HorizontalPriceTicker() {
 
   useEffect(() => {
     updateScrollButtons();
-  }, [prices]); // Depend on prices to update buttons when data loads
+  }, [cryptoPrices]);
 
   if (isLoading) {
     return (
@@ -248,7 +215,7 @@ export function HorizontalPriceTicker() {
   if (error) {
     return (
       <div className="w-full bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        <p className="text-center text-red-500">🍣 SushiSwap data unavailable - No fallback enabled</p>
+        <p className="text-center text-gray-500">Unable to load market data</p>
       </div>
     );
   }
@@ -282,16 +249,16 @@ export function HorizontalPriceTicker() {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         onScroll={updateScrollButtons}
       >
-        {Array.isArray(prices) && prices.length > 0 ? prices.map((crypto) => {
-          const isPositive = (crypto.change24h || 0) > 0;
+        {Array.isArray(cryptoPrices) && cryptoPrices.length > 0 ? cryptoPrices.map((crypto) => {
+          const isPositive = crypto.change > 0;
           const colors = cryptoColors[crypto.symbol.toLowerCase()] || { primary: "#6B7280", secondary: "#9CA3AF" };
 
           return (
-            <div key={crypto.symbol || crypto.id} className="flex flex-col items-center min-w-[90px] max-w-[90px] sm:min-w-[110px] sm:max-w-[110px] lg:min-w-[120px] lg:max-w-[120px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
+            <div key={crypto.symbol} className="flex flex-col items-center min-w-[90px] max-w-[90px] sm:min-w-[110px] sm:max-w-[110px] lg:min-w-[120px] lg:max-w-[120px] p-2 sm:p-3 lg:p-3 hover:transform hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
               {/* Coin Icon */}
               <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full shadow-md mb-1 sm:mb-2 relative overflow-hidden bg-white border-2 border-gray-100">
-                <img
-                  src={crypto.logoURI || getCoinImageUrl(crypto.symbol)}
+                <img 
+                  src={getCoinImageUrl(crypto.name.toLowerCase())}
                   alt={crypto.name}
                   className="w-full h-full object-cover rounded-full"
                   onError={(e) => {
@@ -299,6 +266,7 @@ export function HorizontalPriceTicker() {
                     target.src = getCoinFallbackIcon(crypto.symbol);
                   }}
                 />
+                <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full border-2 border-white"></div>
               </div>
 
               {/* Coin Symbol */}
@@ -308,25 +276,25 @@ export function HorizontalPriceTicker() {
 
               {/* Price */}
               <p className="text-xs sm:text-sm lg:text-base font-bold text-gray-900 mb-0.5 sm:mb-1 text-center">
-                ${crypto.price?.toLocaleString('en-US', {
-                  minimumFractionDigits: crypto.price < 1 ? 4 : 2,
-                  maximumFractionDigits: crypto.price < 1 ? 4 : 2
-                }) || '0.00'}
+                ${crypto.price.toLocaleString('en-US', { 
+                  minimumFractionDigits: 2, 
+                  maximumFractionDigits: 2 
+                })}
               </p>
 
               {/* Percentage Change */}
               <div className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[0.6rem] font-medium ${
-                isPositive
-                  ? 'bg-green-100 text-green-700'
+                isPositive 
+                  ? 'bg-green-100 text-green-700' 
                   : 'bg-red-100 text-red-700'
               }`}>
-                {isPositive ? '+' : ''}{(crypto.change24h || 0).toFixed(2)}%
+                {isPositive ? '+' : ''}{crypto.change.toFixed(2)}%
               </div>
             </div>
           );
         }) : (
           <div className="flex items-center justify-center w-full py-8">
-            <p className="text-red-500">🍣 No SushiSwap data available - Please refresh</p>
+            <p className="text-gray-500">Loading market data...</p>
           </div>
         )}
       </div>
@@ -334,7 +302,7 @@ export function HorizontalPriceTicker() {
       {/* Bottom info bar */}
       <div className="bg-gray-50 px-4 sm:px-6 py-2 sm:py-3 border-t border-gray-100">
         <p className="text-xs text-gray-500 text-center">
-          🍣 SushiSwap prices • Updates every 30 seconds
+          Live market data • Updates every 30 seconds
         </p>
       </div>
     </div>
