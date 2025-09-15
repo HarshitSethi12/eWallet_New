@@ -110,85 +110,26 @@ export function EnhancedTokenList() {
         return sushiTokens;
       }
 
-      // Fallback: Use our main API endpoint
-      console.log('🔄 Fallback to main API...');
-      const response = await fetch('/api/tokens');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.tokens) {
-          return data.tokens.map(token => ({
-            symbol: token.symbol,
-            name: token.name,
-            address: token.address,
-            price: token.price,
-            change24h: token.change24h,
-            marketCap: token.marketCap,
-            volume24h: token.volume24h,
-            logoURI: token.logoURI,
-            chainId: 1,
-            provider: 'SushiSwap',
-            source: 'fallback'
-          }));
-        }
-      }
-
-      throw new Error('All data sources failed');
+      // Fallback: Use mock tokens if SushiSwap fails
+      console.log('🔄 SushiSwap failed, using mock data fallback...');
+      return getMockTokens();
+      
     } catch (error) {
       console.error('Error fetching token data:', error);
-      return [];
-    ];
-
-    let sushiSwapData = null;
-    const fallbackData = [];
-    
-    // Try SushiSwap first (primary source)
-    try {
-      console.log(`🍣 Fetching prices from SushiSwap (primary source)...`);
-      sushiSwapData = await fetchSushiSwapPrices();
-      if (sushiSwapData && sushiSwapData.length > 0) {
-        console.log(`✅ SushiSwap provided ${sushiSwapData.length} token prices`);
-        return sushiSwapData.map(token => ({
-          ...token,
-          provider: 'SushiSwap DEX',
-          source: 'sushiswap'
-        }));
-      }
-    } catch (error) {
-      console.warn(`❌ SushiSwap failed, trying fallback providers:`, error);
+      return getMockTokens();
     }
-    
-    // If SushiSwap fails, try other exchange providers
-    for (const provider of exchangeProviders.slice(1)) {
-      try {
-        console.log(`🔄 Fetching exchange prices from ${provider.name}...`);
-        const tokens = await provider.fetchFn();
-        if (tokens && tokens.length > 0) {
-          fallbackData.push({ provider: provider.name, tokens, weight: provider.weight });
-        }
-      } catch (error) {
-        console.warn(`❌ ${provider.name} failed:`, error);
-      }
-    }
-    
-    // If fallback exchange data available, use it
-    if (fallbackData.length > 0) {
-      return calculateExchangeWeightedPrices(fallbackData);
-    }
-    
-    // Final fallback to market data
-    return await fetchMarketDataFallback();
   };
 
   // Fetch prices from SushiSwap DEX (primary source)
   const fetchSushiSwapPrices = async (): Promise<TokenData[]> => {
     try {
-      console.log('🍣 Fetching SushiSwap prices...');
+      console.log('🍣 Fetching SushiSwap prices for Token List...');
       const response = await fetch(`/api/sushiswap/prices`);
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ SushiSwap prices fetched:', data.prices?.length || 0, 'tokens');
+        console.log('✅ SushiSwap prices fetched for Token List:', data.prices?.length || 0, 'tokens');
         
-        return data.prices?.map(price => ({
+        return data.prices?.map((price: any) => ({
           symbol: price.symbol,
           name: price.name,
           address: price.address,
@@ -197,7 +138,7 @@ export function EnhancedTokenList() {
           marketCap: price.marketCap || 0,
           volume24h: price.volume24h || 0,
           logoURI: price.logoURI || `https://tokens.1inch.io/${price.address.toLowerCase()}.png`,
-          chainId: selectedChain === 'ethereum' ? 1 : selectedChain === 'bsc' ? 56 : 137,
+          chainId: 1,
           provider: 'SushiSwap',
           source: 'sushiswap'
         })) || [];
