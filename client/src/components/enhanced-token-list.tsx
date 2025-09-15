@@ -124,24 +124,26 @@ export function EnhancedTokenList() {
   const fetchSushiSwapPrices = async (): Promise<TokenData[]> => {
     try {
       console.log('🍣 Fetching SushiSwap prices for Token List...');
-      const response = await fetch(`/api/sushiswap/prices`);
+      const response = await fetch(`/api/tokens`);
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ SushiSwap prices fetched for Token List:', data.prices?.length || 0, 'tokens');
+        console.log('✅ SushiSwap prices fetched for Token List:', data.tokens?.length || 0, 'tokens');
         
-        return data.prices?.map((price: any) => ({
-          symbol: price.symbol,
-          name: price.name,
-          address: price.address,
-          price: price.price || 0,
-          change24h: price.change24h || 0,
-          marketCap: price.marketCap || 0,
-          volume24h: price.volume24h || 0,
-          logoURI: price.logoURI || `https://tokens.1inch.io/${price.address.toLowerCase()}.png`,
-          chainId: 1,
-          provider: 'SushiSwap',
-          source: 'sushiswap'
-        })) || [];
+        if (data.success && data.tokens) {
+          return data.tokens.map((token: any) => ({
+            symbol: token.symbol,
+            name: token.name,
+            address: token.address || `mock_${token.symbol.toLowerCase()}`,
+            price: token.price || 0,
+            change24h: token.change24h || 0,
+            marketCap: token.marketCap || 0,
+            volume24h: token.volume24h || 0,
+            logoURI: token.logoURI || `https://tokens.1inch.io/${token.symbol.toLowerCase()}.png`,
+            chainId: 1,
+            provider: 'SushiSwap',
+            source: 'sushiswap'
+          }));
+        }
       }
     } catch (error) {
       console.error('SushiSwap prices error:', error);
