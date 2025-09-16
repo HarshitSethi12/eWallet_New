@@ -143,30 +143,32 @@ export function HorizontalPriceTicker() {
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   const { data: cryptoPrices = [], isLoading, error } = useQuery<any[]>({
-    queryKey: ['crypto-prices'],
+    queryKey: ['sushiswap-live-prices'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/crypto-prices');
+        console.log('🍣 Live Market Prices fetching from SushiSwap...');
+        const response = await fetch('/api/tokens');
         if (!response.ok) {
-          throw new Error('Failed to fetch crypto prices');
+          throw new Error('Failed to fetch SushiSwap prices');
         }
         const data = await response.json();
+        console.log('🍣 Live Market Prices data received:', data.source);
 
-        // Transform the CoinGecko API response to match our expected format
-        const cryptoList = [
-          { symbol: 'BTC', name: 'Bitcoin', price: data.bitcoin?.usd || 0, change: data.bitcoin?.usd_24h_change || 0 },
-          { symbol: 'ETH', name: 'Ethereum', price: data.ethereum?.usd || 0, change: data.ethereum?.usd_24h_change || 0 },
-          { symbol: 'ADA', name: 'Cardano', price: data.cardano?.usd || 0, change: data.cardano?.usd_24h_change || 0 },
-          { symbol: 'DOT', name: 'Polkadot', price: data.polkadot?.usd || 0, change: data.polkadot?.usd_24h_change || 0 },
-          { symbol: 'LINK', name: 'Chainlink', price: data.chainlink?.usd || 0, change: data.chainlink?.usd_24h_change || 0 },
-          { symbol: 'LTC', name: 'Litecoin', price: data.litecoin?.usd || 0, change: data.litecoin?.usd_24h_change || 0 },
-          { symbol: 'XLM', name: 'Stellar', price: data.stellar?.usd || 0, change: data.stellar?.usd_24h_change || 0 },
-          { symbol: 'TRX', name: 'Tron', price: data.tron?.usd || 0, change: data.tron?.usd_24h_change || 0 },
-        ];
+        // Transform the SushiSwap API response to match our expected format
+        if (data.success && data.tokens) {
+          const cryptoList = data.tokens.slice(0, 8).map((token: any) => ({
+            symbol: token.symbol === 'WBTC' ? 'BTC' : token.symbol,
+            name: token.symbol === 'WBTC' ? 'Bitcoin' : token.name,
+            price: token.price || 0,
+            change: token.change24h || 0,
+          }));
+          console.log('🍣 Live Market Prices transformed:', cryptoList.length, 'tokens');
+          return cryptoList;
+        }
 
-        return cryptoList;
+        return [];
       } catch (error) {
-        console.error('Error fetching crypto prices:', error);
+        console.error('❌ Error fetching SushiSwap prices for Live Market:', error);
         return [];
       }
     },
