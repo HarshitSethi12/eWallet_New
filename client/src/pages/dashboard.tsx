@@ -128,9 +128,9 @@ export default function Dashboard() {
   };
 
   // ===== REAL-TIME TOKEN DATA FETCHING =====
-  // Fetch cryptocurrency token data from our API (1inch or CoinGecko)
-  const { data: tokenData, isLoading: tokensLoading, error: tokensError, refetch: refetchTokens } = useQuery({
-    queryKey: ["/api/tokens"],              // Fixed query key
+  // Fetch cryptocurrency token data from CoinGecko for Live Market Prices (horizontal ticker)
+  const { data: marketPricesData, isLoading: marketPricesLoading, error: marketPricesError, refetch: refetchMarketPrices } = useQuery({
+    queryKey: ["/api/tokens"],              // CoinGecko endpoint for market overview
     queryFn: () => apiRequest("/api/tokens"), // Function that makes the API call
     refetchInterval: 30000,                 // Refresh data every 30 seconds
     retry: 3,                               // Retry 3 times on failure
@@ -138,17 +138,41 @@ export default function Dashboard() {
     refetchOnMount: false,                 // Don't always refetch when component mounts
   });
 
+  // Fetch token data from 1inch DEX for Token List (swappable tokens)
+  const { data: tokenListData, isLoading: tokenListLoading, error: tokenListError, refetch: refetchTokenList } = useQuery({
+    queryKey: ["/api/tokens/oneinch"],       // 1inch endpoint for Token List
+    queryFn: () => apiRequest("/api/tokens/oneinch"), // Function that makes the API call
+    refetchInterval: 30000,                 // Refresh data every 30 seconds
+    retry: 3,                               // Retry 3 times on failure
+    staleTime: 10000,                      // Data fresh for 10 seconds
+    refetchOnMount: false,                 // Don't always refetch when component mounts
+  });
 
-  // ===== MANUAL REFRESH FUNCTION =====
-  // Function to manually refresh token prices
-  const handleRefreshPrices = () => {
-    console.log('🔄 Manually refreshing token prices...');
-    refetchTokens();
+
+  // ===== MANUAL REFRESH FUNCTIONS =====
+  // Function to manually refresh market prices (horizontal ticker)
+  const handleRefreshMarketPrices = () => {
+    console.log('🔄 Manually refreshing market prices...');
+    refetchMarketPrices();
+  };
+
+  // Function to manually refresh token list (1inch DEX prices)
+  const handleRefreshTokenList = () => {
+    console.log('🔄 Manually refreshing token list...');
+    refetchTokenList();
+  };
+
+  // Function to refresh both data sources
+  const handleRefreshAllPrices = () => {
+    console.log('🔄 Manually refreshing all price data...');
+    refetchMarketPrices();
+    refetchTokenList();
   };
 
   // ===== DATA SELECTION LOGIC =====
   // Use real API data when available, fallback to mock data during loading/error
-  const portfolioTokens = tokenData?.tokens || mockTokens;
+  const marketTokens = marketPricesData?.tokens || mockTokens; // For horizontal ticker (CoinGecko)
+  const portfolioTokens = tokenListData?.tokens || mockTokens;  // For Token List (1inch DEX)
 
   // ===== API DATA FETCHING =====
   // Fetch wallet data using React Query
@@ -479,19 +503,19 @@ export default function Dashboard() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={handleRefreshPrices}
-                    disabled={tokensLoading}
+                    onClick={handleRefreshTokenList}
+                    disabled={tokenListLoading}
                     className="h-6 px-2 text-xs"
                   >
-                    <RefreshCw className={`h-3 w-3 ${tokensLoading ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`h-3 w-3 ${tokenListLoading ? 'animate-spin' : ''}`} />
                   </Button>
-                  {tokenData && (
+                  {tokenListData && (
                     <span className={`text-xs font-normal px-2 py-1 rounded ${
-                      tokenData.tokens?.length > 0 && tokenData.success !== false
-                        ? 'text-pink-700 bg-pink-100 border border-pink-200'
+                      tokenListData.tokens?.length > 0 && tokenListData.success !== false
+                        ? 'text-blue-700 bg-blue-100 border border-blue-200'
                         : 'text-gray-500 bg-gray-100 border border-gray-200'
                     }`}>
-                      {tokenData.tokens?.length > 0 && tokenData.success !== false ? '🍣 SushiSwap' : 'Mock Data'}
+                      {tokenListData.tokens?.length > 0 && tokenListData.success !== false ? '🔵 1inch DEX' : 'Mock Data'}
                     </span>
                   )}
                 </div>
@@ -500,7 +524,7 @@ export default function Dashboard() {
             <CardContent className="flex-1">
               <ScrollArea className="h-full">
                 <div className="space-y-2">
-                  {tokensLoading ? (
+                  {tokenListLoading ? (
                     <div className="space-y-2">
                       {[...Array(6)].map((_, i) => (
                         <div key={i} className="flex items-center justify-between p-3 border rounded-lg animate-pulse">
