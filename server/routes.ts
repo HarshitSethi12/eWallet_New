@@ -124,23 +124,82 @@ async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
 router.get("/tokens", async (req, res) => {
   console.log('🔵 /api/tokens endpoint called');
 
+  // SushiSwap supported tokens with their CoinGecko IDs (declared outside try-catch)
+  const sushiTokens = [
+    { symbol: 'ETH', name: 'Ethereum', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', coinGeckoId: 'ethereum' },
+    { symbol: 'USDC', name: 'USD Coin', address: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD', coinGeckoId: 'usd-coin' },
+    { symbol: 'USDT', name: 'Tether USD', address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', coinGeckoId: 'tether' },
+    { symbol: 'WBTC', name: 'Wrapped Bitcoin', address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', coinGeckoId: 'wrapped-bitcoin' },
+    { symbol: 'LINK', name: 'Chainlink', address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', coinGeckoId: 'chainlink' },
+    { symbol: 'UNI', name: 'Uniswap', address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', coinGeckoId: 'uniswap' },
+    { symbol: 'SUSHI', name: 'SushiSwap', address: '0x6B3595068778DD592e39A122f4f5a5cF09C90fE2', coinGeckoId: 'sushi' },
+    { symbol: 'AAVE', name: 'Aave', address: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', coinGeckoId: 'aave' }
+  ];
+
   try {
-    console.log('🍣 Fetching real SushiSwap token prices...');
+    console.log('🍣 Fetching real SushiSwap token prices from CoinGecko...');
 
-    // SushiSwap supported tokens with their CoinGecko IDs
-    const sushiTokens = [
-      { symbol: 'ETH', name: 'Ethereum', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', coinGeckoId: 'ethereum' },
-      { symbol: 'USDC', name: 'USD Coin', address: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD', coinGeckoId: 'usd-coin' },
-      { symbol: 'USDT', name: 'Tether USD', address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', coinGeckoId: 'tether' },
-      { symbol: 'WBTC', name: 'Wrapped Bitcoin', address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', coinGeckoId: 'wrapped-bitcoin' },
-      { symbol: 'LINK', name: 'Chainlink', address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', coinGeckoId: 'chainlink' },
-      { symbol: 'UNI', name: 'Uniswap', address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', coinGeckoId: 'uniswap' },
-      { symbol: 'SUSHI', name: 'SushiSwap', address: '0x6B3595068778DD592e39A122f4f5a5cF09C90fE2', coinGeckoId: 'sushi' },
-      { symbol: 'AAVE', name: 'Aave', address: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', coinGeckoId: 'aave' }
-    ];
+    // Try to fetch real prices from CoinGecko
+    const coinGeckoIds = sushiTokens.map(token => token.coinGeckoId).join(',');
+    const coinGeckoUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoIds}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`;
+    
+    console.log('🔗 CoinGecko API URL:', coinGeckoUrl);
+    
+    const response = await fetch(coinGeckoUrl, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'BitWallet/1.0'
+      },
+      timeout: 10000
+    });
 
-    // Always return fallback data to ensure horizontal ticker works
-    console.log('🍣 Using enhanced SushiSwap fallback prices for horizontal ticker...');
+    if (response.ok) {
+      const coinGeckoData = await response.json();
+      console.log('✅ Real CoinGecko data fetched successfully');
+      console.log('📊 ETH price from CoinGecko:', coinGeckoData.ethereum?.usd);
+      
+      const formattedTokens = sushiTokens.map(token => {
+        const priceData = coinGeckoData[token.coinGeckoId];
+        
+        if (priceData && priceData.usd) {
+          return {
+            symbol: token.symbol,
+            name: token.name,
+            address: token.address,
+            price: priceData.usd,
+            change24h: priceData.usd_24h_change || 0,
+            marketCap: priceData.usd_market_cap || 0,
+            volume24h: priceData.usd_24h_vol || 0,
+            balanceUSD: priceData.usd * Math.random() * 10,
+            logoURI: `https://tokens.1inch.io/${token.address.toLowerCase()}.png`,
+            lastUpdated: new Date().toISOString(),
+            source: 'CoinGecko via SushiSwap'
+          };
+        } else {
+          console.warn(`⚠️ No price data for ${token.symbol}, using fallback`);
+          return null;
+        }
+      }).filter(Boolean);
+
+      console.log(`✅ Real CoinGecko prices formatted: ${formattedTokens.length} tokens`);
+
+      return res.json({
+        success: true,
+        message: `Successfully fetched ${formattedTokens.length} real SushiSwap token prices`,
+        tokens: formattedTokens,
+        validCount: formattedTokens.length,
+        errorCount: sushiTokens.length - formattedTokens.length,
+        source: 'SushiSwap DEX (CoinGecko)',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      throw new Error(`CoinGecko API returned ${response.status}`);
+    }
+  } catch (error) {
+    console.error('❌ Error fetching real prices, falling back to static data:', error.message);
+    
+    // Fallback to static data only if API fails
+    console.log('🍣 Using enhanced SushiSwap fallback prices...');
     
     const currentTime = Date.now();
     const formattedTokens = sushiTokens.map(token => {
@@ -186,40 +245,6 @@ router.get("/tokens", async (req, res) => {
       validCount: formattedTokens.length,
       errorCount: 0,
       source: 'SushiSwap DEX (Enhanced Fallback)',
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('❌ Error in SushiSwap prices endpoint:', error);
-
-    // Final fallback - basic token list
-    const basicTokens = [
-      { symbol: 'ETH', name: 'Ethereum', price: 3650, change24h: 2.1 },
-      { symbol: 'USDC', name: 'USD Coin', price: 1.00, change24h: 0.01 },
-      { symbol: 'USDT', name: 'Tether USD', price: 1.00, change24h: -0.01 },
-      { symbol: 'WBTC', name: 'Wrapped Bitcoin', price: 95420, change24h: 1.8 },
-      { symbol: 'LINK', name: 'Chainlink', price: 22.45, change24h: 3.4 },
-      { symbol: 'UNI', name: 'Uniswap', price: 15.80, change24h: -1.2 },
-      { symbol: 'SUSHI', name: 'SushiSwap', price: 1.25, change24h: 5.2 },
-      { symbol: 'AAVE', name: 'Aave', price: 285.30, change24h: 2.1 }
-    ].map(token => ({
-      ...token,
-      address: `0x${token.symbol.toLowerCase()}`,
-      marketCap: 0,
-      volume24h: 0,
-      balanceUSD: token.price * Math.random() * 10,
-      logoURI: `https://tokens.1inch.io/0x${token.symbol.toLowerCase()}.png`,
-      lastUpdated: new Date().toISOString(),
-      source: 'SushiSwap Basic Fallback'
-    }));
-
-    return res.json({
-      success: true,
-      message: 'Using basic SushiSwap token prices',
-      tokens: basicTokens,
-      validCount: basicTokens.length,
-      errorCount: 0,
-      source: 'SushiSwap DEX (Basic Fallback)',
       timestamp: new Date().toISOString()
     });
   }
