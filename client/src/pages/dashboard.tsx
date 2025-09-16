@@ -130,20 +130,14 @@ export default function Dashboard() {
   // ===== REAL-TIME TOKEN DATA FETCHING =====
   // Fetch cryptocurrency token data from our API (1inch or CoinGecko)
   const { data: tokenData, isLoading: tokensLoading, error: tokensError, refetch: refetchTokens } = useQuery({
-    queryKey: ["/api/tokens"],              // Unique cache key for this query
+    queryKey: ["/api/tokens"],              // Fixed query key
     queryFn: () => apiRequest("/api/tokens"), // Function that makes the API call
     refetchInterval: 30000,                 // Refresh data every 30 seconds
     retry: 3,                               // Retry 3 times on failure
-    onSuccess: (data) => {                  // Callback when data is successfully fetched
-      console.log('🎯 Token data received:', data);
-      console.log('🎯 Data source:', data?.source);
-      console.log('🎯 Number of tokens:', data?.tokens?.length);
-      console.log('🎯 All token prices:', data?.tokens?.map(t => `${t.symbol}: $${t.price}`));
-    },
-    onError: (error) => {                   // Callback when API call fails
-      console.error('❌ Token data fetch error:', error);
-    }
+    staleTime: 10000,                      // Data fresh for 10 seconds
+    refetchOnMount: false,                 // Don't always refetch when component mounts
   });
+
 
   // ===== MANUAL REFRESH FUNCTION =====
   // Function to manually refresh token prices
@@ -491,16 +485,13 @@ export default function Dashboard() {
                   >
                     <RefreshCw className={`h-3 w-3 ${tokensLoading ? 'animate-spin' : ''}`} />
                   </Button>
-                  {tokenData?.source && (
+                  {tokenData && (
                     <span className={`text-xs font-normal px-2 py-1 rounded ${
-                      tokenData.source.toLowerCase().includes('sushiswap') || tokenData.source.toLowerCase().includes('sushi')
+                      tokenData.tokens?.length > 0 && tokenData.success !== false
                         ? 'text-pink-700 bg-pink-100 border border-pink-200'
-                        : tokenData.source.toLowerCase().includes('coingecko')
-                        ? 'text-blue-700 bg-blue-100 border border-blue-200'
                         : 'text-gray-500 bg-gray-100 border border-gray-200'
                     }`}>
-                      {tokenData.source.toLowerCase().includes('sushiswap') || tokenData.source.toLowerCase().includes('sushi') ? '🍣 SushiSwap' : 
-                       tokenData.source.toLowerCase().includes('coingecko') ? 'CoinGecko' : 'Mock Data'}
+                      {tokenData.tokens?.length > 0 && tokenData.success !== false ? '🍣 SushiSwap' : 'Mock Data'}
                     </span>
                   )}
                 </div>
