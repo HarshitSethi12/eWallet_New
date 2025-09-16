@@ -125,35 +125,27 @@ router.get("/tokens/oneinch", async (req, res) => {
   console.log('🔵 /api/tokens/oneinch endpoint called');
 
   try {
-    console.log('🚀 Fetching real-time prices from 1inch API...');
-
-    // 1inch supported tokens for Ethereum mainnet
-    const oneInchTokens = [
-      { symbol: 'ETH', name: 'Ethereum', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' },
-      { symbol: 'USDC', name: 'USD Coin', address: '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD' },
-      { symbol: 'USDT', name: 'Tether USD', address: '0xdAC17F958D2ee523a2206206994597C13D831ec7' },
-      { symbol: 'WBTC', name: 'Wrapped Bitcoin', address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599' },
-      { symbol: 'LINK', name: 'Chainlink', address: '0x514910771AF9Ca656af840dff83E8264EcF986CA' },
-      { symbol: 'UNI', name: 'Uniswap', address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984' },
-      { symbol: 'SUSHI', name: 'SushiSwap', address: '0x6B3595068778DD592e39A122f4f5a5cF09C90fE2' },
-      { symbol: 'AAVE', name: 'Aave', address: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9' },
-      { symbol: 'MKR', name: 'Maker', address: '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2' },
-      { symbol: 'CRV', name: 'Curve DAO Token', address: '0xD533a949740bb3306d119CC777fa900bA034cd52' }
-    ];
+    console.log('🚀 Fetching real-time prices from 1inch Spot Price API...');
 
     // Get API key from environment
     const apiKey = process.env.ONEINCH_API_KEY;
     if (!apiKey) {
-      throw new Error('1inch API key not configured');
+      console.error('❌ 1inch API key not configured');
+      return res.json({
+        success: false,
+        message: '1inch API key not configured',
+        tokens: [],
+        source: '1inch DEX',
+        timestamp: new Date().toISOString()
+      });
     }
 
-    console.log('🔗 1inch API Key found, fetching prices...');
+    console.log('🔗 1inch API Key found, fetching all whitelisted token prices...');
 
-    // Fetch prices from 1inch price API for Ethereum (chain ID 1)
-    const tokenAddresses = oneInchTokens.map(token => token.address).join(',');
-    const oneInchUrl = `https://api.1inch.dev/price/v1.1/1/${tokenAddresses}`;
+    // Use correct 1inch Spot Price API endpoint for Ethereum (chain ID 1)
+    const oneInchUrl = `https://api.1inch.dev/price/v1.1/1`;
     
-    console.log('🔗 1inch Price API URL:', oneInchUrl);
+    console.log('🔗 1inch Spot Price API URL:', oneInchUrl);
     
     const response = await fetch(oneInchUrl, {
       headers: {
@@ -163,94 +155,88 @@ router.get("/tokens/oneinch", async (req, res) => {
       }
     });
 
-    if (response.ok) {
-      const priceData = await response.json();
-      console.log('✅ Real 1inch price data fetched successfully');
-      console.log('📊 ETH price from 1inch:', priceData[oneInchTokens[0].address]);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ 1inch API returned ${response.status}: ${response.statusText}`);
+      console.error('❌ Response body:', errorText);
       
-      const formattedTokens = oneInchTokens.map(token => {
-        const priceInWei = priceData[token.address];
-        
-        if (priceInWei) {
-          // Convert price from wei to USD (1inch returns prices in wei)
-          // For ETH, price is directly in USD, for others we need to calculate
-          let priceUSD = 0;
-          
-          if (token.symbol === 'ETH') {
-            // ETH price is returned directly
-            priceUSD = parseFloat(priceInWei) / 1e18; // Convert from wei to ETH equivalent
-          } else {
-            // For other tokens, we need to calculate based on ETH price
-            const ethPrice = parseFloat(priceData[oneInchTokens[0].address]) / 1e18;
-            priceUSD = (parseFloat(priceInWei) / 1e18) * ethPrice;
-          }
-
-          return {
-            symbol: token.symbol,
-            name: token.name,
-            address: token.address,
-            price: priceUSD,
-            change24h: (Math.random() - 0.5) * 6, // Mock 24h change for now
-            marketCap: priceUSD * Math.random() * 1000000000,
-            volume24h: Math.random() * 100000000,
-            balanceUSD: priceUSD * Math.random() * 10,
-            logoURI: `https://tokens.1inch.io/${token.address.toLowerCase()}.png`,
-            lastUpdated: new Date().toISOString(),
-            source: '1inch DEX'
-          };
-        } else {
-          console.warn(`⚠️ No price data for ${token.symbol} from 1inch`);
-          return null;
-        }
-      }).filter(Boolean);
-
-      console.log(`✅ Real 1inch prices formatted: ${formattedTokens.length} tokens`);
-
       return res.json({
-        success: true,
-        message: `Successfully fetched ${formattedTokens.length} real 1inch DEX prices`,
-        tokens: formattedTokens,
-        validCount: formattedTokens.length,
-        errorCount: oneInchTokens.length - formattedTokens.length,
+        success: false,
+        message: `1inch API error: ${response.status} ${response.statusText}`,
+        tokens: [],
         source: '1inch DEX',
         timestamp: new Date().toISOString()
       });
-    } else {
-      throw new Error(`1inch API returned ${response.status}: ${response.statusText}`);
     }
-  } catch (error) {
-    console.error('❌ Error fetching 1inch prices, falling back to mock data:', error.message);
+
+    const priceData = await response.json();
+    console.log('✅ Real 1inch price data fetched successfully');
+    console.log('📊 Number of tokens from 1inch:', Object.keys(priceData).length);
     
-    // Fallback to mock data with realistic 1inch-style pricing
-    const mockTokens = [
-      { symbol: 'ETH', name: 'Ethereum', price: 4440.39, change24h: 2.1 },
-      { symbol: 'USDC', name: 'USD Coin', price: 1.00, change24h: 0.01 },
-      { symbol: 'USDT', name: 'Tether USD', price: 1.00, change24h: -0.01 },
-      { symbol: 'WBTC', name: 'Wrapped Bitcoin', price: 96820, change24h: 1.8 },
-      { symbol: 'LINK', name: 'Chainlink', price: 22.85, change24h: 3.4 },
-      { symbol: 'UNI', name: 'Uniswap', price: 16.20, change24h: -1.2 },
-      { symbol: 'SUSHI', name: 'SushiSwap', price: 1.35, change24h: 5.2 },
-      { symbol: 'AAVE', name: 'Aave', price: 295.30, change24h: 2.1 },
-      { symbol: 'MKR', name: 'Maker', price: 1650.50, change24h: 1.5 },
-      { symbol: 'CRV', name: 'Curve DAO Token', price: 0.85, change24h: 4.2 }
-    ].map(token => ({
-      ...token,
-      address: `0x${token.symbol.toLowerCase()}`,
-      marketCap: token.price * Math.random() * 1000000000,
-      volume24h: Math.random() * 100000000,
-      balanceUSD: token.price * Math.random() * 10,
-      logoURI: `https://tokens.1inch.io/0x${token.symbol.toLowerCase()}.png`,
-      lastUpdated: new Date().toISOString(),
-      source: '1inch DEX (Fallback)'
-    }));
+    // Known token info for popular tokens
+    const knownTokens = {
+      '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee': { symbol: 'ETH', name: 'Ethereum' },
+      '0xa0b86991c951449b402c7c27d170c54e0f13a8bfd': { symbol: 'USDC', name: 'USD Coin' },
+      '0xdac17f958d2ee523a2206206994597c13d831ec7': { symbol: 'USDT', name: 'Tether USD' },
+      '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': { symbol: 'WBTC', name: 'Wrapped Bitcoin' },
+      '0x514910771af9ca656af840dff83e8264ecf986ca': { symbol: 'LINK', name: 'Chainlink' },
+      '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984': { symbol: 'UNI', name: 'Uniswap' },
+      '0x6b3595068778dd592e39a122f4f5a5cf09c90fe2': { symbol: 'SUSHI', name: 'SushiSwap' },
+      '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9': { symbol: 'AAVE', name: 'Aave' },
+      '0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2': { symbol: 'MKR', name: 'Maker' },
+      '0xd533a949740bb3306d119cc777fa900ba034cd52': { symbol: 'CRV', name: 'Curve DAO Token' }
+    };
+
+    // Convert 1inch response to our format
+    const formattedTokens = Object.entries(priceData).map(([address, priceInWei]) => {
+      const tokenInfo = knownTokens[address.toLowerCase()] || {
+        symbol: address.slice(2, 8).toUpperCase(),
+        name: `Token ${address.slice(2, 8).toUpperCase()}`
+      };
+
+      // Convert price from wei to USD
+      // 1inch returns prices in wei (18 decimals)
+      const priceUSD = parseFloat(priceInWei) / 1e18;
+
+      return {
+        symbol: tokenInfo.symbol,
+        name: tokenInfo.name,
+        address: address,
+        price: priceUSD,
+        change24h: 0, // 1inch doesn't provide 24h change in this endpoint
+        marketCap: 0, // Not provided by this endpoint
+        volume24h: 0, // Not provided by this endpoint
+        balanceUSD: 0, // User balance (to be populated separately)
+        logoURI: `https://tokens.1inch.io/${address.toLowerCase()}.png`,
+        lastUpdated: new Date().toISOString(),
+        source: '1inch DEX'
+      };
+    }).filter(token => token.price > 0); // Only include tokens with valid prices
+
+    // Sort by price descending and take top tokens
+    const sortedTokens = formattedTokens.sort((a, b) => b.price - a.price).slice(0, 50);
+
+    console.log(`✅ Real 1inch prices formatted: ${sortedTokens.length} tokens`);
 
     return res.json({
       success: true,
-      message: 'Using 1inch-style fallback token prices',
-      tokens: mockTokens,
-      validCount: mockTokens.length,
+      message: `Successfully fetched ${sortedTokens.length} real 1inch DEX prices`,
+      tokens: sortedTokens,
+      validCount: sortedTokens.length,
       errorCount: 0,
-      source: '1inch DEX (Fallback)',
+      source: '1inch DEX',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching 1inch prices:', error.message);
+    
+    // NO FALLBACK - Return empty list as requested by user
+    return res.json({
+      success: false,
+      message: `Failed to fetch 1inch prices: ${error.message}`,
+      tokens: [],
+      source: '1inch DEX',
       timestamp: new Date().toISOString()
     });
   }

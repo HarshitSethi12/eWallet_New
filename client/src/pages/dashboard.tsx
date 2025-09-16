@@ -172,7 +172,7 @@ export default function Dashboard() {
   // ===== DATA SELECTION LOGIC =====
   // Use real API data when available, fallback to mock data during loading/error
   const marketTokens = marketPricesData?.tokens || mockTokens; // For horizontal ticker (CoinGecko)
-  const portfolioTokens = tokenListData?.tokens || mockTokens;  // For Token List (1inch DEX)
+  const portfolioTokens = tokenListData?.tokens || [];  // For Token List (1inch DEX) - NO FALLBACK
 
   // ===== API DATA FETCHING =====
   // Fetch wallet data using React Query
