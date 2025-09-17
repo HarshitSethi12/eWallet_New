@@ -177,33 +177,7 @@ function Footer() {
   );
 }
 
-// ===== APP CONTENT COMPONENT =====
-// This component contains all the main app content that needs authentication context
-function AppContent() {
-  return (
-    <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--color-secondary)', margin: 0, padding: 0 }}>
-      {/* ===== NAVIGATION BAR ===== */}
-      {/* Top navigation that stays fixed */}
-      <Navigation />
 
-      {/* ===== MAIN CONTENT AREA ===== */}
-      {/* Flexible content area that takes remaining space */}
-      <main className="flex-1 overflow-auto">
-        <Router />
-      </main>
-
-      {/* ===== FOOTER ===== */}
-      {/* Bottom footer that stays at bottom */}
-      <Footer />
-
-      {/* ===== TOAST NOTIFICATIONS ===== */}
-      {/* Global toast notification system */}
-      <Toaster />
-      {/* Floating chat widget */}
-      <FloatingChatWidget />
-    </div>
-  );
-}
 
 // ===== MAIN APP COMPONENT =====
 // This is the root component that wraps the entire application
@@ -218,10 +192,6 @@ export default function App() {
       {/* ===== AUTHENTICATION PROVIDER ===== */}
       {/* Wrap app with authentication context for user management */}
       <AuthProvider>
-        {/* ===== TOAST NOTIFICATIONS ===== */}
-        {/* Add toast notification system */}
-        <Toaster />
-
         {/* ===== PAGE LAYOUT ===== */}
         {/* Main page structure with navigation, content, and footer */}
         <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-secondary)' }}>
@@ -235,6 +205,13 @@ export default function App() {
 
           {/* Footer at the bottom - hidden on dashboard */}
           {!isDashboard && <Footer />}
+
+          {/* ===== TOAST NOTIFICATIONS ===== */}
+          {/* Global toast notification system */}
+          <Toaster />
+          
+          {/* Floating chat widget */}
+          <FloatingChatWidget />
         </div>
       </AuthProvider>
     </QueryClientProvider>
