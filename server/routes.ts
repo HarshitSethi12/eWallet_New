@@ -1,14 +1,15 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import { eq, and, or } from "drizzle-orm";
 import { db } from "./db";
 import { users, wallets, transactions, selectUserSchema } from "@shared/schema";
 import type { User } from "@shared/schema";
 import { BlockchainService } from "./blockchain";
 import { storage } from "./storage";
-import crypto from 'crypto'; // Import crypto for encryption/decryption
+import crypto from 'crypto';
+import { fetchWithTimeout, normalizeError, type CoinGeckoSimpleResponse, type CoinGeckoMarketsItem, type OneInchPriceResponse, type TokenMetadata } from "./utils/http";
 
 // Authentication middleware
-const authenticateUser = (req: any, res: any, next: any) => {
+const authenticateUser = (req: Request, res: Response, next: NextFunction) => {
   try {
     // Check if session exists and has user
     if (req.session && req.session.user) {
@@ -34,25 +35,11 @@ console.log('✅ Routes module loaded successfully');
 // Add fetch type declaration for TypeScript
 declare const fetch: typeof globalThis.fetch;
 
-// ===== JSON ERROR HANDLING MIDDLEWARE =====
-// Ensure all API responses are properly formatted as JSON
-router.use((req, res, next) => {
-  // Override res.json to add additional safety
-  const originalJson = res.json;
-  res.json = function(body) {
-    try {
-      // Ensure content type is set
-      if (!res.get('Content-Type')) {
-        res.setHeader('Content-Type', 'application/json');
-      }
-      return originalJson.call(this, body);
-    } catch (error) {
-      console.error('JSON response error:', error);
-      // Fallback to plain text if JSON fails
-      res.setHeader('Content-Type', 'text/plain');
-      return res.send('Internal server error');
-    }
-  };
+// ===== CONTENT TYPE MIDDLEWARE =====
+// Ensure all API responses have proper JSON content type
+router.use((req: Request, res: Response, next: NextFunction) => {
+  // Set default content type for API responses
+  res.setHeader('Content-Type', 'application/json');
   next();
 });
 
@@ -87,7 +74,7 @@ function decrypt(text: string): string {
 // Fallback price function using CoinGecko
 async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
   try {
-    const coinGeckoIds = {
+    const coinGeckoIds: Record<string, string> = {
       'ETH': 'ethereum',
       'LINK': 'chainlink',
       'UNI': 'uniswap'
@@ -111,7 +98,7 @@ async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
       return data[coinId]?.usd || null;
     }
   } catch (error) {
-    console.error(`CoinGecko error for ${symbol}:`, error.message);
+    console.error(`CoinGecko error for ${symbol}:`, normalizeError(error));
   }
   return null;
 }
@@ -234,7 +221,7 @@ router.get("/tokens/oneinch", async (req, res) => {
     // NO FALLBACK - Return empty list as requested by user
     return res.json({
       success: false,
-      message: `Failed to fetch 1inch prices: ${error.message}`,
+      message: `Failed to fetch 1inch prices: ${normalizeError(error)}`,
       tokens: [],
       source: '1inch DEX',
       timestamp: new Date().toISOString()
@@ -267,16 +254,15 @@ router.get("/tokens", async (req, res) => {
     
     console.log('🔗 CoinGecko API URL:', coinGeckoUrl);
     
-    const response = await fetch(coinGeckoUrl, {
+    const response = await fetchWithTimeout(coinGeckoUrl, {
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'BitWallet/1.0'
-      },
-      timeout: 10000
-    });
+      }
+    }, 10000);
 
     if (response.ok) {
-      const coinGeckoData = await response.json();
+      const coinGeckoData = await response.json() as CoinGeckoSimpleResponse;
       console.log('✅ Real CoinGecko data fetched successfully');
       console.log('📊 ETH price from CoinGecko:', coinGeckoData.ethereum?.usd);
       
@@ -301,7 +287,7 @@ router.get("/tokens", async (req, res) => {
           console.warn(`⚠️ No price data for ${token.symbol}, using fallback`);
           return null;
         }
-      }).filter(Boolean);
+      }).filter((token): token is NonNullable<typeof token> => token !== null);
 
       console.log(`✅ Real CoinGecko prices formatted: ${formattedTokens.length} tokens`);
 
@@ -318,7 +304,7 @@ router.get("/tokens", async (req, res) => {
       throw new Error(`CoinGecko API returned ${response.status}`);
     }
   } catch (error) {
-    console.error('❌ Error fetching real prices, falling back to static data:', error.message);
+    console.error('❌ Error fetching real prices, falling back to static data:', normalizeError(error));
     
     // Fallback to static data only if API fails
     console.log('🍣 Using enhanced SushiSwap fallback prices...');
@@ -436,7 +422,7 @@ router.get("/crypto-prices-top25", async (req, res) => {
       throw new Error(`HTTP ${response.status}`);
     }
   } catch (error) {
-    console.error('❌ Error fetching top 25 crypto prices:', error);
+    console.error('❌ Error fetching top 25 crypto prices:', normalizeError(error));
     
     // Complete fallback with exactly 25 tokens
     const fallbackData = [
@@ -555,15 +541,15 @@ router.get("/api/crypto-prices", async (req, res) => {
   try {
     console.log('🔄 Fetching real-time crypto prices from CoinGecko...');
     
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,binancecoin,solana,usd-coin,ripple,dogecoin,cardano,avalanche-2,shiba-inu,chainlink,polkadot,bitcoin-cash,polygon,litecoin,near,uniswap,internet-computer,ethereum-classic,stellar,filecoin,cosmos,monero,hedera-hashgraph,tron,lido-staked-ether,wrapped-bitcoin,sui,aave,sushi&vs_currencies=usd&include_24hr_change=true',
       {
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'BitWallet/1.0'
-        },
-        timeout: 15000
-      }
+        }
+      },
+      15000
     );
 
     if (response.ok) {
