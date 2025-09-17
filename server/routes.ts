@@ -371,7 +371,7 @@ router.get("/crypto-prices-top25", async (req, res) => {
           'Accept': 'application/json',
           'User-Agent': 'BitWallet/1.0'
         },
-        timeout: 15000
+        // timeout: 15000  // Not supported in fetch
       }
     );
 
@@ -470,7 +470,7 @@ router.get("/api/crypto-prices", async (req, res) => {
           'Accept': 'application/json',
           'User-Agent': 'BitWallet/1.0'
         },
-        timeout: 15000
+        // timeout: 15000  // Not supported in fetch
       }
     );
 
@@ -1314,7 +1314,7 @@ router.get("/api/sushiswap/price-changes", async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
-      timeout: 15000
+      // timeout: 15000  // Not supported in fetch
     });
 
     if (response.ok) {
@@ -1604,6 +1604,9 @@ router.get("/api/exchange/trade-history", (req, res) => {
   });
 });
 
+// Constants for token addresses
+const USDC_ADDRESS = '0xA0b86991c951449b402c7C27D170c54E0F13A8BfD';
+
 // Helper function to get token symbol from address
 function getTokenSymbol(address: string): string {
   const tokenMap = {
@@ -1817,7 +1820,7 @@ async function getJupiterQuote(fromToken, toToken, amount) {
   try {
     const response = await fetch(
       `https://quote-api.jup.ag/v6/quote?inputMint=${fromToken}&outputMint=${toToken}&amount=${amount}&slippageBps=50`,
-      { timeout: 10000 }
+      { /* timeout: 10000 */ }  // Not supported in fetch
     );
 
     if (response.ok) {
@@ -1873,7 +1876,7 @@ async function getCoinGeckoSwapQuote(fromTokenSymbol, toTokenSymbol, amount) {
 
     const response = await fetch(
       `https://api.coingecko.com/api/v3/simple/price?ids=${fromId},${toId}&vs_currencies=usd`,
-      { timeout: 10000 }
+      { /* timeout: 10000 */ }  // Not supported in fetch
     );
 
     if (response.ok) {
@@ -3055,7 +3058,7 @@ router.get("/api/jupiter/prices", async (req, res) => {
       try {
         const response = await fetch(
           `https://price.jup.ag/v4/price?ids=${token.mint}`,
-          { timeout: 5000 }
+          { /* timeout: 5000 */ }  // Not supported in fetch
         );
 
         if (response.ok) {
