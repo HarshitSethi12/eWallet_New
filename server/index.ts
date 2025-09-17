@@ -379,48 +379,12 @@ process.on('unhandledRejection', (reason, promise) => {
       }
     }
 
-    // Configure port for different environments with fallback
-    const preferredPort = parseInt(process.env.PORT || "5000", 10);
+    // Configure port for different environments - force port 5000 for development
+    const port = parseInt(process.env.PORT || "5000", 10);
     const host = "0.0.0.0"; // Always bind to 0.0.0.0 for Cloud Run compatibility
     
-    // Function to find an available port
-    const findAvailablePort = (startPort: number, maxTries: number = 10): Promise<number> => {
-      return new Promise((resolve, reject) => {
-        let currentPort = startPort;
-        let tries = 0;
-        
-        const tryPort = () => {
-          if (tries >= maxTries) {
-            reject(new Error(`Could not find available port after ${maxTries} attempts`));
-            return;
-          }
-          
-          const testServer = createServer();
-          testServer.once('error', (err: any) => {
-            if (err.code === 'EADDRINUSE') {
-              tries++;
-              currentPort++;
-              setImmediate(tryPort);
-            } else {
-              reject(err);
-            }
-          });
-          
-          testServer.once('listening', () => {
-            testServer.close(() => resolve(currentPort));
-          });
-          
-          testServer.listen(currentPort, host);
-        };
-        
-        tryPort();
-      });
-    };
-    
-    const port = await findAvailablePort(preferredPort);
-    if (port !== preferredPort) {
-      log(`⚠️ Port ${preferredPort} was in use, using port ${port} instead`);
-    }
+    // Force the server to use port 5000 in development
+    log(`🔧 Attempting to bind to port ${port}`);
 
     // Graceful shutdown handling
     const gracefulShutdown = () => {

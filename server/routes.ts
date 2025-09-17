@@ -406,7 +406,7 @@ router.get("/crypto-prices-top25", async (req, res) => {
 
       console.log('📊 Unique coins filtered:', uniqueCoins.length);
       console.log('📊 Final formatted data count:', formattedData.length);
-      console.log('📊 Coin symbols:', formattedData.map(c => c.symbol).join(', '));
+      console.log('📊 Coin symbols:', formattedData.map((c: any) => c.symbol).join(', '));
       
       // If we got less than 25 from API, pad with fallback tokens
       if (formattedData.length < 25) {
@@ -1025,7 +1025,7 @@ router.post("/api/moralis/balances", async (req, res) => {
 
 // In-memory liquidity pools (in production, use database)
 const liquidityPools = new Map();
-const tradeHistory = [];
+const tradeHistory: any[] = [];
 
 // Initialize default liquidity pools
 const initializeLiquidityPools = () => {
@@ -1324,11 +1324,11 @@ router.get("/api/sushiswap/price-changes", async (req, res) => {
 
     if (response.ok) {
       const data = await response.json();
-      const priceChanges = [];
+      const priceChanges: any[] = [];
 
       if (data.data && data.data.current) {
-        data.data.current.forEach(currentPair => {
-          const yesterdayPair = data.data.yesterday?.find(p => p.id === currentPair.id);
+        data.data.current.forEach((currentPair: any) => {
+          const yesterdayPair = data.data.yesterday?.find((p: any) => p.id === currentPair.id);
           
           if (yesterdayPair) {
             const currentPrice0 = parseFloat(currentPair.token0Price);
@@ -2031,7 +2031,7 @@ function getBridgeRoute(fromNetwork: string, toNetwork: string) {
   };
 
   const routeKey = `${fromNetwork}-${toNetwork}`;
-  return routes[routeKey] || { provider: 'Generic Bridge', estimatedTime: 1800, fee: 0.2 };
+  return (routes as any)[routeKey] || { provider: 'Generic Bridge', estimatedTime: 1800, fee: 0.2 };
 }
 
 // Helper function: Check if token is a stable coin
@@ -2050,8 +2050,8 @@ function calculateBridgeFee(amount: string, fromNetwork: string, toNetwork: stri
     'solana': 0.5   // Very low fees
   };
 
-  const fromFee = baseFeesUSD[fromNetwork] || 10;
-  const toFee = baseFeesUSD[toNetwork] || 10;
+  const fromFee = (baseFeesUSD as any)[fromNetwork] || 10;
+  const toFee = (baseFeesUSD as any)[toNetwork] || 10;
   const bridgeFee = 5; // Bridge protocol fee
 
   return fromFee + toFee + bridgeFee;
@@ -2092,7 +2092,7 @@ async function getNativeDEXQuote(fromToken: string, toToken: string, amount: str
     price: mockRate,
     priceImpact: Math.random() * 2, // 0-2% impact
     fee: '0.3%',
-    provider: nativeDEXs[network] || 'Unknown DEX',
+    provider: (nativeDEXs as any)[network] || 'Unknown DEX',
     route: [fromToken, toToken]
   };
 }
@@ -2176,7 +2176,7 @@ function getProvidersForNetwork(network: string) {
     ]
   };
 
-  return providers[network] || providers.ethereum;
+  return (providers as any)[network] || providers.ethereum;
 }
 
 // Simple in-memory cache for live prices (60 second cache)
@@ -2695,7 +2695,7 @@ async function getOrcaQuote(fromToken: string, toToken: string, amount: string, 
 }
 
 // Helper function: Generate smart routing quotes like real exchanges
-function generateMockQuote(fromToken, toToken, amount) {
+function generateMockQuote(fromToken: string, toToken: string, amount: string) {
   const fromAmountNum = parseFloat(amount);
 
   // Simulate smart routing through stable coins (like real exchanges do)
@@ -2851,10 +2851,10 @@ router.get("/api/crypto-prices", async (req, res) => {
     console.log('✅ CoinGecko prices fetched successfully');
 
     // Transform the data into a more usable format
-    const transformedData = {};
+    const transformedData: any = {};
     Object.keys(data).forEach(key => {
       const crypto = data[key];
-      transformedData[key] = {
+      (transformedData as any)[key] = {
         price: crypto.usd,
         change24h: crypto.usd_24h_change || 0
       };
@@ -2881,7 +2881,7 @@ router.post("/api/coingecko/tokens", async (req, res) => {
       'polygon': 'polygon-pos'
     };
 
-    const platformId = chainMap[chain] || 'ethereum';
+    const platformId = (chainMap as any)[chain] || 'ethereum';
 
     const response = await fetch(
       `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&category=decentralized-finance-defi&order=market_cap_desc&per_page=${limit}&page=1&sparkline=false&price_change_percentage=24h&locale=en`
@@ -2889,7 +2889,7 @@ router.post("/api/coingecko/tokens", async (req, res) => {
 
     if (response.ok) {
       const data = await response.json();
-      const tokens = data.map(coin => ({
+      const tokens = data.map((coin: any) => ({
         symbol: coin.symbol.toUpperCase(),
         name: coin.name,
         address: coin.id, // Using CoinGecko ID as address for now
@@ -2934,7 +2934,7 @@ router.post("/api/coinmarketcap/tokens", async (req, res) => {
 
     if (response.ok) {
       const data = await response.json();
-      const tokens = data.data.map(coin => ({
+      const tokens = data.data.map((coin: any) => ({
         symbol: coin.symbol,
         name: coin.name,
         address: coin.slug, // Using slug as address
@@ -2997,7 +2997,7 @@ router.post("/api/0x/quote", async (req, res) => {
       'polygon': '137'
     };
 
-    const chainId = chainMap[network] || '1';
+    const chainId = (chainMap as any)[network] || '1';
 
     // Note: You'll need to add 0x API key if using their API
     const mockQuote = {
@@ -3174,7 +3174,7 @@ router.post("/api/jupiter/quote", async (req, res) => {
           priceImpact: data.priceImpactPct || 0,
           fee: '0.25%',
           provider: 'Jupiter',
-          route: data.routePlan?.map(r => r.swapInfo.outputMint) || [fromToken, toToken]
+          route: data.routePlan?.map((r: any) => r.swapInfo.outputMint) || [fromToken, toToken]
         };
 
         res.json({ quote, source: 'jupiter' });
