@@ -45,6 +45,9 @@ router.use((req: Request, res: Response, next: NextFunction) => {
 
 // ===== HELPER FUNCTIONS =====
 
+// Helper function to get user ID as number from request
+const getUserId = (req: Request) => Number(req.user!.id);
+
 // Function to encrypt sensitive data (like private keys) before storing in database
 function encrypt(text: string): string {
   const algorithm = 'aes-256-cbc';                  // Encryption algorithm
@@ -156,12 +159,12 @@ router.get("/tokens/oneinch", async (req, res) => {
       });
     }
 
-    const priceData = await response.json();
+    const priceData = await response.json() as Record<string, string>;
     console.log('✅ Real 1inch price data fetched successfully');
     console.log('📊 Number of tokens from 1inch:', Object.keys(priceData).length);
     
     // Known token info for popular tokens
-    const knownTokens = {
+    const knownTokens: Record<string, { symbol: string; name: string }> = {
       '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee': { symbol: 'ETH', name: 'Ethereum' },
       '0xa0b86991c951449b402c7c27d170c54e0f13a8bfd': { symbol: 'USDC', name: 'USD Coin' },
       '0xdac17f958d2ee523a2206206994597c13d831ec7': { symbol: 'USDT', name: 'Tether USD' },
@@ -175,7 +178,7 @@ router.get("/tokens/oneinch", async (req, res) => {
     };
 
     // Convert 1inch response to our format
-    const formattedTokens = Object.entries(priceData).map(([address, priceInWei]) => {
+    const formattedTokens = Object.entries(priceData).map(([address, priceInWei]: [string, string]) => {
       const tokenInfo = knownTokens[address.toLowerCase()] || {
         symbol: address.slice(2, 8).toUpperCase(),
         name: `Token ${address.slice(2, 8).toUpperCase()}`
@@ -216,7 +219,7 @@ router.get("/tokens/oneinch", async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error fetching 1inch prices:', error.message);
+    console.error('❌ Error fetching 1inch prices:', normalizeError(error));
     
     // NO FALLBACK - Return empty list as requested by user
     return res.json({
@@ -380,8 +383,8 @@ router.get("/crypto-prices-top25", async (req, res) => {
       console.log('✅ Top 25 CoinGecko prices fetched successfully:', data.length, 'tokens');
       
       // Remove duplicates by symbol and ID to ensure uniqueness
-      const uniqueCoins = data.filter((coin, index, arr) => 
-        arr.findIndex(c => 
+      const uniqueCoins = data.filter((coin: any, index: number, arr: any[]) => 
+        arr.findIndex((c: any) => 
           c.symbol.toUpperCase() === coin.symbol.toUpperCase() || c.id === coin.id
         ) === index
       );
@@ -389,7 +392,7 @@ router.get("/crypto-prices-top25", async (req, res) => {
       // Ensure we have exactly 25 unique tokens
       const limitedData = uniqueCoins.slice(0, 25);
       
-      const formattedData = limitedData.map(coin => ({
+      const formattedData = limitedData.map((coin: any) => ({
         id: coin.id,
         symbol: coin.symbol.toUpperCase(),
         name: coin.name,
@@ -479,8 +482,8 @@ router.get("/api/crypto-prices", async (req, res) => {
       console.log('✅ Top 25 CoinGecko prices fetched successfully:', data.length, 'tokens');
       
       // Transform to match the expected format
-      const transformedData = {};
-      data.forEach(coin => {
+      const transformedData: Record<string, { symbol: string; name: string; current_price: number; price_change_percentage_24h: number; market_cap: number; total_volume: number; image: string; market_cap_rank: number; usd: number; usd_24h_change: number; }> = {};
+      data.forEach((coin: any) => {
         transformedData[coin.id] = {
           symbol: coin.symbol.toUpperCase(),
           name: coin.name,
@@ -613,7 +616,7 @@ router.get("/api/debug/test-sushiswap", async (req, res) => {
     console.error('SushiSwap test failed:', error);
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: normalizeError(error),
       timestamp: new Date().toISOString()
     });
   }
@@ -626,10 +629,11 @@ router.get("/api/debug/test-sushiswap", async (req, res) => {
 // GET /wallets - Get all wallets for the authenticated user
 router.get("/wallets", authenticateUser, async (req, res) => {
   try {
-    const userWallets = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+    const userId = Number(req.user!.id);
+    const userWallets = await db.select().from(wallets).where(eq(wallets.userId, userId));
     res.json(userWallets);
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: normalizeError(error) });
   }
 });
 
@@ -652,8 +656,9 @@ router.post("/wallets", authenticateUser, async (req, res) => {
     // Encrypt the private key before storing
     const encryptedPrivateKey = encrypt(walletData.privateKey);
 
+    const userId = Number(req.user!.id);
     const [wallet] = await db.insert(wallets).values({
-      userId: req.user!.id,
+      userId: userId,
       address: walletData.address,
       encryptedPrivateKey: encryptedPrivateKey, // Store encrypted private key
       chain: chain,
@@ -671,7 +676,7 @@ router.post("/wallets", authenticateUser, async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error creating wallet:', error);
-    res.status(500).json({ message: 'Failed to create wallet', error: error.message });
+    res.status(500).json({ message: 'Failed to create wallet', error: normalizeError(error) });
   }
 });
 
@@ -681,11 +686,12 @@ router.post("/wallets", authenticateUser, async (req, res) => {
 router.get("/transactions", authenticateUser, async (req, res) => {
   try {
     // Get user's wallets first
-    const userWallets = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+    const userId = Number(req.user!.id);
+    const userWallets = await db.select().from(wallets).where(eq(wallets.userId, userId));
     const userAddresses = userWallets.map(wallet => wallet.address);
     
     // Get transactions involving any of the user's addresses
-    let userTransactions = [];
+    let userTransactions: any[] = [];
     if (userAddresses.length > 0) {
       userTransactions = await db.select().from(transactions).where(
         or(
@@ -696,7 +702,7 @@ router.get("/transactions", authenticateUser, async (req, res) => {
     }
     res.json(userTransactions);
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: normalizeError(error) });
   }
 });
 
@@ -725,7 +731,7 @@ router.post("/register", async (req, res) => {
     res.status(201).json({ message: "User registered successfully", user: { id: user.id, name: user.name, email: user.email } });
   } catch (error: any) {
     console.error("Registration error:", error);
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ message: normalizeError(error) });
   }
 });
 
@@ -761,7 +767,7 @@ router.post("/login", async (req, res) => {
 
   } catch (error: any) {
     console.error("Login error:", error);
-    res.status(500).json({ message: "Login failed", error: error.message });
+    res.status(500).json({ message: "Login failed", error: normalizeError(error) });
   }
 });
 
@@ -959,7 +965,7 @@ router.post("/api/moralis/tokens", async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch tokens from Moralis',
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -1011,7 +1017,7 @@ router.post("/api/moralis/balances", async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch balances',
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -1163,7 +1169,7 @@ router.post("/api/exchange/quote", (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to calculate quote',
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -1235,7 +1241,7 @@ router.post("/api/trade/buy-inr", async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Purchase failed',
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -1368,7 +1374,7 @@ router.get("/api/sushiswap/price-changes", async (req, res) => {
     console.error('Price changes error:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -1449,7 +1455,7 @@ router.get("/api/sushiswap/price-changes", async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Swap execution failed',
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -1521,7 +1527,7 @@ router.post("/api/trade/sell-inr", async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Sale failed',
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -1572,7 +1578,7 @@ router.post("/api/exchange/add-liquidity", authenticateUser, async (req, res) =>
     res.status(500).json({
       success: false,
       message: 'Failed to add liquidity',
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -1617,7 +1623,7 @@ function getTokenSymbol(address: string): string {
     'bitcoin': 'BTC'
   };
 
-  return tokenMap[address] || address.slice(0, 6);
+  return (tokenMap as Record<string, string>)[address] || address.slice(0, 6);
 }
 
 // ===== SWAP ENDPOINTS =====
@@ -1654,7 +1660,7 @@ router.get("/api/swap/tokens", async (req, res) => {
       ]
     };
 
-    const tokens = tokensByNetwork[network] || tokensByNetwork.ethereum;
+    const tokens = (tokensByNetwork as Record<string, any>)[network as string] || tokensByNetwork.ethereum;
 
     res.json({
       success: true,
@@ -1668,7 +1674,7 @@ router.get("/api/swap/tokens", async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch swap tokens',
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -1711,7 +1717,7 @@ router.post("/api/swap/quote", async (req, res) => {
             break;
           }
         } catch (error) {
-          console.warn(`❌ ${provider.name} failed:`, error.message);
+          console.warn(`❌ ${provider.name} failed:`, normalizeError(error));
           continue;
         }
       }
@@ -1743,7 +1749,7 @@ router.post("/api/swap/quote", async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get swap quote',
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -1786,7 +1792,7 @@ router.post("/api/swap/execute", authenticateUser, async (req, res) => {
     // Record transaction in database (mock)
     try {
       await db.insert(transactions).values({
-        userId: req.user!.id,
+        userId: getUserId(req),
         type: 'swap',
         amount: parseFloat(amount),
         fromAddress: fromToken,
@@ -1810,13 +1816,13 @@ router.post("/api/swap/execute", authenticateUser, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to execute swap',
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
 
 // Helper function: Jupiter API quote for Solana
-async function getJupiterQuote(fromToken, toToken, amount) {
+async function getJupiterQuote(fromToken: string, toToken: string, amount: string) {
   try {
     const response = await fetch(
       `https://quote-api.jup.ag/v6/quote?inputMint=${fromToken}&outputMint=${toToken}&amount=${amount}&slippageBps=50`,
@@ -1833,7 +1839,7 @@ async function getJupiterQuote(fromToken, toToken, amount) {
         price: parseFloat(data.outAmount) / parseFloat(amount),
         priceImpact: data.priceImpactPct || 0,
         fee: '0.25%',
-        route: data.routePlan?.map(r => r.swapInfo.outputMint) || [fromToken, toToken],
+        route: data.routePlan?.map((r: any) => r.swapInfo.outputMint) || [fromToken, toToken],
         estimatedGas: 'N/A',
         provider: 'Jupiter'
       };
@@ -1845,14 +1851,14 @@ async function getJupiterQuote(fromToken, toToken, amount) {
 }
 
 // Helper function: Moralis API quote for EVM chains
-async function getMoralisQuote(fromToken, toToken, amount, network) {
+async function getMoralisQuote(fromToken: string, toToken: string, amount: string, network: string) {
   // This would use Moralis API in production
   // For now, return null to fall back to other providers
   return null;
 }
 
 // Helper function: CoinGecko-based swap quote
-async function getCoinGeckoSwapQuote(fromTokenSymbol, toTokenSymbol, amount) {
+async function getCoinGeckoSwapQuote(fromTokenSymbol: string, toTokenSymbol: string, amount: string) {
   try {
     // Map common symbols to CoinGecko IDs
     const symbolToId = {
@@ -1869,8 +1875,8 @@ async function getCoinGeckoSwapQuote(fromTokenSymbol, toTokenSymbol, amount) {
       'WBTC': 'wrapped-bitcoin'
     };
 
-    const fromId = symbolToId[fromTokenSymbol.toUpperCase()];
-    const toId = symbolToId[toTokenSymbol.toUpperCase()];
+    const fromId = (symbolToId as Record<string, string>)[fromTokenSymbol.toUpperCase()];
+    const toId = (symbolToId as Record<string, string>)[toTokenSymbol.toUpperCase()];
 
     if (!fromId || !toId) return null;
 
@@ -2479,7 +2485,7 @@ async function getSushiSwapEthereumQuote(fromToken: string, toToken: string, amo
       liquiditySource: 'SushiSwap Pools'
     };
   } catch (error) {
-    console.warn('SushiSwap quote failed:', error.message);
+    console.warn('SushiSwap quote failed:', normalizeError(error));
     return null;
   }
 }
@@ -2820,7 +2826,7 @@ router.post("/api/test-moralis", async (req, res) => {
     console.error('❌ Moralis test failed:', error);
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: normalizeError(error),
       details: 'Moralis API test failed'
     });
   }
@@ -2863,7 +2869,7 @@ router.get("/api/crypto-prices", async (req, res) => {
     console.error('❌ Error fetching crypto prices:', error);
     res.status(500).json({
       error: 'Failed to fetch cryptocurrency prices',
-      details: error.message
+      details: normalizeError(error)
     });
   }
 });
@@ -2905,7 +2911,7 @@ router.post("/api/coingecko/tokens", async (req, res) => {
     }
   } catch (error) {
     console.error('CoinGecko tokens error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: normalizeError(error) });
   }
 });
 
@@ -2950,7 +2956,7 @@ router.post("/api/coinmarketcap/tokens", async (req, res) => {
     }
   } catch (error) {
     console.error('CoinMarketCap tokens error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: normalizeError(error) });
   }
 });
 
@@ -2980,7 +2986,7 @@ router.post("/api/uniswap/quote", async (req, res) => {
     res.json({ quote: mockQuote, source: 'uniswap' });
   } catch (error) {
     console.error('Uniswap quote error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: normalizeError(error) });
   }
 });
 
@@ -3012,7 +3018,7 @@ router.post("/api/0x/quote", async (req, res) => {
     res.json({ quote: mockQuote, source: '0x' });
   } catch (error) {
     console.error('0x quote error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: normalizeError(error) });
   }
 });
 
@@ -3036,7 +3042,7 @@ router.post("/api/paraswap/quote", async (req, res) => {
     res.json({ quote: mockQuote, source: 'paraswap' });
   } catch (error) {
     console.error('Paraswap quote error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: normalizeError(error) });
   }
 });
 
@@ -3095,7 +3101,7 @@ router.get("/api/jupiter/prices", async (req, res) => {
     console.error('Jupiter prices error:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -3142,7 +3148,7 @@ router.get("/api/uniswap/prices", async (req, res) => {
     console.error('Uniswap prices error:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: normalizeError(error)
     });
   }
 });
@@ -3197,7 +3203,7 @@ router.post("/api/jupiter/quote", async (req, res) => {
     res.json({ quote: mockQuote, source: 'jupiter-mock' });
   } catch (error) {
     console.error('Jupiter quote error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: normalizeError(error) });
   }
 });
 
