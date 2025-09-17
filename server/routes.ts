@@ -759,7 +759,6 @@ router.post("/login", async (req, res) => {
         return res.status(500).json({ message: "Login failed" });
       }
 
-      req.session!.userId = user.id;
       req.session!.user = { id: user.id, email: user.email, name: user.name };
 
       res.json({ message: "Login successful", user: { id: user.id, name: user.name, email: user.email } });
@@ -1792,12 +1791,9 @@ router.post("/api/swap/execute", authenticateUser, async (req, res) => {
     // Record transaction in database (mock)
     try {
       await db.insert(transactions).values({
-        userId: getUserId(req),
-        type: 'swap',
-        amount: parseFloat(amount),
+        amount: Math.floor(parseFloat(amount)),
         fromAddress: fromToken,
         toAddress: toToken,
-        hash: swapResult.transactionHash,
         confirmed: true,
         timestamp: new Date()
       });
