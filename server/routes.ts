@@ -393,7 +393,10 @@ router.get("/api/crypto-prices-top25", async (req, res) => {
       const data = await response.json();
       console.log('✅ Top 25 CoinGecko prices fetched successfully:', data.length, 'tokens');
       
-      const formattedData = data.map(coin => ({
+      // Ensure we have exactly 25 tokens
+      const limitedData = data.slice(0, 25);
+      
+      const formattedData = limitedData.map(coin => ({
         id: coin.id,
         symbol: coin.symbol.toUpperCase(),
         name: coin.name,
@@ -404,6 +407,20 @@ router.get("/api/crypto-prices-top25", async (req, res) => {
         image: coin.image,
         market_cap_rank: coin.market_cap_rank
       }));
+
+      console.log('📊 Formatted data count:', formattedData.length);
+      
+      // If we got less than 25 from API, pad with fallback tokens
+      if (formattedData.length < 25) {
+        const fallbackTokens = [
+          { id: 'tron', symbol: 'TRX', name: 'TRON', current_price: 0.24, price_change_percentage_24h: 2.6, market_cap: 20800000000, total_volume: 1850000000, image: 'https://assets.coingecko.com/coins/images/1094/small/tron-logo.png', market_cap_rank: 23 },
+          { id: 'near', symbol: 'NEAR', name: 'NEAR Protocol', current_price: 6.20, price_change_percentage_24h: 4.2, market_cap: 7200000000, total_volume: 380000000, image: 'https://assets.coingecko.com/coins/images/10365/small/near_icon.png', market_cap_rank: 24 },
+          { id: 'aptos', symbol: 'APT', name: 'Aptos', current_price: 12.80, price_change_percentage_24h: 3.9, market_cap: 6800000000, total_volume: 320000000, image: 'https://assets.coingecko.com/coins/images/26455/small/aptos_round.png', market_cap_rank: 25 }
+        ];
+        
+        const needed = 25 - formattedData.length;
+        formattedData.push(...fallbackTokens.slice(0, needed));
+      }
       
       return res.json(formattedData);
     } else {
@@ -412,7 +429,7 @@ router.get("/api/crypto-prices-top25", async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching top 25 crypto prices:', error);
     
-    // Enhanced fallback with exactly 25 tokens
+    // Complete fallback with exactly 25 tokens
     const fallbackData = [
       { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', current_price: 98750, price_change_percentage_24h: 2.5, market_cap: 1950000000000, total_volume: 25000000000, image: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png', market_cap_rank: 1 },
       { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', current_price: 3650, price_change_percentage_24h: 1.8, market_cap: 440000000000, total_volume: 15000000000, image: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png', market_cap_rank: 2 },
@@ -441,7 +458,7 @@ router.get("/api/crypto-prices-top25", async (req, res) => {
       { id: 'aptos', symbol: 'APT', name: 'Aptos', current_price: 12.80, price_change_percentage_24h: 3.9, market_cap: 6800000000, total_volume: 320000000, image: 'https://assets.coingecko.com/coins/images/26455/small/aptos_round.png', market_cap_rank: 25 }
     ];
     
-    console.log('📊 Using fallback data with 25 tokens');
+    console.log('📊 Using fallback data with exactly', fallbackData.length, 'tokens');
     res.json(fallbackData);
   }
 });

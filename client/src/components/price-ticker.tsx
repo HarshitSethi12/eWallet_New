@@ -128,10 +128,14 @@ export function PriceTicker() {
 
         console.log('✅ Top 25 crypto prices fetched successfully:', data.length, 'tokens');
         console.log('📊 First few tokens:', data.slice(0, 3).map(coin => coin.symbol));
+        console.log('📊 All token symbols:', data.map(coin => coin.symbol).join(', '));
 
         // Ensure we have exactly 25 tokens
         if (data.length !== 25) {
           console.warn('⚠️ Expected 25 tokens but got:', data.length);
+          console.warn('⚠️ Missing tokens:', 25 - data.length);
+        } else {
+          console.log('✅ Perfect! Got exactly 25 tokens as expected');
         }
 
         // Data is already in the correct format from the backend
@@ -271,8 +275,13 @@ export function PriceTicker() {
 
             <div className="pt-2 mt-2 border-t">
               <p className="text-xs text-gray-400 text-center">
-                Showing top {prices.length} cryptocurrencies • Updates every 30s • CoinGecko
+                Showing {prices.length} of top 25 cryptocurrencies • Updates every 30s • CoinGecko
               </p>
+              {prices.length < 25 && (
+                <p className="text-xs text-orange-500 text-center mt-1">
+                  ⚠️ Only {prices.length} tokens loaded (expected 25)
+                </p>
+              )}
             </div>
           </>
         ) : (
