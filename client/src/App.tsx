@@ -224,12 +224,12 @@ export default function App() {
 
         {/* ===== PAGE LAYOUT ===== */}
         {/* Main page structure with navigation, content, and footer */}
-        <div className="h-screen flex flex-col overflow-hidden">
+        <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-secondary)' }}>
           {/* Navigation bar at the top - hidden on dashboard */}
           {!isDashboard && <Navigation />}
 
           {/* Main content area that grows to fill space */}
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1">
             <Router />
           </main>
 
