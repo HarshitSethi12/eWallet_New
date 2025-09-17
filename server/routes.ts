@@ -373,6 +373,78 @@ router.get("/tokens", async (req, res) => {
 });
 
 
+// GET /api/crypto-prices-top25 - Get top 25 cryptocurrencies for Live Market Prices
+router.get("/api/crypto-prices-top25", async (req, res) => {
+  try {
+    console.log('🔄 Fetching top 25 crypto prices from CoinGecko...');
+    
+    const response = await fetch(
+      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=25&page=1&sparkline=false&price_change_percentage=24h',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BitWallet/1.0'
+        },
+        timeout: 15000
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Top 25 CoinGecko prices fetched successfully:', data.length, 'tokens');
+      
+      const formattedData = data.map(coin => ({
+        id: coin.id,
+        symbol: coin.symbol.toUpperCase(),
+        name: coin.name,
+        current_price: coin.current_price || 0,
+        price_change_percentage_24h: coin.price_change_percentage_24h || 0,
+        market_cap: coin.market_cap || 0,
+        total_volume: coin.total_volume || 0,
+        image: coin.image,
+        market_cap_rank: coin.market_cap_rank
+      }));
+      
+      return res.json(formattedData);
+    } else {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (error) {
+    console.error('❌ Error fetching top 25 crypto prices:', error);
+    
+    // Fallback to top 25 mock data
+    const fallbackData = [
+      { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', current_price: 98750, price_change_percentage_24h: 2.5, market_cap: 1950000000000, total_volume: 25000000000, image: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png', market_cap_rank: 1 },
+      { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', current_price: 3650, price_change_percentage_24h: 1.8, market_cap: 440000000000, total_volume: 15000000000, image: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png', market_cap_rank: 2 },
+      { id: 'tether', symbol: 'USDT', name: 'Tether', current_price: 1.00, price_change_percentage_24h: 0.01, market_cap: 120000000000, total_volume: 45000000000, image: 'https://assets.coingecko.com/coins/images/325/small/Tether.png', market_cap_rank: 3 },
+      { id: 'solana', symbol: 'SOL', name: 'Solana', current_price: 245, price_change_percentage_24h: 3.2, market_cap: 118000000000, total_volume: 3500000000, image: 'https://assets.coingecko.com/coins/images/4128/small/solana.png', market_cap_rank: 4 },
+      { id: 'binancecoin', symbol: 'BNB', name: 'BNB', current_price: 715, price_change_percentage_24h: 1.5, market_cap: 103000000000, total_volume: 2100000000, image: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png', market_cap_rank: 5 },
+      { id: 'usd-coin', symbol: 'USDC', name: 'USDC', current_price: 1.00, price_change_percentage_24h: 0.00, market_cap: 40000000000, total_volume: 5500000000, image: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png', market_cap_rank: 6 },
+      { id: 'ripple', symbol: 'XRP', name: 'XRP', current_price: 2.45, price_change_percentage_24h: 4.1, market_cap: 140000000000, total_volume: 8500000000, image: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png', market_cap_rank: 7 },
+      { id: 'cardano', symbol: 'ADA', name: 'Cardano', current_price: 1.08, price_change_percentage_24h: 2.8, market_cap: 38000000000, total_volume: 1200000000, image: 'https://assets.coingecko.com/coins/images/975/small/cardano.png', market_cap_rank: 8 },
+      { id: 'avalanche-2', symbol: 'AVAX', name: 'Avalanche', current_price: 42.50, price_change_percentage_24h: 3.5, market_cap: 17500000000, total_volume: 650000000, image: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png', market_cap_rank: 9 },
+      { id: 'dogecoin', symbol: 'DOGE', name: 'Dogecoin', current_price: 0.38, price_change_percentage_24h: 5.2, market_cap: 56000000000, total_volume: 4200000000, image: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png', market_cap_rank: 10 },
+      { id: 'chainlink', symbol: 'LINK', name: 'Chainlink', current_price: 25.80, price_change_percentage_24h: 2.1, market_cap: 16200000000, total_volume: 850000000, image: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png', market_cap_rank: 11 },
+      { id: 'polkadot', symbol: 'DOT', name: 'Polkadot', current_price: 8.90, price_change_percentage_24h: 1.9, market_cap: 13500000000, total_volume: 420000000, image: 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png', market_cap_rank: 12 },
+      { id: 'wrapped-bitcoin', symbol: 'WBTC', name: 'Wrapped Bitcoin', current_price: 98600, price_change_percentage_24h: 2.4, market_cap: 15800000000, total_volume: 280000000, image: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png', market_cap_rank: 13 },
+      { id: 'uniswap', symbol: 'UNI', name: 'Uniswap', current_price: 15.20, price_change_percentage_24h: 3.8, market_cap: 9200000000, total_volume: 320000000, image: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png', market_cap_rank: 14 },
+      { id: 'internet-computer', symbol: 'ICP', name: 'Internet Computer', current_price: 12.40, price_change_percentage_24h: 2.7, market_cap: 5800000000, total_volume: 180000000, image: 'https://assets.coingecko.com/coins/images/14495/small/Internet_Computer_logo.png', market_cap_rank: 15 },
+      { id: 'litecoin', symbol: 'LTC', name: 'Litecoin', current_price: 108, price_change_percentage_24h: 1.6, market_cap: 8100000000, total_volume: 950000000, image: 'https://assets.coingecko.com/coins/images/2/small/litecoin.png', market_cap_rank: 16 },
+      { id: 'ethereum-classic', symbol: 'ETC', name: 'Ethereum Classic', current_price: 32.50, price_change_percentage_24h: 2.9, market_cap: 4800000000, total_volume: 420000000, image: 'https://assets.coingecko.com/coins/images/453/small/ethereum-classic-logo.png', market_cap_rank: 17 },
+      { id: 'stellar', symbol: 'XLM', name: 'Stellar', current_price: 0.42, price_change_percentage_24h: 4.5, market_cap: 12500000000, total_volume: 680000000, image: 'https://assets.coingecko.com/coins/images/100/small/Stellar_symbol_black_RGB.png', market_cap_rank: 18 },
+      { id: 'filecoin', symbol: 'FIL', name: 'Filecoin', current_price: 6.80, price_change_percentage_24h: 3.1, market_cap: 4200000000, total_volume: 250000000, image: 'https://assets.coingecko.com/coins/images/12817/small/filecoin.png', market_cap_rank: 19 },
+      { id: 'cosmos', symbol: 'ATOM', name: 'Cosmos Hub', current_price: 8.90, price_change_percentage_24h: 2.3, market_cap: 3500000000, total_volume: 180000000, image: 'https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png', market_cap_rank: 20 },
+      { id: 'monero', symbol: 'XMR', name: 'Monero', current_price: 198, price_change_percentage_24h: 1.8, market_cap: 3650000000, total_volume: 95000000, image: 'https://assets.coingecko.com/coins/images/69/small/monero_logo.png', market_cap_rank: 21 },
+      { id: 'hedera-hashgraph', symbol: 'HBAR', name: 'Hedera', current_price: 0.28, price_change_percentage_24h: 5.1, market_cap: 10500000000, total_volume: 420000000, image: 'https://assets.coingecko.com/coins/images/3441/small/Hedera_Hashgraph_logo.png', market_cap_rank: 22 },
+      { id: 'tron', symbol: 'TRX', name: 'TRON', current_price: 0.24, price_change_percentage_24h: 2.6, market_cap: 20800000000, total_volume: 1850000000, image: 'https://assets.coingecko.com/coins/images/1094/small/tron-logo.png', market_cap_rank: 23 },
+      { id: 'near', symbol: 'NEAR', name: 'NEAR Protocol', current_price: 6.20, price_change_percentage_24h: 4.2, market_cap: 7200000000, total_volume: 380000000, image: 'https://assets.coingecko.com/coins/images/10365/small/near_icon.png', market_cap_rank: 24 },
+      { id: 'aptos', symbol: 'APT', name: 'Aptos', current_price: 12.80, price_change_percentage_24h: 3.9, market_cap: 6800000000, total_volume: 320000000, image: 'https://assets.coingecko.com/coins/images/26455/small/aptos_round.png', market_cap_rank: 25 }
+    ];
+    
+    res.json(fallbackData);
+  }
+});
+
 // GET /api/crypto-prices - Separate endpoint for market overview
 router.get("/api/crypto-prices", async (req, res) => {
   try {

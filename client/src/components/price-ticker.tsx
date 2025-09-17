@@ -6,10 +6,12 @@ interface CryptoPriceData {
   id: string;
   symbol: string;
   name: string;
+  image?: string; // Added for CoinGecko image URL
   current_price: number;
   price_change_percentage_24h: number;
-  market_cap: number;
+  market_cap?: number; // Added for market cap
   total_volume: number;
+  market_cap_rank?: number; // Added for market cap rank
 }
 
 // Get coin image URL from CoinGecko with proper fallback
@@ -63,7 +65,7 @@ const getCoinImageId = (coinId: string): string => {
 const getCoinFallbackIcon = (symbol: string): string => {
   const colors: { [key: string]: string } = {
     'BTC': '#f7931a',
-    'ETH': '#627eea', 
+    'ETH': '#627eea',
     'USDT': '#26a17b',
     'BNB': '#f3ba2f',
     'SOL': '#9945ff',
@@ -110,31 +112,32 @@ const getCoinFallbackIcon = (symbol: string): string => {
 };
 
 export function PriceTicker() {
-  const { data: prices, isLoading, error } = useQuery<any[]>({
+  const { data: prices, isLoading, error } = useQuery<CryptoPriceData[]>({
     queryKey: ["crypto-prices"],
     queryFn: async () => {
       try {
+        // Fetch top 25 coins from CoinGecko
         const response = await fetch('/api/crypto-prices');
         if (!response.ok) {
           throw new Error('Failed to fetch crypto prices');
         }
         const data = await response.json();
 
-        // Transform the data to match your expected format
-        const cryptoList = [
-          { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', current_price: data.bitcoin?.usd || 0, price_change_percentage_24h: data.bitcoin?.usd_24h_change || 0 },
-          { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', current_price: data.ethereum?.usd || 0, price_change_percentage_24h: data.ethereum?.usd_24h_change || 0 },
-          { id: 'cardano', symbol: 'ADA', name: 'Cardano', current_price: data.cardano?.usd || 0, price_change_percentage_24h: data.cardano?.usd_24h_change || 0 },
-          { id: 'polkadot', symbol: 'DOT', name: 'Polkadot', current_price: data.polkadot?.usd || 0, price_change_percentage_24h: data.polkadot?.usd_24h_change || 0 },
-          { id: 'chainlink', symbol: 'LINK', name: 'Chainlink', current_price: data.chainlink?.usd || 0, price_change_percentage_24h: data.chainlink?.usd_24h_change || 0 },
-          { id: 'litecoin', symbol: 'LTC', name: 'Litecoin', current_price: data.litecoin?.usd || 0, price_change_percentage_24h: data.litecoin?.usd_24h_change || 0 },
-          { id: 'stellar', symbol: 'XLM', name: 'Stellar', current_price: data.stellar?.usd || 0, price_change_percentage_24h: data.stellar?.usd_24h_change || 0 },
-          { id: 'tron', symbol: 'TRX', name: 'Tron', current_price: data.tron?.usd || 0, price_change_percentage_24h: data.tron?.usd_24h_change || 0 },
-          { id: 'staked-ether', symbol: 'STETH', name: 'Staked Ether', current_price: data['staked-ether']?.usd || 0, price_change_percentage_24h: data['staked-ether']?.usd_24h_change || 0 },
-          { id: 'wrapped-bitcoin', symbol: 'WBTC', name: 'Wrapped Bitcoin', current_price: data['wrapped-bitcoin']?.usd || 0, price_change_percentage_24h: data['wrapped-bitcoin']?.usd_24h_change || 0 },
-          { id: 'leo-token', symbol: 'LEO', name: 'LEO Token', current_price: data['leo-token']?.usd || 0, price_change_percentage_24h: data['leo-token']?.usd_24h_change || 0 },
-          { id: 'usd-coin', symbol: 'USDC', name: 'USD Coin', current_price: data['usd-coin']?.usd || 0, price_change_percentage_24h: data['usd-coin']?.usd_24h_change || 0 },
-        ];
+        // Transform the data to match your expected format, fetching top 25
+        const cryptoList: CryptoPriceData[] = Object.keys(data).slice(0, 25).map((key) => {
+          const coinData = data[key];
+          return {
+            id: key,
+            symbol: coinData.symbol.toUpperCase(),
+            name: coinData.name,
+            image: coinData.image,
+            current_price: coinData.current_price,
+            price_change_percentage_24h: coinData.price_change_percentage_24h,
+            market_cap: coinData.market_cap,
+            total_volume: coinData.total_volume,
+            market_cap_rank: coinData.market_cap_rank,
+          };
+        });
 
         return cryptoList;
       } catch (error) {
@@ -193,11 +196,11 @@ export function PriceTicker() {
           const isNeutral = Math.abs(crypto.price_change_percentage_24h) < 0.01;
 
           return (
-            <div key={crypto.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full overflow-hidden bg-white border-2 border-gray-100 shadow-sm">
-                  <img 
-                    src={getCoinImageUrl(crypto.id)}
+                  <img
+                    src={crypto.image || getCoinImageUrl(crypto.id)}
                     alt={crypto.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -211,6 +214,9 @@ export function PriceTicker() {
                     {crypto.symbol.toUpperCase()}
                   </p>
                   <p className="text-sm text-gray-500">{crypto.name}</p>
+                  {crypto.market_cap_rank && (
+                    <p className="text-xs text-blue-600">Rank #{crypto.market_cap_rank}</p>
+                  )}
                 </div>
               </div>
 
@@ -232,6 +238,11 @@ export function PriceTicker() {
                     {isPositive ? '+' : ''}{crypto.price_change_percentage_24h.toFixed(2)}%
                   </span>
                 </div>
+                {crypto.market_cap && (
+                  <p className="text-xs text-gray-400">
+                    MCap: ${(crypto.market_cap / 1e9).toFixed(1)}B
+                  </p>
+                )}
               </div>
             </div>
           );
