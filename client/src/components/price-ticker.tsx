@@ -113,35 +113,37 @@ const getCoinFallbackIcon = (symbol: string): string => {
 
 export function PriceTicker() {
   const { data: prices, isLoading, error } = useQuery<CryptoPriceData[]>({
-    queryKey: ["crypto-prices"],
+    queryKey: ["crypto-prices-top25"],
     queryFn: async () => {
       try {
-        // Fetch top 25 coins from CoinGecko
-        const response = await fetch('/api/crypto-prices');
+        console.log('🔄 Fetching top 25 crypto prices for Live Market Prices...');
+        
+        // Fetch top 25 coins from the dedicated endpoint
+        const response = await fetch('/api/crypto-prices-top25');
         if (!response.ok) {
           throw new Error('Failed to fetch crypto prices');
         }
         const data = await response.json();
 
-        // Transform the data to match your expected format, fetching top 25
-        const cryptoList: CryptoPriceData[] = Object.keys(data).slice(0, 25).map((key) => {
-          const coinData = data[key];
-          return {
-            id: key,
-            symbol: coinData.symbol.toUpperCase(),
-            name: coinData.name,
-            image: coinData.image,
-            current_price: coinData.current_price,
-            price_change_percentage_24h: coinData.price_change_percentage_24h,
-            market_cap: coinData.market_cap,
-            total_volume: coinData.total_volume,
-            market_cap_rank: coinData.market_cap_rank,
-          };
-        });
+        console.log('✅ Top 25 crypto prices fetched successfully:', data.length, 'tokens');
 
+        // Data is already in the correct format from the backend
+        const cryptoList: CryptoPriceData[] = data.map((coin: any) => ({
+          id: coin.id,
+          symbol: coin.symbol,
+          name: coin.name,
+          image: coin.image,
+          current_price: coin.current_price,
+          price_change_percentage_24h: coin.price_change_percentage_24h,
+          market_cap: coin.market_cap,
+          total_volume: coin.total_volume,
+          market_cap_rank: coin.market_cap_rank,
+        }));
+
+        console.log('📊 Live Market Prices processed:', cryptoList.length, 'tokens');
         return cryptoList;
       } catch (error) {
-        console.error('Error fetching crypto prices:', error);
+        console.error('Error fetching top 25 crypto prices:', error);
         return [];
       }
     },
@@ -190,69 +192,83 @@ export function PriceTicker() {
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {prices?.map((crypto) => {
-          const isPositive = crypto.price_change_percentage_24h > 0;
-          const isNeutral = Math.abs(crypto.price_change_percentage_24h) < 0.01;
+      <CardContent className="space-y-2 max-h-96 overflow-y-auto">
+        {prices && prices.length > 0 ? (
+          <>
+            {prices.map((crypto, index) => {
+              const isPositive = crypto.price_change_percentage_24h > 0;
+              const isNeutral = Math.abs(crypto.price_change_percentage_24h) < 0.01;
 
-          return (
-            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-white border-2 border-gray-100 shadow-sm">
-                  <img
-                    src={crypto.image || getCoinImageUrl(crypto.id)}
-                    alt={crypto.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = getCoinFallbackIcon(crypto.symbol);
-                    }}
-                  />
-                </div>
-                <div>
-                  <p className="font-semibold" style={{ color: 'var(--color-heading)' }}>
-                    {crypto.symbol.toUpperCase()}
-                  </p>
-                  <p className="text-sm text-gray-500">{crypto.name}</p>
-                  {crypto.market_cap_rank && (
-                    <p className="text-xs text-blue-600">Rank #{crypto.market_cap_rank}</p>
-                  )}
-                </div>
-              </div>
+              return (
+                <div key={`${crypto.id}-${index}`} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-white border-2 border-gray-100 shadow-sm">
+                      <img
+                        src={crypto.image || getCoinImageUrl(crypto.id)}
+                        alt={crypto.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = getCoinFallbackIcon(crypto.symbol);
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm" style={{ color: 'var(--color-heading)' }}>
+                        {crypto.symbol}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate max-w-24">{crypto.name}</p>
+                      {crypto.market_cap_rank && (
+                        <p className="text-xs text-blue-600">#{crypto.market_cap_rank}</p>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="text-right">
-                <p className="font-bold text-lg" style={{ color: 'var(--color-heading)' }}>
-                  ${crypto.current_price.toLocaleString()}
-                </p>
-                <div className={`flex items-center gap-1 text-sm ${
-                  isNeutral ? 'text-gray-500' : isPositive ? 'text-green-500' : 'text-red-500'
-                }`}>
-                  {isNeutral ? (
-                    <Minus className="h-3 w-3" />
-                  ) : isPositive ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  <span>
-                    {isPositive ? '+' : ''}{crypto.price_change_percentage_24h.toFixed(2)}%
-                  </span>
+                  <div className="text-right">
+                    <p className="font-bold text-sm" style={{ color: 'var(--color-heading)' }}>
+                      ${crypto.current_price >= 1 
+                        ? crypto.current_price.toLocaleString(undefined, {maximumFractionDigits: 2})
+                        : crypto.current_price.toFixed(6)
+                      }
+                    </p>
+                    <div className={`flex items-center gap-1 text-xs ${
+                      isNeutral ? 'text-gray-500' : isPositive ? 'text-green-500' : 'text-red-500'
+                    }`}>
+                      {isNeutral ? (
+                        <Minus className="h-2 w-2" />
+                      ) : isPositive ? (
+                        <TrendingUp className="h-2 w-2" />
+                      ) : (
+                        <TrendingDown className="h-2 w-2" />
+                      )}
+                      <span>
+                        {isPositive ? '+' : ''}{crypto.price_change_percentage_24h.toFixed(2)}%
+                      </span>
+                    </div>
+                    {crypto.market_cap && (
+                      <p className="text-xs text-gray-400">
+                        ${crypto.market_cap >= 1e9 
+                          ? `${(crypto.market_cap / 1e9).toFixed(1)}B`
+                          : `${(crypto.market_cap / 1e6).toFixed(0)}M`
+                        }
+                      </p>
+                    )}
+                  </div>
                 </div>
-                {crypto.market_cap && (
-                  <p className="text-xs text-gray-400">
-                    MCap: ${(crypto.market_cap / 1e9).toFixed(1)}B
-                  </p>
-                )}
-              </div>
+              );
+            })}
+
+            <div className="pt-2 mt-2 border-t">
+              <p className="text-xs text-gray-400 text-center">
+                Showing top {prices.length} cryptocurrencies • Updates every 30s • CoinGecko
+              </p>
             </div>
-          );
-        })}
-
-        <div className="pt-2 border-t">
-          <p className="text-xs text-gray-400 text-center">
-            Prices update every 30 seconds • Powered by CoinGecko
-          </p>
-        </div>
+          </>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No price data available</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
