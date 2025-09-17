@@ -121,11 +121,18 @@ export function PriceTicker() {
         // Fetch top 25 coins from the dedicated endpoint
         const response = await fetch('/api/crypto-prices-top25');
         if (!response.ok) {
-          throw new Error('Failed to fetch crypto prices');
+          console.error('❌ API response not ok:', response.status, response.statusText);
+          throw new Error(`Failed to fetch crypto prices: ${response.status}`);
         }
         const data = await response.json();
 
         console.log('✅ Top 25 crypto prices fetched successfully:', data.length, 'tokens');
+        console.log('📊 First few tokens:', data.slice(0, 3).map(coin => coin.symbol));
+
+        // Ensure we have exactly 25 tokens
+        if (data.length !== 25) {
+          console.warn('⚠️ Expected 25 tokens but got:', data.length);
+        }
 
         // Data is already in the correct format from the backend
         const cryptoList: CryptoPriceData[] = data.map((coin: any) => ({
@@ -141,13 +148,17 @@ export function PriceTicker() {
         }));
 
         console.log('📊 Live Market Prices processed:', cryptoList.length, 'tokens');
+        console.log('🎯 Sample tokens:', cryptoList.slice(0, 5).map(c => `${c.symbol}: $${c.current_price}`));
+        
         return cryptoList;
       } catch (error) {
-        console.error('Error fetching top 25 crypto prices:', error);
-        return [];
+        console.error('❌ Error fetching top 25 crypto prices:', error);
+        throw error; // Re-throw to let React Query handle retries
       }
     },
     refetchInterval: 30000, // Refetch every 30 seconds
+    retry: 3, // Retry 3 times on failure
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 
   if (isLoading) {
