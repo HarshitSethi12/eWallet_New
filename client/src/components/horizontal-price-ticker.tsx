@@ -156,13 +156,21 @@ export function HorizontalPriceTicker() {
 
         // Transform the CoinGecko API response to match our expected format
         if (Array.isArray(data) && data.length > 0) {
-          const cryptoList = data.map((coin: any) => ({
-            symbol: coin.symbol === 'WBTC' ? 'BTC' : coin.symbol,
-            name: coin.symbol === 'WBTC' ? 'Bitcoin' : coin.name,
+          // Remove duplicates by symbol to ensure uniqueness
+          const uniqueCoins = data.filter((coin, index, arr) => 
+            arr.findIndex(c => c.symbol.toUpperCase() === coin.symbol.toUpperCase()) === index
+          );
+          
+          const cryptoList = uniqueCoins.slice(0, 25).map((coin: any) => ({
+            id: coin.id,
+            symbol: coin.symbol.toUpperCase(),
+            name: coin.name,
             price: coin.current_price || 0,
             change: coin.price_change_percentage_24h || 0,
+            image: coin.image, // Use the actual CoinGecko image URL
+            market_cap_rank: coin.market_cap_rank
           }));
-          console.log('📊 Live Market Prices transformed:', cryptoList.length, 'tokens');
+          console.log('📊 Live Market Prices transformed:', cryptoList.length, 'unique tokens');
           return cryptoList;
         }
 
@@ -260,7 +268,7 @@ export function HorizontalPriceTicker() {
               {/* Coin Icon */}
               <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full shadow-md mb-1 sm:mb-2 relative overflow-hidden bg-white border-2 border-gray-100">
                 <img 
-                  src={getCoinImageUrl(crypto.name.toLowerCase())}
+                  src={crypto.image || getCoinFallbackIcon(crypto.symbol)}
                   alt={crypto.name}
                   className="w-full h-full object-cover rounded-full"
                   onError={(e) => {

@@ -393,8 +393,15 @@ router.get("/crypto-prices-top25", async (req, res) => {
       const data = await response.json();
       console.log('✅ Top 25 CoinGecko prices fetched successfully:', data.length, 'tokens');
       
-      // Ensure we have exactly 25 tokens
-      const limitedData = data.slice(0, 25);
+      // Remove duplicates by symbol and ID to ensure uniqueness
+      const uniqueCoins = data.filter((coin, index, arr) => 
+        arr.findIndex(c => 
+          c.symbol.toUpperCase() === coin.symbol.toUpperCase() || c.id === coin.id
+        ) === index
+      );
+      
+      // Ensure we have exactly 25 unique tokens
+      const limitedData = uniqueCoins.slice(0, 25);
       
       const formattedData = limitedData.map(coin => ({
         id: coin.id,
@@ -404,11 +411,13 @@ router.get("/crypto-prices-top25", async (req, res) => {
         price_change_percentage_24h: coin.price_change_percentage_24h || 0,
         market_cap: coin.market_cap || 0,
         total_volume: coin.total_volume || 0,
-        image: coin.image,
+        image: coin.image, // Direct CoinGecko image URL
         market_cap_rank: coin.market_cap_rank
       }));
 
-      console.log('📊 Formatted data count:', formattedData.length);
+      console.log('📊 Unique coins filtered:', uniqueCoins.length);
+      console.log('📊 Final formatted data count:', formattedData.length);
+      console.log('📊 Coin symbols:', formattedData.map(c => c.symbol).join(', '));
       
       // If we got less than 25 from API, pad with fallback tokens
       if (formattedData.length < 25) {
