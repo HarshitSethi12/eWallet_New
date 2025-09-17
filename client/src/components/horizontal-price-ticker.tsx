@@ -143,32 +143,32 @@ export function HorizontalPriceTicker() {
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   const { data: cryptoPrices = [], isLoading, error } = useQuery<any[]>({
-    queryKey: ['sushiswap-live-prices'],
+    queryKey: ['crypto-prices-top25'],
     queryFn: async () => {
       try {
-        console.log('🍣 Live Market Prices fetching from SushiSwap...');
-        const response = await fetch('/api/tokens');
+        console.log('🔄 Live Market Prices fetching top 25 cryptocurrencies...');
+        const response = await fetch('/api/crypto-prices-top25');
         if (!response.ok) {
-          throw new Error('Failed to fetch SushiSwap prices');
+          throw new Error('Failed to fetch top 25 crypto prices');
         }
         const data = await response.json();
-        console.log('🍣 Live Market Prices data received:', data.source);
+        console.log('✅ Top 25 crypto prices fetched successfully:', data.length, 'tokens');
 
-        // Transform the SushiSwap API response to match our expected format
-        if (data.success && data.tokens) {
-          const cryptoList = data.tokens.slice(0, 8).map((token: any) => ({
-            symbol: token.symbol === 'WBTC' ? 'BTC' : token.symbol,
-            name: token.symbol === 'WBTC' ? 'Bitcoin' : token.name,
-            price: token.price || 0,
-            change: token.change24h || 0,
+        // Transform the CoinGecko API response to match our expected format
+        if (Array.isArray(data) && data.length > 0) {
+          const cryptoList = data.map((coin: any) => ({
+            symbol: coin.symbol === 'WBTC' ? 'BTC' : coin.symbol,
+            name: coin.symbol === 'WBTC' ? 'Bitcoin' : coin.name,
+            price: coin.current_price || 0,
+            change: coin.price_change_percentage_24h || 0,
           }));
-          console.log('🍣 Live Market Prices transformed:', cryptoList.length, 'tokens');
+          console.log('📊 Live Market Prices transformed:', cryptoList.length, 'tokens');
           return cryptoList;
         }
 
         return [];
       } catch (error) {
-        console.error('❌ Error fetching SushiSwap prices for Live Market:', error);
+        console.error('❌ Error fetching top 25 crypto prices for Live Market:', error);
         return [];
       }
     },
@@ -201,7 +201,7 @@ export function HorizontalPriceTicker() {
     return (
       <div className="relative w-full bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
         <div className="flex items-center gap-6 overflow-hidden">
-          {[1, 2, 3, 4, 5].map((i) => (
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <div key={i} className="flex flex-col items-center min-w-[140px] animate-pulse">
               <div className="w-12 h-12 bg-gray-200 rounded-full mb-2"></div>
               <div className="h-4 bg-gray-200 rounded w-12 mb-1"></div>

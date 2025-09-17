@@ -374,7 +374,7 @@ router.get("/tokens", async (req, res) => {
 
 
 // GET /api/crypto-prices-top25 - Get top 25 cryptocurrencies for Live Market Prices
-router.get("/api/crypto-prices-top25", async (req, res) => {
+router.get("/crypto-prices-top25", async (req, res) => {
   try {
     console.log('🔄 Fetching top 25 crypto prices from CoinGecko...');
     
