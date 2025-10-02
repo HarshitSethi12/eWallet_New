@@ -357,8 +357,8 @@ export default function Dashboard() {
         {/* Four Section Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-400px)] min-h-[600px] bg-white">
           {/* Top Left: Wallet Overview */}
-          <Card className="bg-white shadow-sm border border-gray-200 !bg-white">
-            <CardHeader className="pb-3">
+          <Card className="bg-white shadow-sm border border-gray-200 !bg-white flex flex-col">
+            <CardHeader className="pb-3 flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
                 <WalletIcon className="h-5 w-5" />
                 Wallet Overview
@@ -383,9 +383,9 @@ export default function Dashboard() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="flex-1">
-              <ScrollArea className="h-full">
-                <div className="space-y-4">
+            <CardContent className="flex-1 overflow-hidden">
+              <ScrollArea className="h-[calc(100%-1rem)]">
+                <div className="space-y-4 pr-4">
                   {/* Portfolio Summary */}
                   <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                     <div className="text-center space-y-2">
@@ -439,16 +439,16 @@ export default function Dashboard() {
           </Card>
 
           {/* Top Right: Recent Transactions */}
-          <Card className="bg-white shadow-sm border border-gray-200 !bg-white">
-            <CardHeader className="pb-3 bg-white">
+          <Card className="bg-white shadow-sm border border-gray-200 !bg-white flex flex-col">
+            <CardHeader className="pb-3 bg-white flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
                 <Clock className="h-5 w-5" />
                 Recent Transactions
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 bg-white">
-              <ScrollArea className="h-full bg-white">
-                <div className="space-y-3 bg-white">
+            <CardContent className="flex-1 bg-white overflow-hidden">
+              <ScrollArea className="h-[calc(100%-1rem)] bg-white">
+                <div className="space-y-3 bg-white pr-4">
                   {mockTransactions.map((tx) => (
                     <div key={tx.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="flex items-center gap-3">
@@ -492,8 +492,8 @@ export default function Dashboard() {
           </Card>
 
           {/* Bottom Left: Token List with Live Prices */}
-          <Card className="bg-white shadow-sm border border-gray-200 !bg-white">
-            <CardHeader className="pb-3 bg-white">
+          <Card className="bg-white shadow-sm border border-gray-200 !bg-white flex flex-col">
+            <CardHeader className="pb-3 bg-white flex-shrink-0">
               <CardTitle className="flex items-center justify-between text-lg font-semibold text-amber-700">
                 <div className="flex items-center gap-2">
                   <Coins className="h-5 w-5" />
@@ -521,9 +521,9 @@ export default function Dashboard() {
                 </div>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1">
-              <ScrollArea className="h-full">
-                <div className="space-y-2">
+            <CardContent className="flex-1 overflow-hidden">
+              <ScrollArea className="h-[calc(100%-1rem)]">
+                <div className="space-y-2 pr-4">
                   {tokenListLoading ? (
                     <div className="space-y-2">
                       {[...Array(6)].map((_, i) => (
@@ -571,16 +571,16 @@ export default function Dashboard() {
           </Card>
 
           {/* Bottom Right: Portfolio Holdings */}
-          <Card className="bg-white shadow-sm border border-gray-200 !bg-white">
-            <CardHeader className="pb-3 bg-white">
+          <Card className="bg-white shadow-sm border border-gray-200 !bg-white flex flex-col">
+            <CardHeader className="pb-3 bg-white flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
                 <BarChart3 className="h-5 w-5" />
                 Portfolio Holdings
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 bg-white">
-              <ScrollArea className="h-full">
-                <div className="space-y-4">
+            <CardContent className="flex-1 bg-white overflow-hidden">
+              <ScrollArea className="h-[calc(100%-1rem)]">
+                <div className="space-y-4 pr-4">
                   {/* Portfolio Distribution */}
                   {portfolioTokens.map((token) => {
                     const percentage = ((token.balanceUSD || 0) / totalPortfolioValue) * 100;
