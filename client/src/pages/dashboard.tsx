@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 
 // Custom components for different sections
 import { PriceTicker } from "@/components/price-ticker";
@@ -120,6 +121,9 @@ export default function Dashboard() {
   // ===== SESSION STATUS STATE =====
   const [sessionStatus, setSessionStatus] = React.useState(null);
 
+  // ===== TOKEN LIST SEARCH STATE =====
+  const [tokenSearchTerm, setTokenSearchTerm] = useState('');
+
   // ===== SESSION CHECK HANDLER =====
   const handleCheckSession = async () => {
     const status = await checkSessionStatus();
@@ -173,6 +177,12 @@ export default function Dashboard() {
   // Use real API data when available, fallback to mock data during loading/error
   const marketTokens = marketPricesData?.tokens || mockTokens; // For horizontal ticker (CoinGecko)
   const portfolioTokens = tokenListData?.tokens || [];  // For Token List (1inch DEX) - NO FALLBACK
+  
+  // Filter tokens based on search term
+  const filteredPortfolioTokens = portfolioTokens.filter((token: any) =>
+    token.name.toLowerCase().includes(tokenSearchTerm.toLowerCase()) ||
+    token.symbol.toLowerCase().includes(tokenSearchTerm.toLowerCase())
+  );
 
   // ===== API DATA FETCHING =====
   // Fetch wallet data using React Query
@@ -520,6 +530,16 @@ export default function Dashboard() {
                   )}
                 </div>
               </CardTitle>
+              <div className="mt-3">
+                <Input
+                  type="text"
+                  placeholder="Search tokens..."
+                  value={tokenSearchTerm}
+                  onChange={(e) => setTokenSearchTerm(e.target.value)}
+                  className="h-8 text-sm"
+                  data-testid="input-token-search"
+                />
+              </div>
             </CardHeader>
             <CardContent className="flex-1 overflow-hidden p-0">
               <ScrollArea className="h-full px-6 pb-6">
@@ -542,8 +562,8 @@ export default function Dashboard() {
                         </div>
                       ))}
                     </div>
-                  ) : portfolioTokens.map((token) => (
-                    <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                  ) : filteredPortfolioTokens.map((token) => (
+                    <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors" data-testid={`token-item-${token.symbol}`}>
                       <div className="flex items-center gap-3">
                         <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />
                         <div>
@@ -553,7 +573,7 @@ export default function Dashboard() {
                       </div>
 
                       <div className="text-right">
-                        <p className="text-sm font-semibold">${(token.price || 0).toFixed(2)}</p>
+                        <p className="text-sm font-semibold" data-testid={`price-${token.symbol}`}>${(token.price || 0).toFixed(2)}</p>
                         <Badge variant={(token.change24h || 0) >= 0 ? "default" : "destructive"} className="text-xs">
                           {(token.change24h || 0) >= 0 ? (
                             <TrendingUp className="h-2 w-2 mr-1" />
