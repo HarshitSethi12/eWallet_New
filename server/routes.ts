@@ -187,7 +187,8 @@ router.get("/tokens/oneinch", async (req, res) => {
     };
 
     // Convert 1inch response to our format
-    const formattedTokens = Object.entries(priceData).map(([address, priceInWei]: [string, string]) => {
+    // 1inch Spot Price API returns prices in USD with proper decimal scaling
+    const formattedTokens = Object.entries(priceData).map(([address, priceString]: [string, string]) => {
       // Normalize address to lowercase for lookup
       const normalizedAddress = address.toLowerCase();
       const tokenInfo = knownTokens[normalizedAddress] || {
@@ -195,9 +196,9 @@ router.get("/tokens/oneinch", async (req, res) => {
         name: `Token ${address.slice(2, 8).toUpperCase()}`
       };
 
-      // Convert price from wei to USD
-      // 1inch returns prices in wei (18 decimals)
-      const priceUSD = parseFloat(priceInWei) / 1e18;
+      // 1inch Spot Price API v1.1 returns prices as strings in USD
+      // The value represents price in USD, not wei
+      const priceUSD = parseFloat(priceString);
 
       return {
         symbol: tokenInfo.symbol,
