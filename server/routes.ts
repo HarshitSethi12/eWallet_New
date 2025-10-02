@@ -173,8 +173,10 @@ router.get("/tokens/oneinch", async (req, res) => {
       '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': { symbol: 'USDC', name: 'USD Coin' },
       '0xdac17f958d2ee523a2206206994597c13d831ec7': { symbol: 'USDT', name: 'Tether USD' },
       '0x6b175474e89094c44da98b954eedeac495271d0f': { symbol: 'DAI', name: 'Dai Stablecoin' },
+      '0x4fabb145d64652a948d72533023f6e7a623c7c53': { symbol: 'BUSD', name: 'Binance USD' },
+      '0x8e870d67f660d95d5be530380d0ec0bd388289e1': { symbol: 'USDP', name: 'Pax Dollar' },
       
-      // Major tokens
+      // Major DeFi tokens
       '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': { symbol: 'WBTC', name: 'Wrapped Bitcoin' },
       '0x514910771af9ca656af840dff83e8264ecf986ca': { symbol: 'LINK', name: 'Chainlink' },
       '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984': { symbol: 'UNI', name: 'Uniswap' },
@@ -183,32 +185,115 @@ router.get("/tokens/oneinch", async (req, res) => {
       '0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2': { symbol: 'MKR', name: 'Maker' },
       '0xd533a949740bb3306d119cc777fa900ba034cd52': { symbol: 'CRV', name: 'Curve DAO Token' },
       '0xc00e94cb662c3520282e6f5717214004a7f26888': { symbol: 'COMP', name: 'Compound' },
-      '0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e': { symbol: 'YFI', name: 'yearn.finance' }
+      '0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e': { symbol: 'YFI', name: 'yearn.finance' },
+      '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0': { symbol: 'MATIC', name: 'Polygon' },
+      '0x0d8775f648430679a709e98d2b0cb6250d2887ef': { symbol: 'BAT', name: 'Basic Attention Token' },
+      '0x1a5f9352af8af974bfc03399e3767df6370d82e4': { symbol: 'OWL', name: 'OWL Token' },
+      '0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce': { symbol: 'SHIB', name: 'Shiba Inu' },
+      '0xae7ab96520de3a18e5e111b5eaab095312d7fe84': { symbol: 'stETH', name: 'Lido Staked Ether' },
+      '0x5a98fcbea516cf06857215779fd812ca3bef1b32': { symbol: 'LDO', name: 'Lido DAO' },
+      '0x111111111117dc0aa78b770fa6a738034120c302': { symbol: '1INCH', name: '1inch' },
+      '0xf629cbd94d3791c9250152bd8dfbdf380e2a3b9c': { symbol: 'ENJ', name: 'Enjin Coin' },
+      '0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b': { symbol: 'CVX', name: 'Convex Finance' },
+      '0x0f5d2fb29fb7d3cfee444a200298f468908cc942': { symbol: 'MANA', name: 'Decentraland' },
+      '0xc944e90c64b2c07662a292be6244bdf05cda44a7': { symbol: 'GRT', name: 'The Graph' },
+      '0x6810e776880c02933d47db1b9fc05908e5386b96': { symbol: 'GNO', name: 'Gnosis' },
+      '0x85eee30c52b0b379b046fb0f85f4f3dc3009afec': { symbol: 'KEEP', name: 'Keep Network' },
+      '0x3845badade8e6dff049820680d1f14bd3903a5d0': { symbol: 'SAND', name: 'The Sandbox' },
+      '0xba100000625a3754423978a60c9317c58a424e3d': { symbol: 'BAL', name: 'Balancer' },
+      '0x408e41876cccdc0f92210600ef50372656052a38': { symbol: 'REN', name: 'Ren' },
+      '0xbbbbca6a901c926f240b89eacb641d8aec7aeafd': { symbol: 'LRC', name: 'Loopring' },
+      '0x8798249c2e607446efb7ad49ec89dd1865ff4272': { symbol: 'xSUSHI', name: 'SushiBar' }
     };
 
-    // Convert 1inch response to our format
-    // 1inch Spot Price API returns prices in wei format, need to convert to USD
-    const formattedTokens = Object.entries(priceData).map(([address, priceString]: [string, string]) => {
-      // Normalize address to lowercase for lookup
+    // Convert 1inch response to our format and fetch real prices from CoinGecko
+    const tokenAddresses = Object.keys(priceData);
+    
+    // Map of Ethereum token addresses to CoinGecko IDs
+    const addressToCoinGeckoId: Record<string, string> = {
+      '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee': 'ethereum',
+      '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': 'weth',
+      '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': 'usd-coin',
+      '0xdac17f958d2ee523a2206206994597c13d831ec7': 'tether',
+      '0x6b175474e89094c44da98b954eedeac495271d0f': 'dai',
+      '0x4fabb145d64652a948d72533023f6e7a623c7c53': 'binance-usd',
+      '0x8e870d67f660d95d5be530380d0ec0bd388289e1': 'paxos-standard',
+      '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': 'wrapped-bitcoin',
+      '0x514910771af9ca656af840dff83e8264ecf986ca': 'chainlink',
+      '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984': 'uniswap',
+      '0x6b3595068778dd592e39a122f4f5a5cf09c90fe2': 'sushi',
+      '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9': 'aave',
+      '0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2': 'maker',
+      '0xd533a949740bb3306d119cc777fa900ba034cd52': 'curve-dao-token',
+      '0xc00e94cb662c3520282e6f5717214004a7f26888': 'compound-governance-token',
+      '0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e': 'yearn-finance',
+      '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0': 'matic-network',
+      '0x0d8775f648430679a709e98d2b0cb6250d2887ef': 'basic-attention-token',
+      '0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce': 'shiba-inu',
+      '0xae7ab96520de3a18e5e111b5eaab095312d7fe84': 'staked-ether',
+      '0x5a98fcbea516cf06857215779fd812ca3bef1b32': 'lido-dao',
+      '0x111111111117dc0aa78b770fa6a738034120c302': '1inch',
+      '0xf629cbd94d3791c9250152bd8dfbdf380e2a3b9c': 'enjincoin',
+      '0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b': 'convex-finance',
+      '0x0f5d2fb29fb7d3cfee444a200298f468908cc942': 'decentraland',
+      '0xc944e90c64b2c07662a292be6244bdf05cda44a7': 'the-graph',
+      '0x6810e776880c02933d47db1b9fc05908e5386b96': 'gnosis',
+      '0x85eee30c52b0b379b046fb0f85f4f3dc3009afec': 'keep-network',
+      '0x3845badade8e6dff049820680d1f14bd3903a5d0': 'the-sandbox',
+      '0xba100000625a3754423978a60c9317c58a424e3d': 'balancer',
+      '0x408e41876cccdc0f92210600ef50372656052a38': 'republic-protocol',
+      '0xbbbbca6a901c926f240b89eacb641d8aec7aeafd': 'loopring',
+      '0x8798249c2e607446efb7ad49ec89dd1865ff4272': 'xsushi'
+    };
+
+    // Get CoinGecko IDs for known tokens
+    const coinGeckoIds = Array.from(new Set(
+      tokenAddresses
+        .map(addr => addressToCoinGeckoId[addr.toLowerCase()])
+        .filter(id => id)
+    )).join(',');
+
+    // Fetch real prices from CoinGecko
+    let coinGeckoPrices: Record<string, any> = {};
+    if (coinGeckoIds) {
+      try {
+        const cgUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoIds}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`;
+        const cgResponse = await fetchWithTimeout(cgUrl, {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'BitWallet/1.0'
+          }
+        }, 5000);
+        
+        if (cgResponse.ok) {
+          coinGeckoPrices = await cgResponse.json();
+          console.log('✅ Fetched CoinGecko prices for 1inch tokens');
+        }
+      } catch (error) {
+        console.warn('⚠️ CoinGecko fetch failed, using fallback prices');
+      }
+    }
+
+    // Format tokens with real prices
+    const formattedTokens = Object.entries(priceData).map(([address, _priceString]: [string, string]) => {
       const normalizedAddress = address.toLowerCase();
       const tokenInfo = knownTokens[normalizedAddress] || {
         symbol: address.slice(2, 8).toUpperCase(),
         name: `Token ${address.slice(2, 8).toUpperCase()}`
       };
 
-      // 1inch returns prices as wei strings (needs conversion)
-      // Price in wei / 10^18 = price in ETH equivalent
-      // For USD stablecoins (USDC, USDT, DAI), the price should be ~1
-      // For other tokens, we need to convert based on their decimals
-      const priceInWei = BigInt(priceString);
-      let priceUSD: number;
+      // Get price from CoinGecko
+      const coinGeckoId = addressToCoinGeckoId[normalizedAddress];
+      const cgData = coinGeckoId ? coinGeckoPrices[coinGeckoId] : null;
       
-      // Stablecoins should be ~$1
-      if (['USDC', 'USDT', 'DAI', 'BUSD'].includes(tokenInfo.symbol)) {
-        priceUSD = 1.00;
-      } else {
-        // Convert from wei to decimal (divide by 10^18)
-        priceUSD = Number(priceInWei) / 1e18;
+      let priceUSD = 0;
+      let change24h = 0;
+      let marketCap = 0;
+
+      if (cgData) {
+        priceUSD = cgData.usd || 0;
+        change24h = cgData.usd_24h_change || 0;
+        marketCap = cgData.usd_market_cap || 0;
       }
 
       return {
@@ -216,21 +301,21 @@ router.get("/tokens/oneinch", async (req, res) => {
         name: tokenInfo.name,
         address: address,
         price: priceUSD,
-        change24h: 0, // 1inch doesn't provide 24h change in this endpoint
-        marketCap: 0, // Not provided by this endpoint
-        volume24h: 0, // Not provided by this endpoint
-        balanceUSD: 0, // User balance (to be populated separately)
+        change24h: change24h,
+        marketCap: marketCap,
+        volume24h: 0,
+        balanceUSD: 0,
         logoURI: `https://tokens.1inch.io/${address.toLowerCase()}.png`,
         lastUpdated: new Date().toISOString(),
-        source: '1inch DEX'
+        source: '1inch DEX + CoinGecko'
       };
     }).filter(token => {
       // Only include tokens with valid prices AND known symbols
       return token.price > 0 && !token.symbol.match(/^[0-9A-F]{6}$/);
     });
 
-    // Sort by price descending and take top tokens
-    const sortedTokens = formattedTokens.sort((a, b) => b.price - a.price).slice(0, 50);
+    // Sort by market cap descending and take top tokens
+    const sortedTokens = formattedTokens.sort((a, b) => b.marketCap - a.marketCap).slice(0, 50);
 
     console.log(`✅ Real 1inch prices formatted: ${sortedTokens.length} tokens`);
 
