@@ -163,23 +163,34 @@ router.get("/tokens/oneinch", async (req, res) => {
     console.log('✅ Real 1inch price data fetched successfully');
     console.log('📊 Number of tokens from 1inch:', Object.keys(priceData).length);
     
-    // Known token info for popular tokens
+    // Known token info for popular Ethereum tokens (with proper address mapping)
     const knownTokens: Record<string, { symbol: string; name: string }> = {
+      // ETH (native token, special address)
       '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee': { symbol: 'ETH', name: 'Ethereum' },
-      '0xa0b86991c951449b402c7c27d170c54e0f13a8bfd': { symbol: 'USDC', name: 'USD Coin' },
+      '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': { symbol: 'WETH', name: 'Wrapped Ether' },
+      
+      // Stablecoins
+      '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': { symbol: 'USDC', name: 'USD Coin' },
       '0xdac17f958d2ee523a2206206994597c13d831ec7': { symbol: 'USDT', name: 'Tether USD' },
+      '0x6b175474e89094c44da98b954eedeac495271d0f': { symbol: 'DAI', name: 'Dai Stablecoin' },
+      
+      // Major tokens
       '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': { symbol: 'WBTC', name: 'Wrapped Bitcoin' },
       '0x514910771af9ca656af840dff83e8264ecf986ca': { symbol: 'LINK', name: 'Chainlink' },
       '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984': { symbol: 'UNI', name: 'Uniswap' },
       '0x6b3595068778dd592e39a122f4f5a5cf09c90fe2': { symbol: 'SUSHI', name: 'SushiSwap' },
       '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9': { symbol: 'AAVE', name: 'Aave' },
       '0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2': { symbol: 'MKR', name: 'Maker' },
-      '0xd533a949740bb3306d119cc777fa900ba034cd52': { symbol: 'CRV', name: 'Curve DAO Token' }
+      '0xd533a949740bb3306d119cc777fa900ba034cd52': { symbol: 'CRV', name: 'Curve DAO Token' },
+      '0xc00e94cb662c3520282e6f5717214004a7f26888': { symbol: 'COMP', name: 'Compound' },
+      '0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e': { symbol: 'YFI', name: 'yearn.finance' }
     };
 
     // Convert 1inch response to our format
     const formattedTokens = Object.entries(priceData).map(([address, priceInWei]: [string, string]) => {
-      const tokenInfo = knownTokens[address.toLowerCase()] || {
+      // Normalize address to lowercase for lookup
+      const normalizedAddress = address.toLowerCase();
+      const tokenInfo = knownTokens[normalizedAddress] || {
         symbol: address.slice(2, 8).toUpperCase(),
         name: `Token ${address.slice(2, 8).toUpperCase()}`
       };
@@ -201,7 +212,10 @@ router.get("/tokens/oneinch", async (req, res) => {
         lastUpdated: new Date().toISOString(),
         source: '1inch DEX'
       };
-    }).filter(token => token.price > 0); // Only include tokens with valid prices
+    }).filter(token => {
+      // Only include tokens with valid prices AND known symbols
+      return token.price > 0 && !token.symbol.match(/^[0-9A-F]{6}$/);
+    });
 
     // Sort by price descending and take top tokens
     const sortedTokens = formattedTokens.sort((a, b) => b.price - a.price).slice(0, 50);
