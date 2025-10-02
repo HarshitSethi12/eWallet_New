@@ -187,7 +187,7 @@ router.get("/tokens/oneinch", async (req, res) => {
     };
 
     // Convert 1inch response to our format
-    // 1inch Spot Price API returns prices in USD with proper decimal scaling
+    // 1inch Spot Price API returns prices in wei format, need to convert to USD
     const formattedTokens = Object.entries(priceData).map(([address, priceString]: [string, string]) => {
       // Normalize address to lowercase for lookup
       const normalizedAddress = address.toLowerCase();
@@ -196,9 +196,20 @@ router.get("/tokens/oneinch", async (req, res) => {
         name: `Token ${address.slice(2, 8).toUpperCase()}`
       };
 
-      // 1inch Spot Price API v1.1 returns prices as strings in USD
-      // The value represents price in USD, not wei
-      const priceUSD = parseFloat(priceString);
+      // 1inch returns prices as wei strings (needs conversion)
+      // Price in wei / 10^18 = price in ETH equivalent
+      // For USD stablecoins (USDC, USDT, DAI), the price should be ~1
+      // For other tokens, we need to convert based on their decimals
+      const priceInWei = BigInt(priceString);
+      let priceUSD: number;
+      
+      // Stablecoins should be ~$1
+      if (['USDC', 'USDT', 'DAI', 'BUSD'].includes(tokenInfo.symbol)) {
+        priceUSD = 1.00;
+      } else {
+        // Convert from wei to decimal (divide by 10^18)
+        priceUSD = Number(priceInWei) / 1e18;
+      }
 
       return {
         symbol: tokenInfo.symbol,
