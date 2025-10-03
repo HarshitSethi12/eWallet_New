@@ -197,8 +197,60 @@ export default function Dashboard() {
     queryFn: () => apiRequest("/api/transactions"), // Function to fetch transaction data
   });
 
-  // Mock token data for wallet overview
-  const mockTokensOverview = [
+  // ===== REAL WALLET BALANCE STATE =====
+  const [realBalances, setRealBalances] = useState<any[]>([]);
+  const [isLoadingBalances, setIsLoadingBalances] = useState(false);
+  const { account } = useMetaMask();
+
+  // Fetch real wallet balances when user connects MetaMask
+  useEffect(() => {
+    const fetchRealBalances = async () => {
+      if (!account || !window.ethereum) return;
+
+      setIsLoadingBalances(true);
+      try {
+        // Get ETH balance
+        const ethBalance = await window.ethereum.request({
+          method: 'eth_getBalance',
+          params: [account, 'latest']
+        });
+
+        // Convert from Wei to ETH (1 ETH = 10^18 Wei)
+        const ethBalanceInEth = parseInt(ethBalance, 16) / Math.pow(10, 18);
+
+        // Get ETH price from market data
+        const ethPrice = marketTokens.find((t: any) => t.symbol === 'ETH')?.price || 0;
+
+        const balances = [
+          {
+            symbol: 'ETH',
+            name: 'Ethereum',
+            address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+            balance: ethBalanceInEth.toFixed(4),
+            balanceUSD: ethBalanceInEth * ethPrice,
+            price: ethPrice,
+            change24h: marketTokens.find((t: any) => t.symbol === 'ETH')?.change24h || 0,
+            logoURI: 'https://tokens.1inch.io/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png'
+          }
+        ];
+
+        // TODO: Add ERC-20 token balance fetching here
+        // For now, we only show ETH balance
+
+        setRealBalances(balances);
+        console.log('✅ Real balances fetched:', balances);
+      } catch (error) {
+        console.error('❌ Error fetching real balances:', error);
+      } finally {
+        setIsLoadingBalances(false);
+      }
+    };
+
+    fetchRealBalances();
+  }, [account, marketTokens]);
+
+  // Use real balances if available, otherwise use mock data
+  const mockTokensOverview = realBalances.length > 0 ? realBalances : [
     {
       symbol: 'ETH',
       name: 'Ethereum',
@@ -222,11 +274,13 @@ export default function Dashboard() {
   ];
 
   // ===== PORTFOLIO CALCULATIONS =====
-  // Calculate total portfolio value by summing all token values
-  const totalPortfolioValue = portfolioTokens.reduce((sum, token) => sum + token.balanceUSD, 0);
+  // Calculate total portfolio value from real MetaMask balances
+  const totalPortfolioValue = realBalances.length > 0 
+    ? realBalances.reduce((sum, token) => sum + (token.balanceUSD || 0), 0)
+    : portfolioTokens.reduce((sum, token) => sum + token.balanceUSD, 0);
 
   // Mock initial investment amount for profit/loss calculation
-  const initialInvestment = 8500; // Mock initial investment
+  const initialInvestment = realBalances.length > 0 ? totalPortfolioValue * 0.85 : 8500; // 85% of current value as mock initial investment
 
   // Calculate portfolio performance percentage
   const portfolioChange = ((totalPortfolioValue - initialInvestment) / initialInvestment) * 100;
@@ -378,7 +432,9 @@ export default function Dashboard() {
                   {user?.provider === 'metamask' && (
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-green-700 font-medium">MetaMask Connected</span>
+                      <span className="text-sm text-green-700 font-medium">
+                        {realBalances.length > 0 ? 'Real Balance' : 'MetaMask Connected'}
+                      </span>
                     </div>
                   )}
                   {user?.provider === 'metamask' && user.walletAddress && (
@@ -389,7 +445,9 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold">${totalPortfolioValue.toFixed(2)}</p>
-                  <p className="text-sm text-gray-500">Total Portfolio Value</p>
+                  <p className="text-sm text-gray-500">
+                    {realBalances.length > 0 ? 'Real' : 'Mock'} Portfolio Value
+                  </p>
                 </div>
               </div>
             </CardHeader>
@@ -416,7 +474,12 @@ export default function Dashboard() {
                   </div>
 
                   {/* Token Holdings */}
-                  {portfolioTokens.map((token) => (
+                  {isLoadingBalances ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mx-auto"></div>
+                      <p className="text-xs text-gray-500 mt-2">Loading real balances...</p>
+                    </div>
+                  ) : (realBalances.length > 0 ? realBalances : portfolioTokens).map((token) => (
                     <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="flex items-center gap-3">
                         <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />
@@ -602,7 +665,7 @@ export default function Dashboard() {
               <ScrollArea className="h-full px-6 pb-6">
                 <div className="space-y-4 pr-4">
                   {/* Portfolio Distribution */}
-                  {portfolioTokens.map((token) => {
+                  {(realBalances.length > 0 ? realBalances : portfolioTokens).map((token) => {
                     const percentage = ((token.balanceUSD || 0) / totalPortfolioValue) * 100;
                     return (
                       <div key={token.symbol} className="space-y-2">
@@ -642,7 +705,11 @@ export default function Dashboard() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Total Assets:</span>
-                      <span className="font-medium">{portfolioTokens.length}</span>
+                      <span className="font-medium">{realBalances.length > 0 ? realBalances.length : portfolioTokens.length}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Data Source:</span>
+                      <span className="font-medium text-blue-600">{realBalances.length > 0 ? 'Real MetaMask' : 'Mock Data'}</span>
                     </div>
                   </div>
                 </div>
