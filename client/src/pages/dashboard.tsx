@@ -202,6 +202,52 @@ export default function Dashboard() {
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const { account } = useMetaMask();
 
+  // ERC-20 Token ABI for balanceOf function
+  const ERC20_ABI = [
+    {
+      constant: true,
+      inputs: [{ name: '_owner', type: 'address' }],
+      name: 'balanceOf',
+      outputs: [{ name: 'balance', type: 'uint256' }],
+      type: 'function'
+    },
+    {
+      constant: true,
+      inputs: [],
+      name: 'decimals',
+      outputs: [{ name: '', type: 'uint8' }],
+      type: 'function'
+    },
+    {
+      constant: true,
+      inputs: [],
+      name: 'symbol',
+      outputs: [{ name: '', type: 'string' }],
+      type: 'function'
+    },
+    {
+      constant: true,
+      inputs: [],
+      name: 'name',
+      outputs: [{ name: '', type: 'string' }],
+      type: 'function'
+    }
+  ];
+
+  // Popular ERC-20 token addresses on Ethereum mainnet
+  const POPULAR_TOKENS = [
+    { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', symbol: 'USDC', decimals: 6 },
+    { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', symbol: 'USDT', decimals: 6 },
+    { address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', symbol: 'WBTC', decimals: 8 },
+    { address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', symbol: 'LINK', decimals: 18 },
+    { address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', symbol: 'UNI', decimals: 18 },
+    { address: '0x6B3595068778DD592e39A122f4f5a5cF09C90fE2', symbol: 'SUSHI', decimals: 18 },
+    { address: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', symbol: 'AAVE', decimals: 18 },
+    { address: '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2', symbol: 'MKR', decimals: 18 },
+    { address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', symbol: 'WETH', decimals: 18 },
+    { address: '0xD533a949740bb3306d119CC777fa900bA034cd52', symbol: 'CRV', decimals: 18 }
+  ];
+
   // Fetch real wallet balances when user connects MetaMask
   useEffect(() => {
     const fetchRealBalances = async () => {
@@ -209,20 +255,19 @@ export default function Dashboard() {
 
       setIsLoadingBalances(true);
       try {
-        // Get ETH balance
+        const balances: any[] = [];
+
+        // 1. Get ETH balance
         const ethBalance = await window.ethereum.request({
           method: 'eth_getBalance',
           params: [account, 'latest']
         });
 
-        // Convert from Wei to ETH (1 ETH = 10^18 Wei)
         const ethBalanceInEth = parseInt(ethBalance, 16) / Math.pow(10, 18);
-
-        // Get ETH price from market data
         const ethPrice = marketTokens.find((t: any) => t.symbol === 'ETH')?.price || 0;
 
-        const balances = [
-          {
+        if (ethBalanceInEth > 0) {
+          balances.push({
             symbol: 'ETH',
             name: 'Ethereum',
             address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
@@ -231,14 +276,56 @@ export default function Dashboard() {
             price: ethPrice,
             change24h: marketTokens.find((t: any) => t.symbol === 'ETH')?.change24h || 0,
             logoURI: 'https://tokens.1inch.io/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png'
-          }
-        ];
+          });
+        }
 
-        // TODO: Add ERC-20 token balance fetching here
-        // For now, we only show ETH balance
+        // 2. Fetch ERC-20 token balances
+        for (const token of POPULAR_TOKENS) {
+          try {
+            // Call balanceOf function
+            const data = window.ethereum.request({
+              method: 'eth_call',
+              params: [{
+                to: token.address,
+                data: '0x70a08231000000000000000000000000' + account.slice(2) // balanceOf function signature + address
+              }, 'latest']
+            });
+
+            const balance = await data;
+            const balanceNum = parseInt(balance, 16) / Math.pow(10, token.decimals);
+
+            // Only add tokens with non-zero balance
+            if (balanceNum > 0) {
+              // Find price from market data
+              const tokenPrice = marketTokens.find((t: any) => 
+                t.symbol.toUpperCase() === token.symbol.toUpperCase()
+              )?.price || 0;
+
+              const change24h = marketTokens.find((t: any) => 
+                t.symbol.toUpperCase() === token.symbol.toUpperCase()
+              )?.change24h || 0;
+
+              balances.push({
+                symbol: token.symbol,
+                name: token.symbol,
+                address: token.address,
+                balance: balanceNum.toFixed(token.decimals === 18 ? 4 : token.decimals === 8 ? 6 : 2),
+                balanceUSD: balanceNum * tokenPrice,
+                price: tokenPrice,
+                change24h: change24h,
+                logoURI: `https://tokens.1inch.io/${token.address.toLowerCase()}.png`
+              });
+            }
+          } catch (tokenError) {
+            console.warn(`Failed to fetch balance for ${token.symbol}:`, tokenError);
+          }
+        }
+
+        // Sort by USD value (highest first)
+        balances.sort((a, b) => b.balanceUSD - a.balanceUSD);
 
         setRealBalances(balances);
-        console.log('✅ Real balances fetched:', balances);
+        console.log('✅ Real balances fetched:', balances.length, 'tokens with balance');
       } catch (error) {
         console.error('❌ Error fetching real balances:', error);
       } finally {
@@ -277,13 +364,15 @@ export default function Dashboard() {
   // Calculate total portfolio value from real MetaMask balances
   const totalPortfolioValue = realBalances.length > 0 
     ? realBalances.reduce((sum, token) => sum + (token.balanceUSD || 0), 0)
-    : portfolioTokens.reduce((sum, token) => sum + token.balanceUSD, 0);
+    : 0;
 
-  // Mock initial investment amount for profit/loss calculation
-  const initialInvestment = realBalances.length > 0 ? totalPortfolioValue * 0.85 : 8500; // 85% of current value as mock initial investment
+  // Mock initial investment amount for profit/loss calculation (only if we have real balances)
+  const initialInvestment = realBalances.length > 0 ? totalPortfolioValue * 0.85 : 0;
 
   // Calculate portfolio performance percentage
-  const portfolioChange = ((totalPortfolioValue - initialInvestment) / initialInvestment) * 100;
+  const portfolioChange = initialInvestment > 0 
+    ? ((totalPortfolioValue - initialInvestment) / initialInvestment) * 100 
+    : 0;
 
   // ===== RENDER LOGIC =====
   // Redirect to home if user is not logged in
@@ -479,7 +568,7 @@ export default function Dashboard() {
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mx-auto"></div>
                       <p className="text-xs text-gray-500 mt-2">Loading real balances...</p>
                     </div>
-                  ) : (realBalances.length > 0 ? realBalances : portfolioTokens).map((token) => (
+                  ) : realBalances.length > 0 ? realBalances.map((token) => (
                     <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="flex items-center gap-3">
                         <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />
@@ -505,7 +594,12 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-gray-500">No tokens found in wallet</p>
+                      <p className="text-xs text-gray-400 mt-1">Connect MetaMask to view your holdings</p>
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
             </CardContent>
@@ -665,8 +759,8 @@ export default function Dashboard() {
               <ScrollArea className="h-full px-6 pb-6">
                 <div className="space-y-4 pr-4">
                   {/* Portfolio Distribution */}
-                  {(realBalances.length > 0 ? realBalances : portfolioTokens).map((token) => {
-                    const percentage = ((token.balanceUSD || 0) / totalPortfolioValue) * 100;
+                  {realBalances.length > 0 ? realBalances.map((token) => {
+                    const percentage = totalPortfolioValue > 0 ? ((token.balanceUSD || 0) / totalPortfolioValue) * 100 : 0;
                     return (
                       <div key={token.symbol} className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -705,11 +799,11 @@ export default function Dashboard() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Total Assets:</span>
-                      <span className="font-medium">{realBalances.length > 0 ? realBalances.length : portfolioTokens.length}</span>
+                      <span className="font-medium">{realBalances.length}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Data Source:</span>
-                      <span className="font-medium text-blue-600">{realBalances.length > 0 ? 'Real MetaMask' : 'Mock Data'}</span>
+                      <span className="font-medium text-blue-600">{realBalances.length > 0 ? 'Real MetaMask' : 'No Wallet Connected'}</span>
                     </div>
                   </div>
                 </div>
@@ -717,6 +811,14 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+        
+        {/* Empty state for portfolio holdings when no wallet */}
+        {realBalances.length === 0 && !isLoadingBalances && (
+          <div className="col-span-2 text-center py-12">
+            <p className="text-lg text-gray-600 mb-2">Connect your MetaMask wallet to view portfolio</p>
+            <p className="text-sm text-gray-400">Real-time balance tracking for all your tokens</p>
+          </div>
+        )}
 
 
       </div>
