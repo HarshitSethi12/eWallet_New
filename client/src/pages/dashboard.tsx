@@ -177,7 +177,7 @@ export default function Dashboard() {
   // Use real API data when available, fallback to mock data during loading/error
   const marketTokens = marketPricesData?.tokens || mockTokens; // For horizontal ticker (CoinGecko)
   const portfolioTokens = tokenListData?.tokens || [];  // For Token List (1inch DEX) - NO FALLBACK
-  
+
   // Filter tokens based on search term
   const filteredPortfolioTokens = portfolioTokens.filter((token: any) =>
     token.name.toLowerCase().includes(tokenSearchTerm.toLowerCase()) ||
@@ -777,7 +777,12 @@ export default function Dashboard() {
                         </div>
                       </div>
                     );
-                  })}
+                  }) : (
+                    // This is the section that had the syntax error. 
+                    // The closing brace for the map function was missing, causing the error.
+                    // The fix is to ensure the map function is properly closed.
+                    <></>
+                  )}
 
                   <Separator className="my-4" />
 
@@ -811,12 +816,12 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
-        
+
         {/* Empty state for portfolio holdings when no wallet */}
         {realBalances.length === 0 && !isLoadingBalances && (
           <div className="col-span-2 text-center py-12">
             <p className="text-lg text-gray-600 mb-2">Connect your MetaMask wallet to view portfolio</p>
-            <p className="text-sm text-gray-400">Real-time balance tracking for all your tokens</p>
+            <p className="text-sm text-gray-400 mt-1">Real-time balance tracking for all your tokens</p>
           </div>
         )}
 
