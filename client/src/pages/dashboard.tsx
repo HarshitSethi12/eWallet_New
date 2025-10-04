@@ -759,29 +759,30 @@ export default function Dashboard() {
               <ScrollArea className="h-full px-6 pb-6">
                 <div className="space-y-4 pr-4">
                   {/* Portfolio Distribution */}
-                  {realBalances.length > 0 ? realBalances.map((token) => {
-                    const percentage = totalPortfolioValue > 0 ? ((token.balanceUSD || 0) / totalPortfolioValue) * 100 : 0;
-                    return (
-                      <div key={token.symbol} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <img src={token.logoURI} alt={token.name} className="w-6 h-6 rounded-full" />
-                            <span className="text-sm font-medium">{token.symbol}</span>
+                  {realBalances.length > 0 ? (
+                    realBalances.map((token) => {
+                      const percentage = totalPortfolioValue > 0 ? ((token.balanceUSD || 0) / totalPortfolioValue) * 100 : 0;
+                      return (
+                        <div key={token.symbol} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <img src={token.logoURI} alt={token.name} className="w-6 h-6 rounded-full" />
+                              <span className="text-sm font-medium">{token.symbol}</span>
+                            </div>
+                            <span className="text-sm text-gray-600">{percentage.toFixed(1)}%</span>
                           </div>
-                          <span className="text-sm text-gray-600">{percentage.toFixed(1)}%</span>
+                          <Progress value={percentage} className="h-2" />
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>{token.balance} {token.symbol}</span>
+                            <span>${(token.balanceUSD || 0).toFixed(2)}</span>
+                          </div>
                         </div>
-                        <Progress value={percentage} className="h-2" />
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>{token.balance} {token.symbol}</span>
-                          <span>${(token.balanceUSD || 0).toFixed(2)}</span>
-                        </div>
-                      </div>
-                    );
-                  }) : (
-                    // This is the section that had the syntax error. 
-                    // The closing brace for the map function was missing, causing the error.
-                    // The fix is to ensure the map function is properly closed.
-                    <></>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-4 text-gray-500 text-sm">
+                      No holdings to display
+                    </div>
                   )}
 
                   <Separator className="my-4" />
