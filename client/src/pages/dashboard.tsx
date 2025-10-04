@@ -99,13 +99,99 @@ const mockTokens = [
   { symbol: 'UNI', name: 'Uniswap', balance: '75', price: 6.80, change24h: -3.2, balanceUSD: 510.00, logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png' }
 ];
 
-// Mock transaction history data for demonstration
-const mockTransactions = [
-  { id: '1', type: 'receive', token: 'ETH', amount: '0.5', value: '$1170.25', from: '0x742d...5A8f', timestamp: '2 hours ago', status: 'completed' },
-  { id: '2', type: 'send', token: 'USDC', amount: '200', value: '$200.00', to: '0x91A2...3B7c', timestamp: '1 day ago', status: 'completed' },
-  { id: '3', type: 'swap', token: 'LINK', amount: '25', value: '$356.25', timestamp: '3 days ago', status: 'completed' },
-  { id: '4', type: 'receive', token: 'UNI', amount: '10', value: '$68.00', from: '0x4f5e...2D1a', timestamp: '1 week ago', status: 'completed' }
-];
+// ===== REAL TRANSACTION STATE =====
+  const [realTransactions, setRealTransactions] = useState<any[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+
+  // Fetch real transactions from blockchain
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      if (!walletAddress || !window.ethereum) return;
+
+      setIsLoadingTransactions(true);
+      try {
+        console.log('🔍 Fetching transactions for:', walletAddress);
+
+        // Use Etherscan API to get transaction history (free tier)
+        const etherscanApiKey = process.env.ETHERSCAN_API_KEY || 'YourApiKeyToken';
+        const response = await fetch(
+          `https://api.etherscan.io/api?module=account&action=txlist&address=${walletAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${etherscanApiKey}`
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.status === '1' && data.result) {
+            // Transform Etherscan transactions to our format
+            const transactions = data.result.slice(0, 10).map((tx: any) => {
+              const isReceived = tx.to.toLowerCase() === walletAddress.toLowerCase();
+              const value = parseFloat(tx.value) / Math.pow(10, 18); // Convert Wei to ETH
+              const gasUsed = parseFloat(tx.gasUsed) * parseFloat(tx.gasPrice) / Math.pow(10, 18);
+
+              // Get token info
+              let tokenSymbol = 'ETH';
+              let tokenAmount = value;
+
+              // Check if it's a token transfer (has input data)
+              if (tx.input && tx.input !== '0x' && tx.input.length >= 138) {
+                // This might be an ERC-20 transfer
+                tokenSymbol = 'TOKEN';
+              }
+
+              // Calculate time ago
+              const timestamp = parseInt(tx.timeStamp) * 1000;
+              const now = Date.now();
+              const diffMs = now - timestamp;
+              const diffMins = Math.floor(diffMs / 60000);
+              const diffHours = Math.floor(diffMs / 3600000);
+              const diffDays = Math.floor(diffMs / 86400000);
+
+              let timeAgo;
+              if (diffMins < 60) {
+                timeAgo = `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
+              } else if (diffHours < 24) {
+                timeAgo = `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+              } else {
+                timeAgo = `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+              }
+
+              return {
+                id: tx.hash,
+                type: isReceived ? 'receive' : 'send',
+                token: tokenSymbol,
+                amount: tokenAmount.toFixed(4),
+                value: `$${(tokenAmount * (marketTokens.find((t: any) => t.symbol === 'ETH')?.price || 0)).toFixed(2)}`,
+                from: tx.from,
+                to: tx.to,
+                timestamp: timeAgo,
+                status: tx.txreceipt_status === '1' ? 'completed' : 'failed',
+                hash: tx.hash,
+                gasUsed: gasUsed.toFixed(6)
+              };
+            });
+
+            setRealTransactions(transactions);
+            console.log('✅ Fetched', transactions.length, 'real transactions');
+          } else {
+            console.log('ℹ️ No transactions found for this address');
+            setRealTransactions([]);
+          }
+        } else {
+          throw new Error('Etherscan API request failed');
+        }
+      } catch (error) {
+        console.error('❌ Error fetching transactions:', error);
+        setRealTransactions([]);
+      } finally {
+        setIsLoadingTransactions(false);
+      }
+    };
+
+    fetchTransactions();
+  }, [walletAddress, marketTokens]);
+
+  // Use real transactions if available, otherwise show empty state
+  const displayTransactions = realTransactions.length > 0 ? realTransactions : [];
 
 // ===== MAIN DASHBOARD COMPONENT =====
 // This is the main dashboard component that displays user's cryptocurrency portfolio
@@ -201,7 +287,7 @@ export default function Dashboard() {
   const [realBalances, setRealBalances] = useState<any[]>([]);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const { account } = useMetaMask();
-  
+
   // Use wallet address from authenticated user (MetaMask login) or MetaMask hook
   const walletAddress = user?.walletAddress || account;
 
@@ -619,7 +705,12 @@ export default function Dashboard() {
             <CardContent className="flex-1 bg-white overflow-hidden p-0">
               <ScrollArea className="h-full bg-white px-6 pb-6">
                 <div className="space-y-3 bg-white pr-4">
-                  {mockTransactions.map((tx) => (
+                  {isLoadingTransactions ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600 mx-auto"></div>
+                      <p className="text-xs text-gray-500 mt-2">Loading real transactions...</p>
+                    </div>
+                  ) : displayTransactions.length > 0 ? displayTransactions.map((tx) => (
                     <div key={tx.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className={`p-1.5 rounded-full ${
@@ -637,8 +728,8 @@ export default function Dashboard() {
                         <div>
                           <p className="text-sm font-semibold capitalize">{tx.type} {tx.token}</p>
                           <p className="text-xs text-gray-500">
-                            {tx.from && `From: ${tx.from}`}
-                            {tx.to && `To: ${tx.to}`}
+                            {tx.from && `From: ${tx.from.slice(0, 6)}...${tx.from.slice(-4)}`}
+                            {tx.to && ` To: ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`}
                             {tx.type === 'swap' && 'Token swap'}
                           </p>
                         </div>
@@ -655,7 +746,12 @@ export default function Dashboard() {
                         <p className="text-xs text-gray-400">{tx.timestamp}</p>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-gray-500">No transactions found</p>
+                      <p className="text-xs text-gray-400 mt-1">Connect MetaMask to view history</p>
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
             </CardContent>
