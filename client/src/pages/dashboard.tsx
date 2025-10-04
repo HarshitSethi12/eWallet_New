@@ -201,6 +201,9 @@ export default function Dashboard() {
   const [realBalances, setRealBalances] = useState<any[]>([]);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const { account } = useMetaMask();
+  
+  // Use wallet address from authenticated user (MetaMask login) or MetaMask hook
+  const walletAddress = user?.walletAddress || account;
 
   // ERC-20 Token ABI for balanceOf function
   const ERC20_ABI = [
@@ -251,7 +254,7 @@ export default function Dashboard() {
   // Fetch real wallet balances when user connects MetaMask
   useEffect(() => {
     const fetchRealBalances = async () => {
-      if (!account || !window.ethereum) return;
+      if (!walletAddress || !window.ethereum) return;
 
       setIsLoadingBalances(true);
       try {
@@ -260,7 +263,7 @@ export default function Dashboard() {
         // 1. Get ETH balance
         const ethBalance = await window.ethereum.request({
           method: 'eth_getBalance',
-          params: [account, 'latest']
+          params: [walletAddress, 'latest']
         });
 
         const ethBalanceInEth = parseInt(ethBalance, 16) / Math.pow(10, 18);
@@ -287,7 +290,7 @@ export default function Dashboard() {
               method: 'eth_call',
               params: [{
                 to: token.address,
-                data: '0x70a08231000000000000000000000000' + account.slice(2) // balanceOf function signature + address
+                data: '0x70a08231000000000000000000000000' + walletAddress.slice(2) // balanceOf function signature + address
               }, 'latest']
             });
 
@@ -334,7 +337,7 @@ export default function Dashboard() {
     };
 
     fetchRealBalances();
-  }, [account, marketTokens]);
+  }, [walletAddress, marketTokens]);
 
   // Use real balances if available, otherwise use mock data
   const mockTokensOverview = realBalances.length > 0 ? realBalances : [
@@ -779,9 +782,18 @@ export default function Dashboard() {
                         </div>
                       );
                     })
+                  ) : isLoadingBalances ? (
+                    <div className="text-center py-4 text-gray-500 text-sm">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600 mx-auto mb-2"></div>
+                      Loading your holdings...
+                    </div>
+                  ) : walletAddress ? (
+                    <div className="text-center py-4 text-gray-500 text-sm">
+                      No tokens found in your wallet
+                    </div>
                   ) : (
                     <div className="text-center py-4 text-gray-500 text-sm">
-                      No holdings to display
+                      Connect MetaMask to view holdings
                     </div>
                   )}
 
@@ -809,7 +821,9 @@ export default function Dashboard() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Data Source:</span>
-                      <span className="font-medium text-blue-600">{realBalances.length > 0 ? 'Real MetaMask' : 'No Wallet Connected'}</span>
+                      <span className="font-medium text-blue-600">
+                        {realBalances.length > 0 ? 'Real MetaMask' : walletAddress ? 'MetaMask Connected' : 'No Wallet Connected'}
+                      </span>
                     </div>
                   </div>
                 </div>
