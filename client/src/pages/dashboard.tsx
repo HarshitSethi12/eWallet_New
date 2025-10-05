@@ -99,7 +99,24 @@ const mockTokens = [
   { symbol: 'UNI', name: 'Uniswap', balance: '75', price: 6.80, change24h: -3.2, balanceUSD: 510.00, logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png' }
 ];
 
-// ===== REAL TRANSACTION STATE =====
+// ===== MAIN DASHBOARD COMPONENT =====
+// This is the main dashboard component that displays user's cryptocurrency portfolio
+export default function Dashboard() {
+  // ===== AUTHENTICATION STATE =====
+  // Get current user data from authentication context
+  const { user, logout, isLoggingOut, checkSessionStatus } = useAuth();
+  // Hook to disconnect MetaMask wallet
+  const { disconnectWallet } = useMetaMask();
+  // Hook to manage navigation
+  const [, setLocation] = useLocation();
+
+  // ===== SESSION STATUS STATE =====
+  const [sessionStatus, setSessionStatus] = React.useState(null);
+
+  // ===== TOKEN LIST SEARCH STATE =====
+  const [tokenSearchTerm, setTokenSearchTerm] = useState('');
+
+  // ===== REAL TRANSACTION STATE =====
   const [realTransactions, setRealTransactions] = useState<any[]>([]);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
 
@@ -208,23 +225,6 @@ const mockTokens = [
 
   // Use real transactions if available, otherwise show empty state
   const displayTransactions = realTransactions.length > 0 ? realTransactions : [];
-
-// ===== MAIN DASHBOARD COMPONENT =====
-// This is the main dashboard component that displays user's cryptocurrency portfolio
-export default function Dashboard() {
-  // ===== AUTHENTICATION STATE =====
-  // Get current user data from authentication context
-  const { user, logout, isLoggingOut, checkSessionStatus } = useAuth();
-  // Hook to disconnect MetaMask wallet
-  const { disconnectWallet } = useMetaMask();
-  // Hook to manage navigation
-  const [, setLocation] = useLocation();
-
-  // ===== SESSION STATUS STATE =====
-  const [sessionStatus, setSessionStatus] = React.useState(null);
-
-  // ===== TOKEN LIST SEARCH STATE =====
-  const [tokenSearchTerm, setTokenSearchTerm] = useState('');
 
   // ===== SESSION CHECK HANDLER =====
   const handleCheckSession = async () => {
