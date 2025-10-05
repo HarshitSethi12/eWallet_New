@@ -106,88 +106,104 @@ const mockTokens = [
   // Fetch real transactions from blockchain
   useEffect(() => {
     const fetchTransactions = async () => {
-      if (!walletAddress || !window.ethereum) return;
+      if (!walletAddress || !window.ethereum) {
+        setRealTransactions([]);
+        return;
+      }
 
       setIsLoadingTransactions(true);
       try {
         console.log('🔍 Fetching transactions for:', walletAddress);
 
-        // Use Etherscan API to get transaction history (free tier)
-        const etherscanApiKey = process.env.ETHERSCAN_API_KEY || 'YourApiKeyToken';
-        const response = await fetch(
-          `https://api.etherscan.io/api?module=account&action=txlist&address=${walletAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${etherscanApiKey}`
-        );
+        // Use Etherscan API to get transaction history
+        // Note: Using demo API key - for production, get your own from etherscan.io
+        const etherscanApiKey = 'YourApiKeyToken'; // Free demo key
+        const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${walletAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${etherscanApiKey}`;
+        
+        console.log('🌐 Calling Etherscan API...');
+        const response = await fetch(apiUrl);
 
-        if (response.ok) {
-          const data = await response.json();
-
-          if (data.status === '1' && data.result) {
-            // Transform Etherscan transactions to our format
-            const transactions = data.result.slice(0, 10).map((tx: any) => {
-              const isReceived = tx.to.toLowerCase() === walletAddress.toLowerCase();
-              const value = parseFloat(tx.value) / Math.pow(10, 18); // Convert Wei to ETH
-              const gasUsed = parseFloat(tx.gasUsed) * parseFloat(tx.gasPrice) / Math.pow(10, 18);
-
-              // Get token info
-              let tokenSymbol = 'ETH';
-              let tokenAmount = value;
-
-              // Check if it's a token transfer (has input data)
-              if (tx.input && tx.input !== '0x' && tx.input.length >= 138) {
-                // This might be an ERC-20 transfer
-                tokenSymbol = 'TOKEN';
-              }
-
-              // Calculate time ago
-              const timestamp = parseInt(tx.timeStamp) * 1000;
-              const now = Date.now();
-              const diffMs = now - timestamp;
-              const diffMins = Math.floor(diffMs / 60000);
-              const diffHours = Math.floor(diffMs / 3600000);
-              const diffDays = Math.floor(diffMs / 86400000);
-
-              let timeAgo;
-              if (diffMins < 60) {
-                timeAgo = `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
-              } else if (diffHours < 24) {
-                timeAgo = `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
-              } else {
-                timeAgo = `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
-              }
-
-              return {
-                id: tx.hash,
-                type: isReceived ? 'receive' : 'send',
-                token: tokenSymbol,
-                amount: tokenAmount.toFixed(4),
-                value: `$${(tokenAmount * (marketTokens.find((t: any) => t.symbol === 'ETH')?.price || 0)).toFixed(2)}`,
-                from: tx.from,
-                to: tx.to,
-                timestamp: timeAgo,
-                status: tx.txreceipt_status === '1' ? 'completed' : 'failed',
-                hash: tx.hash,
-                gasUsed: gasUsed.toFixed(6)
-              };
-            });
-
-            setRealTransactions(transactions);
-            console.log('✅ Fetched', transactions.length, 'real transactions');
-          } else {
-            console.log('ℹ️ No transactions found for this address');
-            setRealTransactions([]);
-          }
-        } else {
-          throw new Error('Etherscan API request failed');
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
         }
-      } catch (error) {
+
+        const data = await response.json();
+        console.log('📦 Etherscan response:', data);
+
+        // Check if we got valid data
+        if (data.status === '1' && data.result && Array.isArray(data.result)) {
+          // Transform Etherscan transactions to our format
+          const transactions = data.result.slice(0, 10).map((tx: any) => {
+            const isReceived = tx.to && tx.to.toLowerCase() === walletAddress.toLowerCase();
+            const value = parseFloat(tx.value || 0) / Math.pow(10, 18); // Convert Wei to ETH
+
+            // Get token info
+            let tokenSymbol = 'ETH';
+            let tokenAmount = value;
+
+            // Check if it's a token transfer (has input data)
+            if (tx.input && tx.input !== '0x' && tx.input.length >= 138) {
+              tokenSymbol = 'TOKEN';
+            }
+
+            // Calculate time ago
+            const timestamp = parseInt(tx.timeStamp) * 1000;
+            const now = Date.now();
+            const diffMs = now - timestamp;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            let timeAgo;
+            if (diffMins < 60) {
+              timeAgo = `${diffMins} ${diffMins === 1 ? 'min' : 'mins'} ago`;
+            } else if (diffHours < 24) {
+              timeAgo = `${diffHours} ${diffHours === 1 ? 'hr' : 'hrs'} ago`;
+            } else {
+              timeAgo = `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+            }
+
+            const ethPrice = marketTokens.find((t: any) => t.symbol === 'ETH')?.price || 0;
+
+            return {
+              id: tx.hash,
+              type: isReceived ? 'receive' : 'send',
+              token: tokenSymbol,
+              amount: tokenAmount.toFixed(4),
+              value: `$${(tokenAmount * ethPrice).toFixed(2)}`,
+              from: tx.from || 'Unknown',
+              to: tx.to || 'Unknown',
+              timestamp: timeAgo,
+              status: tx.txreceipt_status === '1' ? 'completed' : 'failed',
+              hash: tx.hash
+            };
+          });
+
+          setRealTransactions(transactions);
+          console.log('✅ Fetched', transactions.length, 'real transactions');
+        } else if (data.status === '0' && data.message === 'No transactions found') {
+          console.log('ℹ️ No transactions found for this address');
+          setRealTransactions([]);
+        } else {
+          console.warn('⚠️ Unexpected API response format:', data);
+          setRealTransactions([]);
+        }
+      } catch (error: any) {
         console.error('❌ Error fetching transactions:', error);
+        console.log('💡 This could be due to:');
+        console.log('  - Network connectivity issues');
+        console.log('  - Etherscan API rate limiting');
+        console.log('  - Invalid wallet address');
+        console.log('  - CORS restrictions');
         setRealTransactions([]);
       } finally {
         setIsLoadingTransactions(false);
       }
     };
 
-    fetchTransactions();
+    // Add a small delay to avoid rapid API calls
+    const timeoutId = setTimeout(fetchTransactions, 500);
+    return () => clearTimeout(timeoutId);
   }, [walletAddress, marketTokens]);
 
   // Use real transactions if available, otherwise show empty state
