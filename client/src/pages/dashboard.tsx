@@ -116,10 +116,6 @@ export default function Dashboard() {
   // ===== TOKEN LIST SEARCH STATE =====
   const [tokenSearchTerm, setTokenSearchTerm] = useState('');
 
-  // ===== REAL TRANSACTION STATE =====
-  const [realTransactions, setRealTransactions] = useState<any[]>([]);
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
-
   // Fetch real transactions from blockchain
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -306,6 +302,10 @@ export default function Dashboard() {
 
   // Use wallet address from authenticated user (MetaMask login) or MetaMask hook
   const walletAddress = user?.walletAddress || account;
+
+  // ===== REAL TRANSACTION STATE =====
+  const [realTransactions, setRealTransactions] = useState<any[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
 
   // ERC-20 Token ABI for balanceOf function
   const ERC20_ABI = [
