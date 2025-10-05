@@ -817,6 +817,53 @@ router.get("/transactions", authenticateUser, async (req, res) => {
   }
 });
 
+// GET /wallet/transactions/:address - Get real blockchain transactions for a wallet address
+router.get("/wallet/transactions/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    if (!address) {
+      return res.status(400).json({ message: "Wallet address is required" });
+    }
+
+    // Get Etherscan API key from environment
+    const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+    
+    if (!etherscanApiKey) {
+      console.error('❌ Etherscan API key not configured');
+      return res.status(503).json({ 
+        message: "Etherscan API key not configured",
+        status: '0',
+        result: []
+      });
+    }
+
+    console.log('🔍 Fetching transactions for:', address);
+    
+    // Call Etherscan API to get transaction history
+    const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=20&sort=desc&apikey=${etherscanApiKey}`;
+    
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Etherscan API returned ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    // Return the Etherscan response as-is
+    res.json(data);
+    
+  } catch (error: any) {
+    console.error('❌ Error fetching transactions:', normalizeError(error));
+    res.status(500).json({ 
+      message: normalizeError(error),
+      status: '0',
+      result: []
+    });
+  }
+});
+
 // ===== AUTHENTICATION ENDPOINTS =====
 
 // POST /register - Register a new user (OAuth-based)

@@ -205,10 +205,8 @@ export default function Dashboard() {
       try {
         console.log('🔍 Fetching transactions for:', walletAddress);
 
-        // Use Etherscan API to get transaction history
-        // Note: Using demo API key - for production, get your own from etherscan.io
-        const etherscanApiKey = 'YourApiKeyToken'; // Free demo key
-        const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${walletAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${etherscanApiKey}`;
+        // Use Etherscan API to get transaction history from backend
+        const apiUrl = `/api/wallet/transactions/${walletAddress}`;
 
         console.log('🌐 Calling Etherscan API...');
         const response = await fetch(apiUrl);
