@@ -197,29 +197,47 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchTransactions = async () => {
       if (!walletAddress || !window.ethereum) {
+        console.log('⚠️ No wallet address or MetaMask not available');
         setRealTransactions([]);
         return;
       }
 
       setIsLoadingTransactions(true);
       try {
-        console.log('🔍 Fetching transactions for:', walletAddress);
+        console.log('🔍 Fetching transactions for wallet:', walletAddress);
 
         // Use Etherscan API to get transaction history from backend
         const apiUrl = `/api/wallet/transactions/${walletAddress}`;
 
-        console.log('🌐 Calling Etherscan API...');
+        console.log('🌐 Calling backend API:', apiUrl);
         const response = await fetch(apiUrl);
 
+        console.log('📡 API Response Status:', response.status);
+        console.log('📡 API Response Headers:', {
+          contentType: response.headers.get('content-type'),
+          status: response.status,
+          statusText: response.statusText
+        });
+
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ API Error Response:', errorText);
           throw new Error(`API returned ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
-        console.log('📦 Etherscan response:', data);
+        console.log('📦 Full Etherscan API response:', JSON.stringify(data, null, 2));
+        console.log('📊 Response status field:', data.status);
+        console.log('📊 Response message field:', data.message);
+        console.log('📊 Response result type:', Array.isArray(data.result) ? 'Array' : typeof data.result);
+        console.log('📊 Response result length:', data.result?.length);
 
         // Check if we got valid data
+        console.log('🔍 Checking API response validity...');
+        
         if (data.status === '1' && data.result && Array.isArray(data.result)) {
+          console.log('✅ Valid transaction data received, count:', data.result.length);
+          
           // Transform Etherscan transactions to our format
           const transactions = data.result.slice(0, 10).map((tx: any) => {
             const isReceived = tx.to && tx.to.toLowerCase() === walletAddress.toLowerCase();
@@ -268,12 +286,30 @@ export default function Dashboard() {
           });
 
           setRealTransactions(transactions);
-          console.log('✅ Fetched', transactions.length, 'real transactions');
-        } else if (data.status === '0' && data.message === 'No transactions found') {
-          console.log('ℹ️ No transactions found for this address');
+          console.log('✅ Successfully processed', transactions.length, 'transactions');
+          console.log('📋 First transaction:', transactions[0]);
+        } else if (data.status === '0') {
+          console.log('⚠️ Etherscan returned status 0');
+          console.log('⚠️ Message:', data.message);
+          console.log('⚠️ Full response:', JSON.stringify(data, null, 2));
+          
+          if (data.message === 'No transactions found') {
+            console.log('ℹ️ Wallet has no transaction history');
+          } else if (data.message?.includes('rate limit')) {
+            console.log('⚠️ API rate limit reached');
+          } else if (data.message?.includes('Invalid API Key')) {
+            console.log('❌ Invalid Etherscan API key');
+          } else {
+            console.log('⚠️ Unknown status 0 message:', data.message);
+          }
+          
           setRealTransactions([]);
         } else {
-          console.warn('⚠️ Unexpected API response format:', data);
+          console.warn('⚠️ Unexpected API response format');
+          console.warn('⚠️ Status:', data.status);
+          console.warn('⚠️ Message:', data.message);
+          console.warn('⚠️ Result:', data.result);
+          console.warn('⚠️ Full data:', JSON.stringify(data, null, 2));
           setRealTransactions([]);
         }
       } catch (error: any) {

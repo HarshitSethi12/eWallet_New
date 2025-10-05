@@ -822,15 +822,31 @@ router.get("/wallet/transactions/:address", async (req, res) => {
   try {
     const { address } = req.params;
     
+    console.log('🔍 Transaction request received for address:', address);
+    
     if (!address) {
+      console.error('❌ No address provided in request');
       return res.status(400).json({ message: "Wallet address is required" });
+    }
+
+    // Validate address format
+    if (!address.match(/^0x[a-fA-F0-9]{40}$/)) {
+      console.error('❌ Invalid Ethereum address format:', address);
+      return res.status(400).json({ 
+        message: "Invalid Ethereum address format",
+        status: '0',
+        result: []
+      });
     }
 
     // Get Etherscan API key from environment
     const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
     
+    console.log('🔑 Etherscan API key exists:', !!etherscanApiKey);
+    console.log('🔑 Etherscan API key length:', etherscanApiKey?.length || 0);
+    
     if (!etherscanApiKey) {
-      console.error('❌ Etherscan API key not configured');
+      console.error('❌ Etherscan API key not configured in environment');
       return res.status(503).json({ 
         message: "Etherscan API key not configured",
         status: '0',
@@ -843,23 +859,56 @@ router.get("/wallet/transactions/:address", async (req, res) => {
     // Call Etherscan API to get transaction history
     const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=20&sort=desc&apikey=${etherscanApiKey}`;
     
+    console.log('🌐 Calling Etherscan API...');
+    console.log('🌐 API URL (without key):', apiUrl.replace(etherscanApiKey, 'HIDDEN'));
+    
     const response = await fetch(apiUrl);
     
+    console.log('📡 Etherscan API Response Status:', response.status);
+    console.log('📡 Etherscan API Response OK:', response.ok);
+    
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Etherscan API HTTP error:', response.status, response.statusText);
+      console.error('❌ Error body:', errorText);
       throw new Error(`Etherscan API returned ${response.status}: ${response.statusText}`);
     }
 
     const data = await response.json();
     
+    console.log('📦 Etherscan API Response:');
+    console.log('  - Status:', data.status);
+    console.log('  - Message:', data.message);
+    console.log('  - Result type:', Array.isArray(data.result) ? 'Array' : typeof data.result);
+    console.log('  - Result count:', data.result?.length || 0);
+    
+    if (data.status === '0') {
+      console.warn('⚠️ Etherscan returned status 0:', data.message);
+    } else if (data.status === '1' && data.result?.length > 0) {
+      console.log('✅ Found', data.result.length, 'transactions');
+      console.log('📋 First transaction hash:', data.result[0]?.hash);
+    }
+    
     // Return the Etherscan response as-is
     res.json(data);
     
   } catch (error: any) {
-    console.error('❌ Error fetching transactions:', normalizeError(error));
+    console.error('❌ Error fetching transactions:', error);
+    console.error('❌ Error message:', error?.message);
+    console.error('❌ Error stack:', error?.stack);
+    
+    // Check for specific error types
+    if (error.message?.includes('fetch')) {
+      console.error('❌ Network error: Could not reach Etherscan API');
+    } else if (error.message?.includes('rate limit')) {
+      console.error('❌ Etherscan API rate limit exceeded');
+    }
+    
     res.status(500).json({ 
       message: normalizeError(error),
       status: '0',
-      result: []
+      result: [],
+      error: error?.message || 'Unknown error'
     });
   }
 });
