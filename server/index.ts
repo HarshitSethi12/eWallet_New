@@ -186,7 +186,7 @@ process.on('unhandledRejection', (reason, promise) => {
       console.error('❌ Failed to import routes:', error);
       throw error;
     }
-    
+
     // Import and register auth routes
     try {
       const { authRouter } = await import('./auth');
@@ -252,24 +252,21 @@ process.on('unhandledRejection', (reason, promise) => {
 
     // Add ping endpoint
     app.get("/ping", (req, res) => {
-      res.json({ 
-        status: "pong", 
+      res.json({
+        status: "pong",
         timestamp: new Date().toISOString(),
         host: req.get('host'),
         ip: req.ip
       });
     });
 
-    // Add a catch-all API route for debugging
-    app.get("/api/*", (req, res) => {
-      res.status(404).json({ message: `API route not found: ${req.path}` });
-    });
-
     // importantly only setup vite in development and after
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
     if (app.get("env") === "development") {
+      log('🔧 Setting up Vite dev server...');
       await setupVite(app, server);
+      log('✅ Vite dev server configured');
     } else {
       // In production, serve static files from the build directory
       const buildPath = path.resolve(process.cwd(), "dist", "public");
@@ -308,8 +305,8 @@ process.on('unhandledRejection', (reason, promise) => {
         // Handle all non-API routes by serving index.html (SPA fallback)
         app.get('*', (req, res, next) => {
           // Skip API routes and utility endpoints
-          if (req.path.startsWith('/api/') || 
-              req.path.startsWith('/health') || 
+          if (req.path.startsWith('/api/') ||
+              req.path.startsWith('/health') ||
               req.path.startsWith('/ping') ||
               req.path.startsWith('/test')) {
             return next();
@@ -366,8 +363,8 @@ process.on('unhandledRejection', (reason, promise) => {
                     <p>Please run the build process and redeploy.</p>
                     <div style="margin-top: 30px;">
                       <h3>Available API endpoints:</h3>
-                      <a href="/health">Health Check</a> | 
-                      <a href="/ping">Ping</a> | 
+                      <a href="/health">Health Check</a> |
+                      <a href="/ping">Ping</a> |
                       <a href="/api/crypto-prices">Crypto Prices</a>
                     </div>
                   </div>
@@ -382,7 +379,7 @@ process.on('unhandledRejection', (reason, promise) => {
     // Configure port for different environments - force port 5000 for development
     const port = parseInt(process.env.PORT || "5000", 10);
     const host = "0.0.0.0"; // Always bind to 0.0.0.0 for Cloud Run compatibility
-    
+
     // Force the server to use port 5000 in development
     log(`🔧 Attempting to bind to port ${port}`);
 
@@ -409,7 +406,7 @@ process.on('unhandledRejection', (reason, promise) => {
       log(`❌ Unexpected server error: ${error.message}`);
       process.exit(1);
     });
-    
+
     // Start server with proper error handling and host binding
     server.listen({
       port: port,

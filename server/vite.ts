@@ -55,8 +55,15 @@ export async function setupVite(app: Express, server: Server) {
 
   app.use(addNoCacheHeaders); // Apply no-cache headers
   app.use(vite.middlewares);
+
+  // Serve index.html for all non-API routes
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
+
+    // Skip API routes
+    if (url.startsWith('/api') || url.startsWith('/auth') || url.startsWith('/health') || url.startsWith('/ping')) {
+      return next();
+    }
 
     try {
       const clientTemplate = path.resolve(
@@ -65,6 +72,12 @@ export async function setupVite(app: Express, server: Server) {
         "client",
         "index.html",
       );
+
+      // Check if file exists
+      if (!fs.existsSync(clientTemplate)) {
+        log(`❌ Template file not found at: ${clientTemplate}`);
+        return res.status(500).send('Template file not found');
+      }
 
       // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
@@ -75,6 +88,7 @@ export async function setupVite(app: Express, server: Server) {
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
+      log(`❌ Error serving HTML: ${e.message}`);
       vite.ssrFixStacktrace(e as Error);
       next(e);
     }
