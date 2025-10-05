@@ -116,6 +116,83 @@ export default function Dashboard() {
   // ===== TOKEN LIST SEARCH STATE =====
   const [tokenSearchTerm, setTokenSearchTerm] = useState('');
 
+  // ===== REAL-TIME TOKEN DATA FETCHING =====
+  // Fetch cryptocurrency token data from CoinGecko for Live Market Prices (horizontal ticker)
+  const { data: marketPricesData, isLoading: marketPricesLoading, error: marketPricesError, refetch: refetchMarketPrices } = useQuery({
+    queryKey: ["/api/tokens"],              // CoinGecko endpoint for market overview
+    queryFn: () => apiRequest("/api/tokens"), // Function that makes the API call
+    refetchInterval: 30000,                 // Refresh data every 30 seconds
+    retry: 3,                               // Retry 3 times on failure
+    staleTime: 10000,                      // Data fresh for 10 seconds
+    refetchOnMount: false,                 // Don't always refetch when component mounts
+  });
+
+  // Fetch token data from 1inch DEX for Token List (swappable tokens)
+  const { data: tokenListData, isLoading: tokenListLoading, error: tokenListError, refetch: refetchTokenList } = useQuery({
+    queryKey: ["/api/tokens/oneinch"],       // 1inch endpoint for Token List
+    queryFn: () => apiRequest("/api/tokens/oneinch"), // Function that makes the API call
+    refetchInterval: 30000,                 // Refresh data every 30 seconds
+    retry: 3,                               // Retry 3 times on failure
+    staleTime: 10000,                      // Data fresh for 10 seconds
+    refetchOnMount: false,                 // Don't always refetch when component mounts
+  });
+
+  // ===== MANUAL REFRESH FUNCTIONS =====
+  // Function to manually refresh market prices (horizontal ticker)
+  const handleRefreshMarketPrices = () => {
+    console.log('🔄 Manually refreshing market prices...');
+    refetchMarketPrices();
+  };
+
+  // Function to manually refresh token list (1inch DEX prices)
+  const handleRefreshTokenList = () => {
+    console.log('🔄 Manually refreshing token list...');
+    refetchTokenList();
+  };
+
+  // Function to refresh both data sources
+  const handleRefreshAllPrices = () => {
+    console.log('🔄 Manually refreshing all price data...');
+    refetchMarketPrices();
+    refetchTokenList();
+  };
+
+  // ===== DATA SELECTION LOGIC =====
+  // Use real API data when available, fallback to mock data during loading/error
+  const marketTokens = marketPricesData?.tokens || mockTokens; // For horizontal ticker (CoinGecko)
+  const portfolioTokens = tokenListData?.tokens || [];  // For Token List (1inch DEX) - NO FALLBACK
+
+  // Filter tokens based on search term
+  const filteredPortfolioTokens = portfolioTokens.filter((token: any) =>
+    token.name.toLowerCase().includes(tokenSearchTerm.toLowerCase()) ||
+    token.symbol.toLowerCase().includes(tokenSearchTerm.toLowerCase())
+  );
+
+  // ===== API DATA FETCHING =====
+  // Fetch wallet data using React Query
+  const { data: wallets } = useQuery({
+    queryKey: ["/api/wallets"], // Unique key for caching wallet data
+    queryFn: () => apiRequest("/api/wallets"), // Function to fetch wallet data
+  });
+
+  // Fetch transaction data using React Query
+  const { data: transactions } = useQuery({
+    queryKey: ["/api/transactions"], // Unique key for caching transaction data
+    queryFn: () => apiRequest("/api/transactions"), // Function to fetch transaction data
+  });
+
+  // ===== REAL WALLET BALANCE STATE =====
+  const [realBalances, setRealBalances] = useState<any[]>([]);
+  const [isLoadingBalances, setIsLoadingBalances] = useState(false);
+  const { account } = useMetaMask();
+
+  // Use wallet address from authenticated user (MetaMask login) or MetaMask hook
+  const walletAddress = user?.walletAddress || account;
+
+  // ===== REAL TRANSACTION STATE =====
+  const [realTransactions, setRealTransactions] = useState<any[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+
   // Fetch real transactions from blockchain
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -228,84 +305,6 @@ export default function Dashboard() {
     setSessionStatus(status);
     console.log('📊 Manual session check result:', status);
   };
-
-  // ===== REAL-TIME TOKEN DATA FETCHING =====
-  // Fetch cryptocurrency token data from CoinGecko for Live Market Prices (horizontal ticker)
-  const { data: marketPricesData, isLoading: marketPricesLoading, error: marketPricesError, refetch: refetchMarketPrices } = useQuery({
-    queryKey: ["/api/tokens"],              // CoinGecko endpoint for market overview
-    queryFn: () => apiRequest("/api/tokens"), // Function that makes the API call
-    refetchInterval: 30000,                 // Refresh data every 30 seconds
-    retry: 3,                               // Retry 3 times on failure
-    staleTime: 10000,                      // Data fresh for 10 seconds
-    refetchOnMount: false,                 // Don't always refetch when component mounts
-  });
-
-  // Fetch token data from 1inch DEX for Token List (swappable tokens)
-  const { data: tokenListData, isLoading: tokenListLoading, error: tokenListError, refetch: refetchTokenList } = useQuery({
-    queryKey: ["/api/tokens/oneinch"],       // 1inch endpoint for Token List
-    queryFn: () => apiRequest("/api/tokens/oneinch"), // Function that makes the API call
-    refetchInterval: 30000,                 // Refresh data every 30 seconds
-    retry: 3,                               // Retry 3 times on failure
-    staleTime: 10000,                      // Data fresh for 10 seconds
-    refetchOnMount: false,                 // Don't always refetch when component mounts
-  });
-
-
-  // ===== MANUAL REFRESH FUNCTIONS =====
-  // Function to manually refresh market prices (horizontal ticker)
-  const handleRefreshMarketPrices = () => {
-    console.log('🔄 Manually refreshing market prices...');
-    refetchMarketPrices();
-  };
-
-  // Function to manually refresh token list (1inch DEX prices)
-  const handleRefreshTokenList = () => {
-    console.log('🔄 Manually refreshing token list...');
-    refetchTokenList();
-  };
-
-  // Function to refresh both data sources
-  const handleRefreshAllPrices = () => {
-    console.log('🔄 Manually refreshing all price data...');
-    refetchMarketPrices();
-    refetchTokenList();
-  };
-
-  // ===== DATA SELECTION LOGIC =====
-  // Use real API data when available, fallback to mock data during loading/error
-  const marketTokens = marketPricesData?.tokens || mockTokens; // For horizontal ticker (CoinGecko)
-  const portfolioTokens = tokenListData?.tokens || [];  // For Token List (1inch DEX) - NO FALLBACK
-
-  // Filter tokens based on search term
-  const filteredPortfolioTokens = portfolioTokens.filter((token: any) =>
-    token.name.toLowerCase().includes(tokenSearchTerm.toLowerCase()) ||
-    token.symbol.toLowerCase().includes(tokenSearchTerm.toLowerCase())
-  );
-
-  // ===== API DATA FETCHING =====
-  // Fetch wallet data using React Query
-  const { data: wallets } = useQuery({
-    queryKey: ["/api/wallets"], // Unique key for caching wallet data
-    queryFn: () => apiRequest("/api/wallets"), // Function to fetch wallet data
-  });
-
-  // Fetch transaction data using React Query
-  const { data: transactions } = useQuery({
-    queryKey: ["/api/transactions"], // Unique key for caching transaction data
-    queryFn: () => apiRequest("/api/transactions"), // Function to fetch transaction data
-  });
-
-  // ===== REAL WALLET BALANCE STATE =====
-  const [realBalances, setRealBalances] = useState<any[]>([]);
-  const [isLoadingBalances, setIsLoadingBalances] = useState(false);
-  const { account } = useMetaMask();
-
-  // Use wallet address from authenticated user (MetaMask login) or MetaMask hook
-  const walletAddress = user?.walletAddress || account;
-
-  // ===== REAL TRANSACTION STATE =====
-  const [realTransactions, setRealTransactions] = useState<any[]>([]);
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
 
   // ERC-20 Token ABI for balanceOf function
   const ERC20_ABI = [
