@@ -209,7 +209,7 @@ export default function Dashboard() {
         // Note: Using demo API key - for production, get your own from etherscan.io
         const etherscanApiKey = 'YourApiKeyToken'; // Free demo key
         const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${walletAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${etherscanApiKey}`;
-        
+
         console.log('🌐 Calling Etherscan API...');
         const response = await fetch(apiUrl);
 
