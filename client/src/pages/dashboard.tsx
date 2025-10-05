@@ -698,8 +698,11 @@ export default function Dashboard() {
                     </div>
                   )) : (
                     <div className="text-center py-8">
-                      <p className="text-sm text-gray-500">No tokens found in wallet</p>
-                      <p className="text-xs text-gray-400 mt-1">Connect MetaMask to view your holdings</p>
+                      <p className="text-sm text-gray-500">
+                        {user?.provider === 'metamask' && user?.walletAddress 
+                          ? 'No tokens found in your wallet' 
+                          : 'Connect MetaMask to view your holdings'}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -761,8 +764,11 @@ export default function Dashboard() {
                     </div>
                   )) : (
                     <div className="text-center py-8">
-                      <p className="text-sm text-gray-500">No transactions found</p>
-                      <p className="text-xs text-gray-400 mt-1">Connect MetaMask to view history</p>
+                      <p className="text-sm text-gray-500">
+                        {user?.provider === 'metamask' && user?.walletAddress 
+                          ? 'No transactions found' 
+                          : 'Connect MetaMask to view history'}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -896,13 +902,11 @@ export default function Dashboard() {
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600 mx-auto mb-2"></div>
                       Loading your holdings...
                     </div>
-                  ) : walletAddress ? (
-                    <div className="text-center py-4 text-gray-500 text-sm">
-                      No tokens found in your wallet
-                    </div>
                   ) : (
                     <div className="text-center py-4 text-gray-500 text-sm">
-                      Connect MetaMask to view holdings
+                      {user?.provider === 'metamask' && user?.walletAddress 
+                        ? 'No tokens found in your wallet' 
+                        : 'Connect MetaMask to view holdings'}
                     </div>
                   )}
 
@@ -942,7 +946,7 @@ export default function Dashboard() {
         </div>
 
         {/* Empty state for portfolio holdings when no wallet */}
-        {realBalances.length === 0 && !isLoadingBalances && (
+        {realBalances.length === 0 && !isLoadingBalances && !(user?.provider === 'metamask' && user?.walletAddress) && (
           <div className="col-span-2 text-center py-12">
             <p className="text-lg text-gray-600 mb-2">Connect your MetaMask wallet to view portfolio</p>
             <p className="text-sm text-gray-400 mt-1">Real-time balance tracking for all your tokens</p>
