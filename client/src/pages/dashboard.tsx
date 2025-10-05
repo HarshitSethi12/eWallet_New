@@ -111,7 +111,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
 
   // ===== SESSION STATUS STATE =====
-  const [sessionStatus, setSessionStatus] = React.useState(null);
+  const [sessionStatus, setSessionStatus] = React.useState<any>(null);
 
   // ===== TOKEN LIST SEARCH STATE =====
   const [tokenSearchTerm, setTokenSearchTerm] = useState('');
@@ -196,7 +196,7 @@ export default function Dashboard() {
   // Fetch real transactions from blockchain
   useEffect(() => {
     const fetchTransactions = async () => {
-      if (!walletAddress || !window.ethereum) {
+      if (!walletAddress || !(window as any).ethereum) {
         console.log('⚠️ No wallet address or MetaMask not available');
         setRealTransactions([]);
         return;
@@ -389,14 +389,14 @@ export default function Dashboard() {
   // Fetch real wallet balances when user connects MetaMask
   useEffect(() => {
     const fetchRealBalances = async () => {
-      if (!walletAddress || !window.ethereum) return;
+      if (!walletAddress || !(window as any).ethereum) return;
 
       setIsLoadingBalances(true);
       try {
         const balances: any[] = [];
 
         // 1. Get ETH balance
-        const ethBalance = await window.ethereum.request({
+        const ethBalance = await (window as any).ethereum.request({
           method: 'eth_getBalance',
           params: [walletAddress, 'latest']
         });
@@ -421,7 +421,7 @@ export default function Dashboard() {
         for (const token of POPULAR_TOKENS) {
           try {
             // Call balanceOf function
-            const data = window.ethereum.request({
+            const data = (window as any).ethereum.request({
               method: 'eth_call',
               params: [{
                 to: token.address,
@@ -914,7 +914,7 @@ export default function Dashboard() {
                 <div className="space-y-4 pr-4">
                   {/* Portfolio Distribution */}
                   {realBalances.length > 0 ? (
-                    realBalances.map((token) => {
+                    realBalances.map((token: any) => {
                       const percentage = totalPortfolioValue > 0 ? ((token.balanceUSD || 0) / totalPortfolioValue) * 100 : 0;
                       return (
                         <div key={token.symbol} className="space-y-2">
