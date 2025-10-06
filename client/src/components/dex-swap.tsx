@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { ArrowUpDown, RefreshCw, Info, AlertTriangle, Wallet, Settings } from "l
 import { useToast } from "@/hooks/use-toast";
 import { useMetaMask } from "@/hooks/use-metamask";
 import { useAuth } from "@/hooks/use-auth";
+import { useWalletConnect } from "@/hooks/use-walletconnect";
 
 // Enhanced token interface for AMM
 interface Token {
@@ -55,7 +55,8 @@ export function DexSwap() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const metamask = useMetaMask();
-  
+  const walletConnect = useWalletConnect();
+
   // State management
   const [fromToken, setFromToken] = useState<Token>(AMM_TOKENS[0]);
   const [toToken, setToToken] = useState<Token>(AMM_TOKENS[1]);
@@ -67,13 +68,18 @@ export function DexSwap() {
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({});
   const [pools, setPools] = useState([]);
 
+  // Determine active wallet and its account
+  const activeWallet = metamask.account ? metamask : (walletConnect.isConnected ? walletConnect : null);
+  const activeAccount = activeWallet?.account || activeWallet?.address;
+
+
   // Fetch user token balances from MetaMask
   const fetchTokenBalances = async () => {
-    if (!metamask.account) return;
+    if (!activeAccount) return;
 
     try {
-      console.log('🔍 Fetching token balances for:', metamask.account);
-      
+      console.log('🔍 Fetching token balances for:', activeAccount);
+
       // For demo purposes, simulate balance fetching
       // In production, you'd call actual blockchain APIs
       const mockBalances = {
@@ -86,7 +92,7 @@ export function DexSwap() {
       };
 
       setTokenBalances(mockBalances);
-      
+
       // Update token objects with balances
       AMM_TOKENS.forEach(token => {
         token.balance = mockBalances[token.symbol] || '0';
@@ -113,12 +119,12 @@ export function DexSwap() {
   // Get AMM quote from your backend
   const getAMMQuote = async (from: Token, to: Token, amount: string): Promise<AMMQuote | null> => {
     if (!amount || !from || !to || parseFloat(amount) <= 0) return null;
-    
+
     try {
       setIsLoading(true);
-      
+
       console.log(`🔄 Getting AMM quote: ${amount} ${from.symbol} → ${to.symbol}`);
-      
+
       const response = await fetch('/api/exchange/quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -137,7 +143,7 @@ export function DexSwap() {
       } else {
         throw new Error('Failed to get quote');
       }
-      
+
     } catch (error) {
       console.error('Error getting AMM quote:', error);
       toast({
@@ -154,7 +160,7 @@ export function DexSwap() {
   // Handle amount input changes with real-time quotes
   const handleFromAmountChange = async (value: string) => {
     setFromAmount(value);
-    
+
     if (value && fromToken && toToken) {
       const newQuote = await getAMMQuote(fromToken, toToken, value);
       if (newQuote) {
@@ -177,7 +183,7 @@ export function DexSwap() {
     setQuote(null);
   };
 
-  // Execute AMM swap with MetaMask
+  // Execute AMM swap with active wallet
   const executeSwap = async () => {
     if (!quote || !fromToken || !toToken) {
       toast({
@@ -188,11 +194,11 @@ export function DexSwap() {
       return;
     }
 
-    if (!metamask.account) {
+    if (!activeAccount) {
       toast({
         variant: "destructive",
         title: "Wallet not connected",
-        description: "Please connect your MetaMask wallet"
+        description: "Please connect your wallet"
       });
       return;
     }
@@ -200,7 +206,7 @@ export function DexSwap() {
     // Check if user has sufficient balance
     const userBalance = parseFloat(tokenBalances[fromToken.symbol] || '0');
     const swapAmount = parseFloat(fromAmount);
-    
+
     if (userBalance < swapAmount) {
       toast({
         variant: "destructive",
@@ -212,16 +218,16 @@ export function DexSwap() {
 
     try {
       setIsLoading(true);
-      
+
       console.log('🚀 Executing AMM swap...');
-      
+
       // Step 1: Create swap transaction data
       const swapData = {
         fromToken: fromToken.address,
         toToken: toToken.address,
         fromAmount: fromAmount,
         expectedOutput: quote.outputAmount,
-        userAddress: metamask.account,
+        userAddress: activeAccount,
         slippage: 0.5,
         quote: quote
       };
@@ -231,22 +237,27 @@ export function DexSwap() {
         try {
           // Check current allowance (mock implementation)
           console.log('🔍 Checking token allowance...');
-          
+
           // If allowance is insufficient, request approval
           console.log('📝 Requesting token approval...');
-          
-          // Mock approval transaction - in production, this would be a real MetaMask transaction
+
+          // Mock approval transaction - in production, this would be a real wallet transaction
           const approvalMessage = `Approve BitWallet to spend ${fromAmount} ${fromToken.symbol}`;
-          const approvalSignature = await metamask.signMessage(approvalMessage);
-          
+          let approvalSignature;
+          if (metamask.account) {
+            approvalSignature = await metamask.signMessage(approvalMessage);
+          } else if (walletConnect.isConnected) {
+            approvalSignature = await walletConnect.signMessage(approvalMessage);
+          }
+
           console.log('✅ Token approval granted');
-          
+
           toast({
             title: "Approval Granted ✓",
             description: `You can now swap ${fromToken.symbol}`,
             duration: 2000
           });
-          
+
           // Small delay to simulate blockchain confirmation
           await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (approvalError) {
@@ -262,15 +273,20 @@ export function DexSwap() {
 
       // Step 3: Execute the actual swap
       console.log('💱 Executing swap transaction...');
-      
+
       // Create swap message for signature
       const swapMessage = `Execute swap: ${fromAmount} ${fromToken.symbol} → ${quote.outputAmount} ${toToken.symbol}\nPool: ${quote.poolId}\nPrice: ${quote.price}\nFee: ${quote.fee}`;
-      
+
       try {
         // Get user signature for swap execution
-        const swapSignature = await metamask.signMessage(swapMessage);
+        let swapSignature;
+        if (metamask.account) {
+          swapSignature = await metamask.signMessage(swapMessage);
+        } else if (walletConnect.isConnected) {
+          swapSignature = await walletConnect.signMessage(swapMessage);
+        }
         console.log('✅ Swap signature obtained');
-        
+
         // Send swap request to backend
         const response = await fetch('/api/exchange/execute-swap', {
           method: 'POST',
@@ -284,41 +300,41 @@ export function DexSwap() {
 
         if (response.ok) {
           const result = await response.json();
-          
+
           // Simulate transaction confirmation delay
           toast({
             title: "Transaction Submitted ⏳",
             description: "Waiting for blockchain confirmation..."
           });
-          
+
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
+
           toast({
             title: "Swap Successful! 🎉",
             description: `Swapped ${fromAmount} ${fromToken.symbol} for ${quote.outputAmount} ${toToken.symbol}`,
             duration: 5000
           });
-          
+
           // Update local balances
           setTokenBalances(prev => ({
             ...prev,
             [fromToken.symbol]: (parseFloat(prev[fromToken.symbol] || '0') - parseFloat(fromAmount)).toString(),
             [toToken.symbol]: (parseFloat(prev[toToken.symbol] || '0') + parseFloat(quote.outputAmount)).toString()
           }));
-          
+
           // Reset form
           setFromAmount('');
           setToAmount('');
           setQuote(null);
-          
+
           // Refresh pools data
           fetchPools();
-          
+
         } else {
           const errorData = await response.json();
           throw new Error(errorData.message || 'Swap transaction failed');
         }
-        
+
       } catch (signatureError) {
         console.error('❌ Swap signature failed:', signatureError);
         toast({
@@ -328,7 +344,7 @@ export function DexSwap() {
         });
         return;
       }
-      
+
     } catch (error) {
       console.error('Swap execution error:', error);
       toast({
@@ -344,11 +360,11 @@ export function DexSwap() {
   // Load data on component mount
   useEffect(() => {
     fetchPools();
-    
-    if (metamask.account) {
+
+    if (activeAccount) {
       fetchTokenBalances();
     }
-  }, [metamask.account]);
+  }, [activeAccount]);
 
   // Calculate price impact warning level
   const getPriceImpactColor = (impact: string) => {
@@ -379,9 +395,9 @@ export function DexSwap() {
         {/* Wallet Connection Status */}
         <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
           <Wallet className="h-4 w-4" />
-          {metamask.account ? (
+          {activeAccount ? (
             <span className="text-sm text-green-600">
-              Connected: {metamask.account.slice(0, 6)}...{metamask.account.slice(-4)}
+              Connected: {activeAccount.slice(0, 6)}...{activeAccount.slice(-4)}
             </span>
           ) : (
             <span className="text-sm text-orange-600">
@@ -479,7 +495,7 @@ export function DexSwap() {
               <Info className="h-4 w-4" />
               <span>AMM Pool Information</span>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
                 <span className="text-gray-600">Price Impact:</span>
@@ -500,7 +516,7 @@ export function DexSwap() {
                 <span className="ml-1 font-medium">${quote.poolInfo.totalLiquidity}</span>
               </div>
             </div>
-            
+
             <div className="text-xs text-gray-600 border-t pt-2">
               <div>Pool: {quote.poolInfo.reserveIn} {fromToken.symbol} / {quote.poolInfo.reserveOut} {toToken.symbol}</div>
               <div>Rate: 1 {fromToken.symbol} = {quote.price.toFixed(6)} {toToken.symbol}</div>
@@ -520,24 +536,43 @@ export function DexSwap() {
         )}
 
         {/* Connect Wallet / Swap Button */}
-        {!metamask.account ? (
-          <Button
-            onClick={metamask.connectWallet}
-            disabled={metamask.isLoading}
-            className="w-full"
-          >
-            {metamask.isLoading ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Connecting...
-              </>
-            ) : (
-              <>
-                <Wallet className="mr-2 h-4 w-4" />
-                Connect MetaMask
-              </>
-            )}
-          </Button>
+        {!activeAccount ? (
+          <div className="flex gap-2">
+            <Button
+              onClick={metamask.connectWallet}
+              disabled={metamask.isLoading}
+              className="flex-1"
+            >
+              {metamask.isLoading ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting MetaMask...
+                </>
+              ) : (
+                <>
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Connect MetaMask
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={walletConnect.connectWallet}
+              disabled={walletConnect.isLoading}
+              className="flex-1"
+            >
+              {walletConnect.isLoading ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting WalletConnect...
+                </>
+              ) : (
+                <>
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Connect WalletConnect
+                </>
+              )}
+            </Button>
+          </div>
         ) : (
           <Button
             onClick={executeSwap}

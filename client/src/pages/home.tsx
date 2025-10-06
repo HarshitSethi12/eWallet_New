@@ -21,9 +21,10 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Wallet, Transaction } from "@shared/schema";
 // React Icons for additional icons
 import { RiExchangeFundsFill } from "react-icons/ri";
-// Custom hooks for authentication and MetaMask wallet connection
+// Custom hooks for authentication and wallet connections
 import { useAuth } from "@/hooks/use-auth";
 import { useMetaMask } from "@/hooks/use-metamask";
+import { useWalletConnect } from "@/hooks/use-walletconnect";
 // Component for displaying cryptocurrency prices
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 // React core library
