@@ -951,18 +951,8 @@ export default function Dashboard() {
                   {/* Summary Stats */}
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Initial Investment:</span>
-                      <span className="font-medium">${initialInvestment.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Current Value:</span>
+                      <span className="text-gray-600">Total Value:</span>
                       <span className="font-medium">${totalPortfolioValue.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">P&L:</span>
-                      <span className={`font-medium ${portfolioChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {portfolioChange >= 0 ? '+' : ''}${(totalPortfolioValue - initialInvestment).toFixed(2)}
-                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Total Assets:</span>
