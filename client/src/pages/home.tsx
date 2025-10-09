@@ -41,6 +41,10 @@ function WelcomePage() {
   // Get MetaMask wallet connection functions and state
   const { connectWallet, signMessage, account, isConnecting, disconnectWallet, forceReconnect } = useMetaMask();
   
+  // ===== WALLETCONNECT HOOKS =====
+  // Get WalletConnect wallet connection functions and state
+  const walletConnect = useWalletConnect();
+  
   // ===== ROUTING HOOK =====
   // Get current page location for navigation
   const [location] = useLocation();
@@ -55,6 +59,60 @@ function WelcomePage() {
       // You can add a toast notification here if needed
     }
   }, [location]); // Run this effect when the location changes
+
+  // ===== WALLETCONNECT LOGIN HANDLER FUNCTION =====
+  // This function handles the complete WalletConnect authentication process
+  const handleWalletConnectLogin = async () => {
+    console.log('🔵 WalletConnect button clicked');
+    
+    try {
+      console.log('🔵 Attempting to connect to WalletConnect...');
+      
+      // ===== WALLET CONNECTION STEP =====
+      // Connect to WalletConnect and get the user's wallet address
+      const address = await walletConnect.connectWallet();
+      console.log('🔵 Connection result:', address);
+      
+      if (!address) {
+        throw new Error('Failed to connect to WalletConnect');
+      }
+
+      console.log('✅ WalletConnect connected successfully:', address);
+      
+      // ===== STATE SYNCHRONIZATION =====
+      // Small delay to ensure state is updated properly
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // ===== MESSAGE SIGNING STEP =====
+      // Create a unique message for the user to sign (proves wallet ownership)
+      const message = `Sign this message to authenticate with your wallet: ${Date.now()}`;
+      console.log('🔵 Requesting signature for message:', message);
+      
+      // ===== DIGITAL SIGNATURE REQUEST =====
+      // Request user to sign the message with their private key
+      const signature = await walletConnect.signMessage(message);
+      
+      console.log('🔵 Signature received:', signature ? 'Yes' : 'No');
+      
+      // ===== AUTHENTICATION COMPLETION =====
+      if (signature) {
+        console.log('🔵 Calling loginWithMetaMask...');
+        // Send the signed message to our backend for verification
+        // This will automatically route to dashboard on success
+        loginWithMetaMask({ message, signature, address });
+      } else {
+        console.warn('❌ No signature received');
+        alert('Signature required to authenticate. Please try again.');
+      }
+    } catch (error) {
+      console.error('❌ WalletConnect authentication error:', error);
+      alert(`Connection failed: ${error.message || 'Please try again.'}`);
+      
+      // ===== CLEANUP ON ERROR =====
+      // Reset connection state if authentication fails
+      walletConnect.disconnectWallet();
+    }
+  };
 
   // ===== METAMASK LOGIN HANDLER FUNCTION =====
   // This function handles the complete MetaMask authentication process
@@ -220,15 +278,17 @@ function WelcomePage() {
               <Button
                 size="lg"
                 className="btn-primary px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 min-w-[200px] justify-center"
-                onClick={login}
+                onClick={handleWalletConnectLogin}
+                disabled={walletConnect.isLoading}
               >
-                <span className="font-semibold">Sign in with Gmail</span>
-                <svg className="h-6 w-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                </svg>
+                <span className="font-semibold">
+                  {walletConnect.isLoading ? "Connecting..." : "Connect with WalletConnect"}
+                </span>
+                {!walletConnect.isLoading && (
+                  <svg className="h-6 w-6" viewBox="0 0 300 185" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M61.438 36.438c48.15-47.127 126.26-47.127 174.4 0l5.8 5.68c2.41 2.36 2.41 6.18 0 8.53l-19.82 19.4c-1.2 1.18-3.15 1.18-4.35 0l-7.98-7.8c-33.61-32.88-88.09-32.88-121.7 0l-8.54 8.36c-1.2 1.18-3.15 1.18-4.35 0l-19.82-19.4c-2.41-2.36-2.41-6.18 0-8.53l6.37-6.23zm215.5 40.12l17.64 17.27c2.41 2.36 2.41 6.18 0 8.53l-79.48 77.79c-2.41 2.36-6.31 2.36-8.72 0l-56.4-55.2c-.6-.59-1.57-.59-2.17 0l-56.4 55.2c-2.41 2.36-6.31 2.36-8.72 0l-79.49-77.79c-2.41-2.36-2.41-6.18 0-8.53l17.64-17.27c2.41-2.36 6.31-2.36 8.72 0l56.4 55.2c.6.59 1.57.59 2.17 0l56.39-55.2c2.41-2.36 6.31-2.36 8.72 0l56.4 55.2c.6.59 1.57.59 2.17 0l56.4-55.2c2.41-2.36 6.31-2.36 8.72 0z" fill="#3B99FC"/>
+                  </svg>
+                )}
               </Button>
               
               <div className="flex items-center">
@@ -258,7 +318,7 @@ function WelcomePage() {
             </div>
             
             <p className="text-xs text-gray-500 text-center max-w-md">
-              Choose your preferred sign-in method. If MetaMask is not responding, check for pending requests in the extension.
+              Choose your preferred sign-in method. WalletConnect will show a QR code to scan with your mobile wallet.
             </p>
           </div>
         )}
