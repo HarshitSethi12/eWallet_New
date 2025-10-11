@@ -56,7 +56,7 @@ export function useWalletConnect() {
     try {
       const result = await connect(config, {
         connector: walletConnect({
-          projectId: 'YOUR_PROJECT_ID',
+          projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
           showQrModal: true
         })
       });

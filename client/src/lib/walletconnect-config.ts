@@ -4,7 +4,8 @@ import { mainnet, polygon, arbitrum, optimism } from '@wagmi/core/chains';
 import { walletConnect, injected } from '@wagmi/connectors';
 
 // Get your project ID from https://cloud.walletconnect.com
-const projectId = 'YOUR_PROJECT_ID'; // Replace with your actual project ID
+// You need to replace this with your actual WalletConnect Project ID
+const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID';
 
 export const config = createConfig({
   chains: [mainnet, polygon, arbitrum, optimism],
