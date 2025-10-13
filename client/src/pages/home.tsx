@@ -323,6 +323,14 @@ function WelcomePage() {
                 <WalletIcon className="h-6 w-6" />
                 <span className="font-semibold">Create a New Wallet</span>
               </Button>
+
+              <Button
+                size="lg"
+                className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
+              >
+                <WalletIcon className="h-6 w-6" />
+                <span className="font-semibold">Login with BitWallet</span>
+              </Button>
             </div>
             
             <p className="text-xs text-gray-500 text-center max-w-md">
