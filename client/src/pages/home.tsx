@@ -274,10 +274,10 @@ function WelcomePage() {
         {/* Only show login buttons if not authenticated */}
         {!isAuthenticated && (
           <div className="flex flex-col items-center gap-6 mt-8 sm:mt-10">
-            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+            <div className="flex flex-col items-center gap-4 w-full max-w-md">
               <Button
                 size="lg"
-                className="btn-primary px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 min-w-[200px] justify-center"
+                className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
                 onClick={handleWalletConnectLogin}
                 disabled={walletConnect.isLoading}
               >
@@ -291,15 +291,15 @@ function WelcomePage() {
                 )}
               </Button>
               
-              <div className="flex items-center">
-                <div className="h-px bg-gray-300 w-8"></div>
-                <span className="mx-3 text-gray-500 text-sm font-medium">OR</span>
-                <div className="h-px bg-gray-300 w-8"></div>
+              <div className="flex items-center w-full">
+                <div className="flex-1 h-px bg-gray-300"></div>
+                <span className="mx-4 text-gray-500 text-sm font-medium">OR</span>
+                <div className="flex-1 h-px bg-gray-300"></div>
               </div>
               
               <Button
                 size="lg"
-                className="btn-primary px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 min-w-[200px] justify-center"
+                className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
                 onClick={handleMetaMaskLogin}
                 disabled={isConnecting || isMetaMaskLoading}
               >
