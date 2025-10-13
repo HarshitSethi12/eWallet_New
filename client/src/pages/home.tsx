@@ -315,6 +315,15 @@ function WelcomePage() {
                   </svg>
                 )}
               </Button>
+
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+              >
+                <WalletIcon className="h-6 w-6" />
+                <span className="font-semibold">Create a New Wallet</span>
+              </Button>
             </div>
             
             <p className="text-xs text-gray-500 text-center max-w-md">
