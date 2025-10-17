@@ -48,6 +48,22 @@ import {
   LogOut,
   WalletIcon
 } from "lucide-react";
+
+// Recharts for data visualization
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
+} from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 // ===== TYPE DEFINITIONS =====
 // Define TypeScript interfaces for cryptocurrency asset data
 interface CryptoAsset {
@@ -115,6 +131,9 @@ export default function Dashboard() {
 
   // ===== TOKEN LIST SEARCH STATE =====
   const [tokenSearchTerm, setTokenSearchTerm] = useState('');
+
+  // ===== PERFORMANCE CHART STATE =====
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d' | '90d'>('7d');
 
   // ===== REAL-TIME TOKEN DATA FETCHING =====
   // Fetch cryptocurrency token data from CoinGecko for Live Market Prices (horizontal ticker)
@@ -474,6 +493,48 @@ export default function Dashboard() {
     fetchRealBalances();
   }, [walletAddress, marketTokens]);
 
+  // ===== PORTFOLIO PERFORMANCE DATA =====
+  // Generate mock performance data based on timeframe
+  const portfolioPerformanceData = React.useMemo(() => {
+    const days = selectedTimeframe === '7d' ? 7 : selectedTimeframe === '30d' ? 30 : 90;
+    const data = [];
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(now - i * dayMs);
+      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      // Generate realistic portfolio value changes
+      const baseValue = totalPortfolioValue > 0 ? totalPortfolioValue : 5000;
+      const volatility = baseValue * 0.02; // 2% daily volatility
+      const trend = (days - i) * (baseValue * 0.001); // Slight upward trend
+      const randomChange = (Math.random() - 0.5) * volatility;
+      const value = Math.max(baseValue * 0.85 + trend + randomChange, 0);
+      
+      data.push({
+        date: dateStr,
+        value: parseFloat(value.toFixed(2)),
+        profit: parseFloat((value - baseValue * 0.85).toFixed(2))
+      });
+    }
+    
+    return data;
+  }, [selectedTimeframe, totalPortfolioValue]);
+
+  // ===== ASSET ALLOCATION DATA =====
+  const assetAllocationData = React.useMemo(() => {
+    if (realBalances.length === 0) return [];
+    
+    return realBalances.map((token: any, index: number) => ({
+      name: token.symbol,
+      value: token.balanceUSD || 0,
+      percentage: totalPortfolioValue > 0 ? ((token.balanceUSD || 0) / totalPortfolioValue) * 100 : 0,
+      // Generate distinct colors for each token
+      fill: `hsl(${(index * 360) / realBalances.length}, 70%, 60%)`
+    })).sort((a, b) => b.value - a.value);
+  }, [realBalances, totalPortfolioValue]);
+
   // Use real balances if available, otherwise use mock data
   const mockTokensOverview = realBalances.length > 0 ? realBalances : [
     {
@@ -746,69 +807,64 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Top Right: Recent Transactions */}
+          {/* Top Right: Portfolio Performance Chart */}
           <Card className="bg-white shadow-sm border border-gray-200 !bg-white flex flex-col h-[400px]">
             <CardHeader className="pb-3 bg-white flex-shrink-0">
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
-                <Clock className="h-5 w-5" />
-                Recent Transactions
+              <CardTitle className="flex items-center justify-between text-lg font-semibold text-amber-700">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Portfolio Performance
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant={selectedTimeframe === '7d' ? 'default' : 'outline'}
+                    onClick={() => setSelectedTimeframe('7d')}
+                    className="h-6 px-2 text-xs"
+                  >
+                    7D
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={selectedTimeframe === '30d' ? 'default' : 'outline'}
+                    onClick={() => setSelectedTimeframe('30d')}
+                    className="h-6 px-2 text-xs"
+                  >
+                    30D
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={selectedTimeframe === '90d' ? 'default' : 'outline'}
+                    onClick={() => setSelectedTimeframe('90d')}
+                    className="h-6 px-2 text-xs"
+                  >
+                    90D
+                  </Button>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 bg-white overflow-hidden p-0">
-              <ScrollArea className="h-full bg-white px-6 pb-6">
-                <div className="space-y-3 bg-white pr-4">
-                  {isLoadingTransactions ? (
-                    <div className="text-center py-4">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600 mx-auto"></div>
-                      <p className="text-xs text-gray-500 mt-2">Loading real transactions...</p>
-                    </div>
-                  ) : displayTransactions.length > 0 ? displayTransactions.map((tx) => (
-                    <div key={tx.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-1.5 rounded-full ${
-                          tx.type === 'receive' ? 'bg-green-100' :
-                          tx.type === 'send' ? 'bg-red-100' : 'bg-blue-100'
-                        }`}>
-                          {tx.type === 'receive' ? (
-                            <ArrowDownLeft className="h-3 w-3 text-green-600" />
-                          ) : tx.type === 'send' ? (
-                            <Send className="h-3 w-3 text-red-600" />
-                          ) : (
-                            <RiExchangeFundsFill className="h-3 w-3 text-blue-600" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold capitalize">{tx.type} {tx.token}</p>
-                          <p className="text-xs text-gray-500">
-                            {tx.from && `From: ${tx.from.slice(0, 6)}...${tx.from.slice(-4)}`}
-                            {tx.to && ` To: ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`}
-                            {tx.type === 'swap' && 'Token swap'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <p className={`text-sm font-semibold ${
-                          tx.type === 'receive' ? 'text-green-600' :
-                          tx.type === 'send' ? 'text-red-600' : 'text-blue-600'
-                        }`}>
-                          {tx.type === 'send' ? '-' : tx.type === 'receive' ? '+' : ''}{tx.amount} {tx.token}
-                        </p>
-                        <p className="text-xs text-gray-500">{tx.value}</p>
-                        <p className="text-xs text-gray-400">{tx.timestamp}</p>
-                      </div>
-                    </div>
-                  )) : (
-                    <div className="text-center py-8">
+              <div className="h-full px-6 pb-6 pt-2">
+                {realBalances.length > 0 ? (
+                  <div className="h-full">
+                    <PerformanceChart 
+                      data={portfolioPerformanceData} 
+                      timeframe={selectedTimeframe}
+                    />
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm text-gray-500">
                         {user?.provider === 'metamask' && user?.walletAddress 
-                          ? 'No transactions found' 
-                          : 'Connect MetaMask to view history'}
+                          ? 'No data to display' 
+                          : 'Connect MetaMask to view performance'}
                       </p>
                     </div>
-                  )}
-                </div>
-              </ScrollArea>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -901,72 +957,33 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Bottom Right: Portfolio Holdings */}
+          {/* Bottom Right: Asset Allocation Chart */}
           <Card className="bg-white shadow-sm border border-gray-200 !bg-white flex flex-col h-[400px]">
             <CardHeader className="pb-3 bg-white flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-700">
                 <BarChart3 className="h-5 w-5" />
-                Portfolio Holdings
+                Asset Allocation
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 bg-white overflow-hidden p-0">
-              <ScrollArea className="h-full px-6 pb-6">
-                <div className="space-y-4 pr-4">
-                  {/* Portfolio Distribution */}
-                  {realBalances.length > 0 ? (
-                    realBalances.map((token: any) => {
-                      const percentage = totalPortfolioValue > 0 ? ((token.balanceUSD || 0) / totalPortfolioValue) * 100 : 0;
-                      return (
-                        <div key={token.symbol} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <img src={token.logoURI} alt={token.name} className="w-6 h-6 rounded-full" />
-                              <span className="text-sm font-medium">{token.symbol}</span>
-                            </div>
-                            <span className="text-sm text-gray-600">{percentage.toFixed(1)}%</span>
-                          </div>
-                          <Progress value={percentage} className="h-2" />
-                          <div className="flex justify-between text-xs text-gray-500">
-                            <span>{token.balance} {token.symbol}</span>
-                            <span>${(token.balanceUSD || 0).toFixed(2)}</span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : isLoadingBalances ? (
-                    <div className="text-center py-4 text-gray-500 text-sm">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600 mx-auto mb-2"></div>
-                      Loading your holdings...
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 text-gray-500 text-sm">
-                      {user?.provider === 'metamask' && user?.walletAddress 
-                        ? 'No tokens found in your wallet' 
-                        : 'Connect MetaMask to view holdings'}
-                    </div>
-                  )}
-
-                  <Separator className="my-4" />
-
-                  {/* Summary Stats */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total Value:</span>
-                      <span className="font-medium">${totalPortfolioValue.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total Assets:</span>
-                      <span className="font-medium">{realBalances.length}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Data Source:</span>
-                      <span className="font-medium text-blue-600">
-                        {realBalances.length > 0 ? 'Real MetaMask' : walletAddress ? 'MetaMask Connected' : 'No Wallet Connected'}
-                      </span>
+              <div className="h-full px-6 pb-6 pt-2">
+                {realBalances.length > 0 ? (
+                  <div className="h-full">
+                    <AssetAllocationChart data={assetAllocationData} />
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">
+                        {user?.provider === 'metamask' && user?.walletAddress 
+                          ? 'No assets to display' 
+                          : 'Connect MetaMask to view allocation'}
+                      </p>
                     </div>
                   </div>
-                </div>
-              </ScrollArea>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1050,6 +1067,160 @@ export default function Dashboard() {
         }}
         style={{ pointerEvents: 'none' }}
       ></div>
+    </div>
+  );
+}
+
+// ===== PERFORMANCE CHART COMPONENT =====
+function PerformanceChart({ data, timeframe }: { data: any[], timeframe: string }) {
+  const chartConfig = {
+    value: {
+      label: "Portfolio Value",
+      color: "hsl(142, 76%, 36%)",
+    },
+    profit: {
+      label: "Profit/Loss",
+      color: "hsl(142, 76%, 36%)",
+    },
+  };
+
+  return (
+    <ChartContainer config={chartConfig} className="h-full w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+              <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis 
+            dataKey="date" 
+            stroke="#6b7280"
+            fontSize={11}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis 
+            stroke="#6b7280"
+            fontSize={11}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(value) => `$${value.toFixed(0)}`}
+          />
+          <ChartTooltip
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const data = payload[0].payload;
+                return (
+                  <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">{data.date}</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      ${data.value.toFixed(2)}
+                    </p>
+                    <p className={`text-xs ${data.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {data.profit >= 0 ? '+' : ''}${data.profit.toFixed(2)}
+                    </p>
+                  </div>
+                );
+              }
+              return null;
+            }}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="value" 
+            stroke="#22c55e" 
+            strokeWidth={2}
+            fill="url(#colorValue)"
+            fillOpacity={1}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  );
+}
+
+// ===== ASSET ALLOCATION CHART COMPONENT =====
+function AssetAllocationChart({ data }: { data: any[] }) {
+  const RADIAN = Math.PI / 180;
+  
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (percent < 0.05) return null; // Don't show labels for very small slices
+    
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor={x > cx ? 'start' : 'end'} 
+        dominantBaseline="central"
+        className="text-xs font-semibold"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
+
+  return (
+    <div className="h-full w-full flex flex-col">
+      <ResponsiveContainer width="100%" height="70%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            label={renderCustomizedLabel}
+            outerRadius={80}
+            innerRadius={40}
+            fill="#8884d8"
+            dataKey="value"
+            paddingAngle={2}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.fill} />
+            ))}
+          </Pie>
+          <Tooltip
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const data = payload[0].payload;
+                return (
+                  <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                    <p className="text-sm font-semibold text-gray-900">{data.name}</p>
+                    <p className="text-xs text-gray-600">${data.value.toFixed(2)}</p>
+                    <p className="text-xs text-gray-500">{data.percentage.toFixed(1)}%</p>
+                  </div>
+                );
+              }
+              return null;
+            }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="px-4 space-y-2 overflow-y-auto flex-1">
+        {data.map((item, index) => (
+          <div key={index} className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-3 h-3 rounded-full" 
+                style={{ backgroundColor: item.fill }}
+              />
+              <span className="font-medium text-gray-700">{item.name}</span>
+            </div>
+            <div className="text-right">
+              <p className="font-semibold text-gray-900">${item.value.toFixed(2)}</p>
+              <p className="text-gray-500">{item.percentage.toFixed(1)}%</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
