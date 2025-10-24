@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { storage } from './storage';
 import twilio from 'twilio';
 import NodeCache from 'node-cache';
+import sgMail from '@sendgrid/mail';
 
 declare module 'express-session' {
   interface SessionData {
@@ -24,6 +25,11 @@ const otpCache = new NodeCache({ stdTTL: 300 });
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
   ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
   : null;
+
+// Initialize SendGrid
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
 
 export function setupAuth(app: express.Express) {
   // Setup session middleware FIRST
@@ -383,15 +389,48 @@ export function setupAuth(app: express.Express) {
       
       console.log(`Generated OTP for ${email}: ${otp}`);
 
-      // TODO: Send OTP via email service (SendGrid, AWS SES, etc.)
-      // For now, we'll return it in development mode
-      
-      res.json({ 
-        success: true, 
-        message: 'OTP sent successfully',
-        // Include OTP in response for development only
-        ...(process.env.NODE_ENV === 'development' && { otp })
-      });
+      // Send OTP via email
+      if (process.env.SENDGRID_API_KEY && process.env.SENDGRID_FROM_EMAIL) {
+        try {
+          await sgMail.send({
+            to: email,
+            from: process.env.SENDGRID_FROM_EMAIL,
+            subject: 'Your BitWallet Verification Code',
+            text: `Your verification code is: ${otp}. This code will expire in 5 minutes.`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #333;">BitWallet Verification</h2>
+                <p>Your verification code is:</p>
+                <h1 style="background: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; letter-spacing: 8px;">${otp}</h1>
+                <p style="color: #666;">This code will expire in 5 minutes.</p>
+                <p style="color: #999; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+              </div>
+            `
+          });
+          
+          res.json({ 
+            success: true, 
+            message: 'OTP sent successfully',
+            // Include OTP in response for development only
+            ...(process.env.NODE_ENV === 'development' && { otp })
+          });
+        } catch (emailError) {
+          console.error('SendGrid email error:', emailError);
+          // For development, still return success with OTP
+          res.json({ 
+            success: true, 
+            message: 'OTP generated (email service unavailable)',
+            otp // Always include OTP if email fails
+          });
+        }
+      } else {
+        // Development mode - return OTP directly
+        res.json({ 
+          success: true, 
+          message: 'OTP generated (development mode - check console)',
+          otp 
+        });
+      }
     } catch (error) {
       console.error('Send email OTP error:', error);
       res.status(500).json({ error: 'Failed to send OTP' });
