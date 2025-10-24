@@ -7,6 +7,7 @@ import { storage } from './storage';
 import twilio from 'twilio';
 import NodeCache from 'node-cache';
 import sgMail from '@sendgrid/mail';
+import { Resend } from 'resend';
 
 declare module 'express-session' {
   interface SessionData {
@@ -30,6 +31,11 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
 if (process.env.SENDGRID_API_KEY) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 }
+
+// Initialize Resend (alternative to SendGrid, easier for development)
+const resendClient = process.env.RESEND_API_KEY 
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 export function setupAuth(app: express.Express) {
   // Setup session middleware FIRST
@@ -389,7 +395,39 @@ export function setupAuth(app: express.Express) {
       
       console.log(`Generated OTP for ${email}: ${otp}`);
 
-      // Send OTP via email
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">BitWallet Verification</h2>
+          <p>Your verification code is:</p>
+          <h1 style="background: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; letter-spacing: 8px;">${otp}</h1>
+          <p style="color: #666;">This code will expire in 5 minutes.</p>
+          <p style="color: #999; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+        </div>
+      `;
+
+      // Try Resend first (easier for development)
+      if (resendClient && process.env.RESEND_FROM_EMAIL) {
+        try {
+          await resendClient.emails.send({
+            from: process.env.RESEND_FROM_EMAIL,
+            to: email,
+            subject: 'Your BitWallet Verification Code',
+            html: emailHtml,
+          });
+          
+          console.log(`✅ Email sent via Resend to ${email}`);
+          return res.json({ 
+            success: true, 
+            message: 'OTP sent successfully via email',
+            ...(process.env.NODE_ENV === 'development' && { otp })
+          });
+        } catch (emailError) {
+          console.error('Resend email error:', emailError);
+          // Continue to try SendGrid or fallback
+        }
+      }
+
+      // Fallback to SendGrid
       if (process.env.SENDGRID_API_KEY && process.env.SENDGRID_FROM_EMAIL) {
         try {
           await sgMail.send({
@@ -397,40 +435,28 @@ export function setupAuth(app: express.Express) {
             from: process.env.SENDGRID_FROM_EMAIL,
             subject: 'Your BitWallet Verification Code',
             text: `Your verification code is: ${otp}. This code will expire in 5 minutes.`,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #333;">BitWallet Verification</h2>
-                <p>Your verification code is:</p>
-                <h1 style="background: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; letter-spacing: 8px;">${otp}</h1>
-                <p style="color: #666;">This code will expire in 5 minutes.</p>
-                <p style="color: #999; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
-              </div>
-            `
+            html: emailHtml
           });
           
-          res.json({ 
+          console.log(`✅ Email sent via SendGrid to ${email}`);
+          return res.json({ 
             success: true, 
-            message: 'OTP sent successfully',
-            // Include OTP in response for development only
+            message: 'OTP sent successfully via email',
             ...(process.env.NODE_ENV === 'development' && { otp })
           });
         } catch (emailError) {
           console.error('SendGrid email error:', emailError);
-          // For development, still return success with OTP
-          res.json({ 
-            success: true, 
-            message: 'OTP generated (email service unavailable)',
-            otp // Always include OTP if email fails
-          });
+          // Continue to development fallback
         }
-      } else {
-        // Development mode - return OTP directly
-        res.json({ 
-          success: true, 
-          message: 'OTP generated (development mode - check console)',
-          otp 
-        });
       }
+
+      // Development mode fallback - return OTP directly
+      console.log(`⚠️ No email service configured - returning OTP in response`);
+      res.json({ 
+        success: true, 
+        message: 'OTP generated (development mode - check console)',
+        otp 
+      });
     } catch (error) {
       console.error('Send email OTP error:', error);
       res.status(500).json({ error: 'Failed to send OTP' });
