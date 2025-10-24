@@ -581,8 +581,7 @@ function WelcomePage() {
 
               <Button
                 size="lg"
-                variant="outline"
-                className="border-green-600 text-green-600 hover:bg-green-50"
+                className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
                 onClick={() => setShowEmailWalletCreation(true)}
               >
                 <WalletIcon className="h-6 w-6" />
