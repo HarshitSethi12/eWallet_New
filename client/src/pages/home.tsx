@@ -1,4 +1,3 @@
-
 // ===== IMPORT SECTION =====
 // This section imports all the external libraries and components needed for this page
 
@@ -28,337 +27,12 @@ import { useWalletConnect } from "@/hooks/use-walletconnect";
 // Component for displaying cryptocurrency prices
 import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 // React core library
-import React from "react";
-
-// ===== WELCOME PAGE COMPONENT =====
-// This is the main landing page that users see when they first visit the app
-function WelcomePage() {
-  // ===== AUTHENTICATION HOOKS =====
-  // Get authentication functions and state from our custom auth hook
-  const { login, loginWithMetaMask, isMetaMaskLoading, user, isAuthenticated, logout, isLoggingOut } = useAuth();
-  
-  // ===== METAMASK WALLET HOOKS =====
-  // Get MetaMask wallet connection functions and state
-  const { connectWallet, signMessage, account, isConnecting, disconnectWallet, forceReconnect } = useMetaMask();
-  
-  // ===== WALLETCONNECT HOOKS =====
-  // Get WalletConnect wallet connection functions and state
-  const walletConnect = useWalletConnect();
-  
-  // ===== ROUTING HOOK =====
-  // Get current page location for navigation
-  const [location] = useLocation();
-  
-  // ===== ERROR HANDLING EFFECT =====
-  // Check URL parameters for authentication errors when the page loads
-  React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const error = urlParams.get('error');
-    if (error) {
-      console.error('Authentication error:', error);
-      // You can add a toast notification here if needed
-    }
-  }, [location]); // Run this effect when the location changes
-
-  // ===== WALLETCONNECT LOGIN HANDLER FUNCTION =====
-  // This function handles the complete WalletConnect authentication process
-  const handleWalletConnectLogin = async () => {
-    console.log('🔵 WalletConnect button clicked');
-    
-    try {
-      console.log('🔵 Attempting to connect to WalletConnect...');
-      
-      // ===== WALLET CONNECTION STEP =====
-      // Connect to WalletConnect and get the user's wallet address
-      const address = await walletConnect.connectWallet();
-      console.log('🔵 Connection result:', address);
-      
-      if (!address) {
-        throw new Error('Failed to connect to WalletConnect');
-      }
-
-      console.log('✅ WalletConnect connected successfully:', address);
-      
-      // ===== STATE SYNCHRONIZATION =====
-      // Small delay to ensure state is updated properly
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // ===== MESSAGE SIGNING STEP =====
-      // Create a unique message for the user to sign (proves wallet ownership)
-      const message = `Sign this message to authenticate with your wallet: ${Date.now()}`;
-      console.log('🔵 Requesting signature for message:', message);
-      
-      // ===== DIGITAL SIGNATURE REQUEST =====
-      // Request user to sign the message with their private key
-      const signature = await walletConnect.signMessage(message);
-      
-      console.log('🔵 Signature received:', signature ? 'Yes' : 'No');
-      
-      // ===== AUTHENTICATION COMPLETION =====
-      if (signature) {
-        console.log('🔵 Calling loginWithMetaMask...');
-        // Send the signed message to our backend for verification
-        // This will automatically route to dashboard on success
-        loginWithMetaMask({ message, signature, address });
-      } else {
-        console.warn('❌ No signature received');
-        alert('Signature required to authenticate. Please try again.');
-      }
-    } catch (error) {
-      console.error('❌ WalletConnect authentication error:', error);
-      alert(`Connection failed: ${error.message || 'Please try again.'}`);
-      
-      // ===== CLEANUP ON ERROR =====
-      // Reset connection state if authentication fails
-      walletConnect.disconnectWallet();
-    }
-  };
-
-  // ===== METAMASK LOGIN HANDLER FUNCTION =====
-  // This function handles the complete MetaMask authentication process
-  const handleMetaMaskLogin = async () => {
-    console.log('🔵 MetaMask button clicked');
-    
-    // ===== METAMASK INSTALLATION CHECK =====
-    // Check if MetaMask browser extension is installed
-    if (!window.ethereum) {
-      alert('MetaMask is not installed! Please install MetaMask extension.');
-      return;
-    }
-
-    try {
-      console.log('🔵 Attempting to connect to MetaMask...');
-      
-      // ===== WALLET CONNECTION STEP =====
-      // Connect to MetaMask and get the user's wallet address
-      const address = await connectWallet();
-      console.log('🔵 Connection result:', address);
-      
-      if (!address) {
-        throw new Error('Failed to connect to MetaMask');
-      }
-
-      console.log('✅ MetaMask connected successfully:', address);
-      
-      // ===== STATE SYNCHRONIZATION =====
-      // Small delay to ensure state is updated properly
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // ===== MESSAGE SIGNING STEP =====
-      // Create a unique message for the user to sign (proves wallet ownership)
-      const message = `Sign this message to authenticate with your wallet: ${Date.now()}`;
-      console.log('🔵 Requesting signature for message:', message);
-      
-      // ===== DIGITAL SIGNATURE REQUEST =====
-      // Request user to sign the message with their private key
-      const signature = await window.ethereum.request({
-        method: 'personal_sign',
-        params: [message, address]
-      });
-      
-      console.log('🔵 Signature received:', signature ? 'Yes' : 'No');
-      
-      // ===== AUTHENTICATION COMPLETION =====
-      if (signature) {
-        console.log('🔵 Calling loginWithMetaMask...');
-        // Send the signed message to our backend for verification
-        // This will automatically route to dashboard on success
-        loginWithMetaMask({ message, signature, address });
-      } else {
-        console.warn('❌ No signature received');
-        alert('Signature required to authenticate. Please try again.');
-      }
-    } catch (error) {
-      console.error('❌ MetaMask authentication error:', error);
-      
-      // ===== ERROR HANDLING =====
-      // Handle specific MetaMask error codes with user-friendly messages
-      if (error.code === 4001) {
-        alert('Please approve the connection request in MetaMask.');
-      } else if (error.code === -32002) {
-        alert('MetaMask has a pending request. Please open MetaMask and complete or cancel the pending request.');
-      } else {
-        alert(`Connection failed: ${error.message || 'Please try again.'}`);
-      }
-      
-      // ===== CLEANUP ON ERROR =====
-      // Reset connection state if authentication fails
-      disconnectWallet();
-    }
-  };
-
-  return (
-    <div className="container max-w-4xl mx-auto px-3 sm:px-4 space-y-8 sm:space-y-12 md:space-y-16 py-6 sm:py-8 md:py-12">
-      {/* Show authentication status if user is logged in */}
-      {isAuthenticated && user && (
-        <div className="bg-gradient-to-r from-green-50 to-teal-50 border border-green-200/60 rounded-xl p-4 sm:p-6 mb-8 shadow-sm backdrop-blur-sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {user.picture ? (
-                <img 
-                  src={user.picture} 
-                  alt={user.name} 
-                  className="w-12 h-12 rounded-full border-2 border-green-300 shadow-sm"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full border-2 border-green-300 bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center shadow-sm">
-                  <span className="text-white text-sm font-bold">
-                    {user.provider === 'metamask' ? 'MM' : user.name?.[0] || 'U'}
-                  </span>
-                </div>
-              )}
-              <div>
-                <p className="font-bold text-green-800 text-lg">
-                  Welcome back!
-                </p>
-                <p className="text-sm text-green-600 font-medium">
-                  {user.provider === 'metamask' ? 
-                    `${user.walletAddress?.slice(0, 8)}...${user.walletAddress?.slice(-6)}` : 
-                    user.name
-                  }
-                </p>
-                {user.provider === 'metamask' && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-green-600 font-medium">MetaMask Connected</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm"
-                onClick={() => window.location.href = '/dashboard'}
-              >
-                <WalletIcon className="h-4 w-4 mr-2" />
-                Dashboard
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={logout}
-                disabled={isLoggingOut}
-                className="flex items-center gap-2 border-green-300 text-green-700 hover:bg-green-50"
-              >
-                <LogOut className="h-4 w-4" />
-                {isLoggingOut ? "Signing out..." : "Sign Out"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Hero Section */}
-      <div className="text-center space-y-6 sm:space-y-8 mb-8">
-        <div className="relative inline-flex items-center justify-center w-28 h-28 sm:w-32 sm:h-32 mb-4">
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#30D158] via-teal-400 to-[#0A3665] opacity-20 blur-xl animate-pulse"></div>
-          <div className="absolute inset-2 bg-gradient-to-br from-[#F2FFF5] to-white rounded-full opacity-90"></div>
-          <div className="relative z-10 flex items-center justify-center icon-group icon-float">
-            <WalletIcon className="w-8 h-8 sm:w-10 sm:h-10 text-[#30D158] transform -translate-x-2 sm:-translate-x-4" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }} />
-            <RiExchangeFundsFill className="w-12 h-12 sm:w-14 sm:h-14 text-teal-500" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))" }} />
-            <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 text-[#0A3665] transform translate-x-2 sm:translate-x-4" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }} />
-          </div>
-        </div>
-        
-        <div className="space-y-4 sm:space-y-6">
-          <div className="space-y-3 sm:space-y-4 max-w-4xl mx-auto">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold natural-gradient-text tracking-tight leading-tight">
-              Your Go-to Cryptocurrency Exchange
-            </h1>
-            <p className="text-lg sm:text-xl font-semibold animated-gradient-text">
-              Secure Cryptocurrency Management
-            </p>
-          </div>
-        </div>
-        {/* Only show login buttons if not authenticated */}
-        {!isAuthenticated && (
-          <div className="flex flex-col items-center gap-6 mt-8 sm:mt-10">
-            <div className="flex flex-col items-center gap-4 w-full max-w-md">
-              <Button
-                size="lg"
-                className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
-                onClick={handleWalletConnectLogin}
-                disabled={walletConnect.isLoading}
-              >
-                <span className="font-semibold">
-                  {walletConnect.isLoading ? "Connecting..." : "Connect with WalletConnect"}
-                </span>
-                {!walletConnect.isLoading && (
-                  <svg className="h-6 w-6" viewBox="0 0 300 185" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M61.438 36.438c48.15-47.127 126.26-47.127 174.4 0l5.8 5.68c2.41 2.36 2.41 6.18 0 8.53l-19.82 19.4c-1.2 1.18-3.15 1.18-4.35 0l-7.98-7.8c-33.61-32.88-88.09-32.88-121.7 0l-8.54 8.36c-1.2 1.18-3.15 1.18-4.35 0l-19.82-19.4c-2.41-2.36-2.41-6.18 0-8.53l6.37-6.23zm215.5 40.12l17.64 17.27c2.41 2.36 2.41 6.18 0 8.53l-79.48 77.79c-2.41 2.36-6.31 2.36-8.72 0l-56.4-55.2c-.6-.59-1.57-.59-2.17 0l-56.4 55.2c-2.41 2.36-6.31 2.36-8.72 0l-79.49-77.79c-2.41-2.36-2.41-6.18 0-8.53l17.64-17.27c2.41-2.36 6.31-2.36 8.72 0l56.4 55.2c.6.59 1.57.59 2.17 0l56.39-55.2c2.41-2.36 6.31-2.36 8.72 0l56.4 55.2c.6.59 1.57.59 2.17 0l56.4-55.2c2.41-2.36 6.31-2.36 8.72 0z" fill="#3B99FC"/>
-                  </svg>
-                )}
-              </Button>
-              
-              <div className="flex items-center w-full">
-                <div className="flex-1 h-px bg-gray-300"></div>
-                <span className="mx-4 text-gray-500 text-sm font-medium">OR</span>
-                <div className="flex-1 h-px bg-gray-300"></div>
-              </div>
-              
-              <Button
-                size="lg"
-                className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
-                onClick={handleMetaMaskLogin}
-                disabled={isConnecting || isMetaMaskLoading}
-              >
-                <span className="font-semibold">
-                  {isConnecting || isMetaMaskLoading ? "Connecting..." : "Sign in with MetaMask"}
-                </span>
-                {!isConnecting && !isMetaMaskLoading && (
-                  <svg className="h-6 w-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22.46 5.64L13.04.96c-.28-.14-.6-.14-.88 0L2.54 5.64c-.28.14-.46.42-.46.72v10.28c0 .3.18.58.46.72l9.5 4.68c.14.07.3.1.46.1s.32-.03.46-.1l9.5-4.68c.28-.14.46-.42-.46.72V6.36c0-.3-.18-.58-.46-.72zM12 3.12l7.56 3.72L12 10.56 4.44 6.84 12 3.12zm0 9.44l-7.5-3.69v7.5l7.5 3.69v-7.5zm1 7.5l7.5-3.69v-7.5L13 12.56v7.5z" fill="#F6851B"/>
-                    <path d="M12 10.56l7.56-3.72L12 3.12 4.44 6.84 12 10.56z" fill="#E2761B"/>
-                    <path d="M4.5 8.87v7.5l7.5 3.69v-7.5l-7.5-3.69z" fill="#E4761B"/>
-                    <path d="M13 12.56v7.5l7.5-3.69v-7.5L13 12.56z" fill="#763D16"/>
-                  </svg>
-                )}
-              </Button>
-
-              <Button
-                size="lg"
-                className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
-              >
-                <WalletIcon className="h-6 w-6" />
-                <span className="font-semibold">Create a New Wallet</span>
-              </Button>
-
-              <Button
-                size="lg"
-                className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
-              >
-                <WalletIcon className="h-6 w-6" />
-                <span className="font-semibold">Login with BitWallet</span>
-              </Button>
-            </div>
-            
-            <p className="text-xs text-gray-500 text-center max-w-md">
-              Choose your preferred sign-in method. WalletConnect will show a QR code to scan with your mobile wallet.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Live Market Prices Section */}
-      <div className="w-full max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 mb-8 sm:mb-12">
-        <div className="text-center mb-6 sm:mb-8">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold natural-gradient-text leading-relaxed">
-            Live Market Prices
-          </h2>
-        </div>
-        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-200/50">
-          <HorizontalPriceTicker />
-        </div>
-      </div>
-
-      {/* Decorative element */}
-      <div className="relative">
-        <div className="absolute -z-10 top-0 inset-x-0 h-64 bg-gradient-to-b from-[#F2FFF5] to-transparent opacity-70 blur-2xl"></div>
-      </div>
-    </div>
-  );
-}
+import React, { useState, useEffect } from "react";
+// Dialog components for modals
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+// Phone and Email authentication components
+import { PhoneAuth } from "@/components/phone-auth";
+import { EmailAuth } from "@/components/email-auth";
 
 // ===== DASHBOARD PAGE COMPONENT =====
 // This component shows the user's wallet dashboard after they're authenticated
@@ -366,15 +40,15 @@ function DashboardPage() {
   // ===== AUTHENTICATION HOOKS =====
   // Get user data and authentication functions
   const { user, logout, isLoggingOut, checkSessionStatus } = useAuth();
-  
+
   // ===== METAMASK HOOKS =====
   // Get MetaMask disconnect function
   const { disconnectWallet } = useMetaMask();
-  
+
   // ===== NAVIGATION HOOKS =====
   // Get navigation function to change pages programmatically
   const [, setLocation] = useLocation();
-  
+
   // ===== SESSION STATUS STATE =====
   // Local state to store session check results
   const [sessionStatus, setSessionStatus] = React.useState(null);
@@ -407,9 +81,9 @@ function DashboardPage() {
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="flex items-center gap-4 sm:gap-6">
             {user?.picture ? (
-              <img 
-                src={user.picture} 
-                alt={user.name} 
+              <img
+                src={user.picture}
+                alt={user.name}
                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gradient-to-r from-blue-200 to-teal-200 shadow-lg"
               />
             ) : (
@@ -420,8 +94,8 @@ function DashboardPage() {
             <div className="space-y-1">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back!</h1>
               <p className="text-base sm:text-lg text-gray-600 font-medium">
-                {user?.provider === 'metamask' ? 
-                  `${user.walletAddress?.slice(0, 8)}...${user.walletAddress?.slice(-6)}` : 
+                {user?.provider === 'metamask' ?
+                  `${user.walletAddress?.slice(0, 8)}...${user.walletAddress?.slice(-6)}` :
                   user?.name
                 }
               </p>
@@ -434,8 +108,8 @@ function DashboardPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button 
-              size="default" 
+            <Button
+              size="default"
               variant="outline"
               className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 hover:border-blue-300"
               onClick={() => setLocation("/send")}
@@ -443,8 +117,8 @@ function DashboardPage() {
               <Send className="h-4 w-4" />
               Send
             </Button>
-            <Button 
-              size="default" 
+            <Button
+              size="default"
               variant="outline"
               className="flex items-center gap-2 px-4 py-2 hover:bg-teal-50 hover:border-teal-300"
               onClick={() => setLocation("/receive")}
@@ -452,8 +126,8 @@ function DashboardPage() {
               <ArrowDownLeft className="h-4 w-4" />
               Receive
             </Button>
-            <Button 
-              size="default" 
+            <Button
+              size="default"
               variant="outline"
               className="flex items-center gap-2 px-4 py-2 hover:bg-green-50 hover:border-green-300"
               onClick={handleCheckSession}
@@ -461,8 +135,8 @@ function DashboardPage() {
               <ShieldCheck className="h-4 w-4" />
               Check Session
             </Button>
-            <Button 
-              size="default" 
+            <Button
+              size="default"
               variant="outline"
               onClick={logout}
               disabled={isLoggingOut}
@@ -526,7 +200,7 @@ function DashboardPage() {
                 </svg>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Network</label>
@@ -534,7 +208,7 @@ function DashboardPage() {
                   Ethereum ▼
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
                 <div className="flex gap-2">
@@ -544,7 +218,7 @@ function DashboardPage() {
                   <input type="text" placeholder="0.0" className="flex-1 bg-green-100 border border-green-300 rounded-lg px-4 py-3" />
                 </div>
               </div>
-              
+
               <div className="flex justify-center">
                 <div className="w-8 h-8 bg-white border-2 border-green-300 rounded-full flex items-center justify-center">
                   <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -552,7 +226,7 @@ function DashboardPage() {
                   </svg>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
                 <div className="flex gap-2">
@@ -596,6 +270,375 @@ function DashboardPage() {
   );
 }
 
+// ===== WELCOME PAGE COMPONENT =====
+// This is the main landing page that users see when they first visit the app
+function WelcomePage() {
+  // ===== AUTHENTICATION HOOKS =====
+  // Get authentication functions and state from our custom auth hook
+  const { login, loginWithMetaMask, isMetaMaskLoading, user, isAuthenticated, logout, isLoggingOut } = useAuth();
+
+  // ===== METAMASK WALLET HOOKS =====
+  // Get MetaMask wallet connection functions and state
+  const { connectWallet, signMessage, account, isConnecting, disconnectWallet, forceReconnect } = useMetaMask();
+
+  // ===== WALLETCONNECT HOOKS =====
+  // Get WalletConnect wallet connection functions and state
+  const walletConnect = useWalletConnect();
+
+  // ===== ROUTING HOOK =====
+  // Get current page location for navigation
+  const [location, setLocation] = useLocation();
+
+  // ===== STATE FOR MODALS =====
+  const [showPhoneAuth, setShowPhoneAuth] = useState(false);
+  const [showEmailWalletCreation, setShowEmailWalletCreation] = useState(false);
+
+  // ===== ERROR HANDLING EFFECT =====
+  // Check URL parameters for authentication errors when the page loads
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    if (error) {
+      console.error('Authentication error:', error);
+      // You can add a toast notification here if needed
+    }
+  }, [location]); // Run this effect when the location changes
+
+  // ===== WALLETCONNECT LOGIN HANDLER FUNCTION =====
+  // This function handles the complete WalletConnect authentication process
+  const handleWalletConnectLogin = async () => {
+    console.log('🔵 WalletConnect button clicked');
+
+    try {
+      console.log('🔵 Attempting to connect to WalletConnect...');
+
+      // ===== WALLET CONNECTION STEP =====
+      // Connect to WalletConnect and get the user's wallet address
+      const address = await walletConnect.connectWallet();
+      console.log('🔵 Connection result:', address);
+
+      if (!address) {
+        throw new Error('Failed to connect to WalletConnect');
+      }
+
+      console.log('✅ WalletConnect connected successfully:', address);
+
+      // ===== STATE SYNCHRONIZATION =====
+      // Small delay to ensure state is updated properly
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // ===== MESSAGE SIGNING STEP =====
+      // Create a unique message for the user to sign (proves wallet ownership)
+      const message = `Sign this message to authenticate with your wallet: ${Date.now()}`;
+      console.log('🔵 Requesting signature for message:', message);
+
+      // ===== DIGITAL SIGNATURE REQUEST =====
+      // Request user to sign the message with their private key
+      const signature = await walletConnect.signMessage(message);
+
+      console.log('🔵 Signature received:', signature ? 'Yes' : 'No');
+
+      // ===== AUTHENTICATION COMPLETION =====
+      if (signature) {
+        console.log('🔵 Calling loginWithMetaMask...');
+        // Send the signed message to our backend for verification
+        // This will automatically route to dashboard on success
+        loginWithMetaMask({ message, signature, address });
+      } else {
+        console.warn('❌ No signature received');
+        alert('Signature required to authenticate. Please try again.');
+      }
+    } catch (error) {
+      console.error('❌ WalletConnect authentication error:', error);
+      alert(`Connection failed: ${error.message || 'Please try again.'}`);
+
+      // ===== CLEANUP ON ERROR =====
+      // Reset connection state if authentication fails
+      walletConnect.disconnectWallet();
+    }
+  };
+
+  // ===== METAMASK LOGIN HANDLER FUNCTION =====
+  // This function handles the complete MetaMask authentication process
+  const handleMetaMaskLogin = async () => {
+    console.log('🔵 MetaMask button clicked');
+
+    // ===== METAMASK INSTALLATION CHECK =====
+    // Check if MetaMask browser extension is installed
+    if (!window.ethereum) {
+      alert('MetaMask is not installed! Please install MetaMask extension.');
+      return;
+    }
+
+    try {
+      console.log('🔵 Attempting to connect to MetaMask...');
+
+      // ===== WALLET CONNECTION STEP =====
+      // Connect to MetaMask and get the user's wallet address
+      const address = await connectWallet();
+      console.log('🔵 Connection result:', address);
+
+      if (!address) {
+        throw new Error('Failed to connect to MetaMask');
+      }
+
+      console.log('✅ MetaMask connected successfully:', address);
+
+      // ===== STATE SYNCHRONIZATION =====
+      // Small delay to ensure state is updated properly
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // ===== MESSAGE SIGNING STEP =====
+      // Create a unique message for the user to sign (proves wallet ownership)
+      const message = `Sign this message to authenticate with your wallet: ${Date.now()}`;
+      console.log('🔵 Requesting signature for message:', message);
+
+      // ===== DIGITAL SIGNATURE REQUEST =====
+      // Request user to sign the message with their private key
+      const signature = await window.ethereum.request({
+        method: 'personal_sign',
+        params: [message, address]
+      });
+
+      console.log('🔵 Signature received:', signature ? 'Yes' : 'No');
+
+      // ===== AUTHENTICATION COMPLETION =====
+      if (signature) {
+        console.log('🔵 Calling loginWithMetaMask...');
+        // Send the signed message to our backend for verification
+        // This will automatically route to dashboard on success
+        loginWithMetaMask({ message, signature, address });
+      } else {
+        console.warn('❌ No signature received');
+        alert('Signature required to authenticate. Please try again.');
+      }
+    } catch (error) {
+      console.error('❌ MetaMask authentication error:', error);
+
+      // ===== ERROR HANDLING =====
+      // Handle specific MetaMask error codes with user-friendly messages
+      if (error.code === 4001) {
+        alert('Please approve the connection request in MetaMask.');
+      } else if (error.code === -32002) {
+        alert('MetaMask has a pending request. Please open MetaMask and complete or cancel the pending request.');
+      } else {
+        alert(`Connection failed: ${error.message || 'Please try again.'}`);
+      }
+
+      // ===== CLEANUP ON ERROR =====
+      // Reset connection state if authentication fails
+      disconnectWallet();
+    }
+  };
+
+  // ===== PHONE AUTH SUCCESS HANDLER =====
+  // Redirects to dashboard after successful phone authentication
+  const handlePhoneAuthSuccess = () => {
+    setShowPhoneAuth(false);
+    setLocation('/dashboard');
+  };
+
+  // ===== WALLET CREATION SUCCESS HANDLER =====
+  // Redirects to dashboard after successful wallet creation
+  const handleWalletCreationSuccess = (walletData: any) => {
+    console.log('✅ Wallet created:', walletData);
+    setShowEmailWalletCreation(false);
+
+    // Small delay to ensure session is saved
+    setTimeout(() => {
+      setLocation('/dashboard');
+    }, 500);
+  };
+
+  return (
+    <div className="container max-w-4xl mx-auto px-3 sm:px-4 space-y-8 sm:space-y-12 md:space-y-16 py-6 sm:py-8 md:py-12">
+      {/* Show authentication status if user is logged in */}
+      {isAuthenticated && user && (
+        <div className="bg-gradient-to-r from-green-50 to-teal-50 border border-green-200/60 rounded-xl p-4 sm:p-6 mb-8 shadow-sm backdrop-blur-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {user.picture ? (
+                <img
+                  src={user.picture}
+                  alt={user.name}
+                  className="w-12 h-12 rounded-full border-2 border-green-300 shadow-sm"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full border-2 border-green-300 bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center shadow-sm">
+                  <span className="text-white text-sm font-bold">
+                    {user.provider === 'metamask' ? 'MM' : user.name?.[0] || 'U'}
+                  </span>
+                </div>
+              )}
+              <div>
+                <p className="font-bold text-green-800 text-lg">
+                  Welcome back!
+                </p>
+                <p className="text-sm text-green-600 font-medium">
+                  {user.provider === 'metamask' ?
+                    `${user.walletAddress?.slice(0, 8)}...${user.walletAddress?.slice(-6)}` :
+                    user.name
+                  }
+                </p>
+                {user.provider === 'metamask' && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-green-600 font-medium">MetaMask Connected</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm"
+                onClick={() => window.location.href = '/dashboard'}
+              >
+                <WalletIcon className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={logout}
+                disabled={isLoggingOut}
+                className="flex items-center gap-2 border-green-300 text-green-700 hover:bg-green-50"
+              >
+                <LogOut className="h-4 w-4" />
+                {isLoggingOut ? "Signing out..." : "Sign Out"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hero Section */}
+      <div className="text-center space-y-6 sm:space-y-8 mb-8">
+        <div className="relative inline-flex items-center justify-center w-28 h-28 sm:w-32 sm:h-32 mb-4">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#30D158] via-teal-400 to-[#0A3665] opacity-20 blur-xl animate-pulse"></div>
+          <div className="absolute inset-2 bg-gradient-to-br from-[#F2FFF5] to-white rounded-full opacity-90"></div>
+          <div className="relative z-10 flex items-center justify-center icon-group icon-float">
+            <WalletIcon className="w-8 h-8 sm:w-10 sm:h-10 text-[#30D158] transform -translate-x-2 sm:-translate-x-4" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }} />
+            <RiExchangeFundsFill className="w-12 h-12 sm:w-14 sm:h-14 text-teal-500" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))" }} />
+            <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 text-[#0A3665] transform translate-x-2 sm:translate-x-4" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }} />
+          </div>
+        </div>
+
+        <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-3 sm:space-4 max-w-4xl mx-auto">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold natural-gradient-text tracking-tight leading-tight">
+              Your Go-to Cryptocurrency Exchange
+            </h1>
+            <p className="text-lg sm:text-xl font-semibold animated-gradient-text">
+              Secure Cryptocurrency Management
+            </p>
+          </div>
+        </div>
+        {/* Only show login buttons if not authenticated */}
+        {!isAuthenticated && (
+          <div className="flex flex-col items-center gap-6 mt-8 sm:mt-10">
+            <div className="flex flex-col items-center gap-4 w-full max-w-md">
+              <Button
+                size="lg"
+                className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
+                onClick={handleWalletConnectLogin}
+                disabled={walletConnect.isLoading}
+              >
+                <span className="font-semibold">
+                  {walletConnect.isLoading ? "Connecting..." : "Connect with WalletConnect"}
+                </span>
+                {!walletConnect.isLoading && (
+                  <svg className="h-6 w-6" viewBox="0 0 300 185" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M61.438 36.438c48.15-47.127 126.26-47.127 174.4 0l5.8 5.68c2.41 2.36 2.41 6.18 0 8.53l-19.82 19.4c-1.2 1.18-3.15 1.18-4.35 0l-7.98-7.8c-33.61-32.88-88.09-32.88-121.7 0l-8.54 8.36c-1.2 1.18-3.15 1.18-4.35 0l-19.82-19.4c-2.41-2.36-2.41-6.18 0-8.53l6.37-6.23zm215.5 40.12l17.64 17.27c2.41 2.36 2.41 6.18 0 8.53l-79.48 77.79c-2.41 2.36-6.31 2.36-8.72 0l-56.4-55.2c-.6-.59-1.57-.59-2.17 0l-56.4 55.2c-2.41 2.36-6.31 2.36-8.72 0l-79.49-77.79c-2.41-2.36-2.41-6.18 0-8.53l17.64-17.27c2.41-2.36 6.31-2.36 8.72 0l56.4 55.2c.6.59 1.57.59 2.17 0l56.39-55.2c2.41-2.36 6.31-2.36 8.72 0l56.4 55.2c.6.59 1.57.59 2.17 0l56.4-55.2c2.41-2.36 6.31-2.36 8.72 0z" fill="#3B99FC"/>
+                  </svg>
+                )}
+              </Button>
+
+              <div className="flex items-center w-full">
+                <div className="flex-1 h-px bg-gray-300"></div>
+                <span className="mx-4 text-gray-500 text-sm font-medium">OR</span>
+                <div className="flex-1 h-px bg-gray-300"></div>
+              </div>
+
+              <Button
+                size="lg"
+                className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
+                onClick={handleMetaMaskLogin}
+                disabled={isConnecting || isMetaMaskLoading}
+              >
+                <span className="font-semibold">
+                  {isConnecting || isMetaMaskLoading ? "Connecting..." : "Sign in with MetaMask"}
+                </span>
+                {!isConnecting && !isMetaMaskLoading && (
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.46 5.64L13.04.96c-.28-.14-.6-.14-.88 0L2.54 5.64c-.28.14-.46.42-.46.72v10.28c0 .3.18.58.46.72l9.5 4.68c.14.07.3.1.46.1s.32-.03.46-.1l9.5-4.68c.28-.14.46-.42-.46.72V6.36c0-.3-.18-.58-.46-.72zM12 3.12l7.56 3.72L12 10.56 4.44 6.84 12 3.12zm0 9.44l-7.5-3.69v7.5l7.5 3.69v-7.5zm1 7.5l7.5-3.69v-7.5L13 12.56v7.5z" fill="#F6851B"/>
+                    <path d="M12 10.56l7.56-3.72L12 3.12 4.44 6.84 12 10.56z" fill="#E2761B"/>
+                    <path d="M4.5 8.87v7.5l7.5 3.69v-7.5l-7.5-3.69z" fill="#E4761B"/>
+                    <path d="M13 12.56v7.5l7.5-3.69v-7.5L13 12.56z" fill="#763D16"/>
+                  </svg>
+                )}
+              </Button>
+
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-50"
+                onClick={() => setShowEmailWalletCreation(true)}
+              >
+                <WalletIcon className="h-6 w-6" />
+                <span className="font-semibold">Create a New Wallet</span>
+              </Button>
+
+              <Button
+                size="lg"
+                className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
+              >
+                <WalletIcon className="h-6 w-6" />
+                <span className="font-semibold">Login with BitWallet</span>
+              </Button>
+            </div>
+
+            <p className="text-xs text-gray-500 text-center max-w-md">
+              Choose your preferred sign-in method. WalletConnect will show a QR code to scan with your mobile wallet.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Live Market Prices Section */}
+      <div className="w-full max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 mb-8 sm:mb-12">
+        <div className="text-center mb-6 sm:mb-8">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold natural-gradient-text leading-relaxed">
+            Live Market Prices
+          </h2>
+        </div>
+        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-200/50">
+          <HorizontalPriceTicker />
+        </div>
+      </div>
+
+      {/* Decorative element */}
+      <div className="relative">
+        <div className="absolute -z-10 top-0 inset-x-0 h-64 bg-gradient-to-b from-[#F2FFF5] to-transparent opacity-70 blur-2xl"></div>
+      </div>
+
+      {/* Phone Auth Dialog */}
+      <Dialog open={showPhoneAuth} onOpenChange={setShowPhoneAuth}>
+        <DialogContent className="sm:max-w-md">
+          <PhoneAuth onSuccess={handlePhoneAuthSuccess} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Wallet Creation Dialog */}
+      <Dialog open={showEmailWalletCreation} onOpenChange={setShowEmailWalletCreation}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <EmailAuth onSuccess={handleWalletCreationSuccess} />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ===== MAIN HOME PAGE COMPONENT =====
 // This is the default export component that decides what to show on the home page
 export default function Home() {
@@ -608,6 +651,6 @@ export default function Home() {
   if (isAuthenticated && user) {
     return <DashboardPage />;
   }
-  
+
   return <WelcomePage />;
 }

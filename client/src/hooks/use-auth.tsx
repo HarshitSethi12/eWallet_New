@@ -21,7 +21,7 @@ interface User {
   given_name?: string;            // User's first name
   family_name?: string;           // User's last name
   picture?: string;               // URL to user's profile picture
-  provider?: 'google' | 'metamask' | 'phone';  // Authentication method used
+  provider?: 'google' | 'metamask' | 'phone' | 'email';  // Authentication method used
   walletAddress?: string;         // MetaMask wallet address (if using MetaMask)
   phone?: string;                 // Phone number (if using phone auth)
 }

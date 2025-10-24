@@ -360,6 +360,120 @@ export function setupAuth(app: express.Express) {
     }
   });
 
+  // Email/OTP authentication routes
+  app.post('/auth/email/send-otp', async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Store OTP in cache with email as key
+      otpCache.set(email, otp);
+      
+      console.log(`Generated OTP for ${email}: ${otp}`);
+
+      // TODO: Send OTP via email service (SendGrid, AWS SES, etc.)
+      // For now, we'll return it in development mode
+      
+      res.json({ 
+        success: true, 
+        message: 'OTP sent successfully',
+        // Include OTP in response for development only
+        ...(process.env.NODE_ENV === 'development' && { otp })
+      });
+    } catch (error) {
+      console.error('Send email OTP error:', error);
+      res.status(500).json({ error: 'Failed to send OTP' });
+    }
+  });
+
+  app.post('/auth/email/verify-otp', async (req, res) => {
+    try {
+      const { email, otp } = req.body;
+      
+      if (!email || !otp) {
+        return res.status(400).json({ error: 'Email and OTP are required' });
+      }
+
+      // Get stored OTP from cache
+      const storedOtp = otpCache.get(email);
+      
+      if (!storedOtp) {
+        return res.status(400).json({ error: 'OTP expired or invalid' });
+      }
+
+      if (storedOtp !== otp) {
+        return res.status(400).json({ error: 'Invalid OTP' });
+      }
+
+      // OTP is valid, remove from cache
+      otpCache.del(email);
+
+      // Generate Ethereum wallet
+      const ethers = await import('ethers');
+      const wallet = ethers.Wallet.createRandom();
+      
+      const walletData = {
+        address: wallet.address,
+        privateKey: wallet.privateKey,
+        seedPhrase: wallet.mnemonic?.phrase || '',
+      };
+
+      // Create user session
+      const emailUser = {
+        id: `email_${email}`,
+        email: email,
+        name: email.split('@')[0],
+        provider: 'email',
+        walletAddress: wallet.address,
+        picture: null
+      };
+
+      req.session.user = emailUser;
+      req.session.email = email;
+      req.session.isEmailVerified = true;
+
+      // Track login session
+      const sessionData = {
+        userId: null,
+        email: email,
+        name: emailUser.name,
+        walletAddress: wallet.address,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        sessionId: req.sessionID,
+      };
+
+      try {
+        const sessionDbId = await storage.createUserSession(sessionData);
+        req.session.sessionDbId = sessionDbId;
+      } catch (dbError) {
+        console.warn('Warning: Could not create database session:', dbError);
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Email verified and wallet created successfully',
+        user: emailUser,
+        wallet: walletData
+      });
+    } catch (error) {
+      console.error('Verify email OTP error:', error);
+      res.status(500).json({ error: 'Failed to verify OTP' });
+    }
+  });
+
   // Phone/OTP authentication routes
   app.post('/auth/phone/send-otp', async (req, res) => {
     try {
