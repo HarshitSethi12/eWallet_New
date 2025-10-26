@@ -64,7 +64,7 @@ export const metamaskUsers = pgTable("metamask_users", {
 
 export const emailWallets = pgTable("email_wallets", {
   id: serial("id").primaryKey(),
-  email: text("email").notNull().unique(),
+  email: text("email").notNull(),
   walletAddress: text("wallet_address").notNull().unique(),
   encryptedPrivateKey: text("encrypted_private_key").notNull(),
   encryptedSeedPhrase: text("encrypted_seed_phrase").notNull(),

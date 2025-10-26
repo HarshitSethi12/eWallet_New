@@ -275,42 +275,18 @@ class Storage {
   // ===== EMAIL WALLET MANAGEMENT =====
 
   /**
-   * Creates a new email wallet or returns existing one
-   * Prevents duplicate wallets for the same email
+   * Creates a new email wallet (allows multiple wallets per email)
    */
-  async createOrGetEmailWallet(walletData: {
+  async createEmailWallet(walletData: {
     email: string;
     walletAddress: string;
     privateKey: string;
     seedPhrase: string;
   }) {
     try {
-      console.log('🔐 Creating/retrieving email wallet for:', walletData.email);
+      console.log('🔐 Creating new email wallet for:', walletData.email);
 
-      // Check if wallet already exists for this email
-      const existing = await db.select()
-        .from(emailWallets)
-        .where(eq(emailWallets.email, walletData.email));
-
-      if (existing.length > 0) {
-        console.log('✅ Email wallet already exists, returning existing wallet');
-        // Update last login time
-        await db.update(emailWallets)
-          .set({ lastLogin: new Date() })
-          .where(eq(emailWallets.email, walletData.email));
-
-        return {
-          isNew: false,
-          wallet: {
-            address: existing[0].walletAddress,
-            privateKey: this.decrypt(existing[0].encryptedPrivateKey),
-            seedPhrase: this.decrypt(existing[0].encryptedSeedPhrase),
-          }
-        };
-      }
-
-      // Create new wallet
-      console.log('🆕 Creating new email wallet');
+      // Always create a new wallet
       const result = await db.insert(emailWallets)
         .values({
           email: walletData.email,
@@ -320,34 +296,64 @@ class Storage {
         })
         .returning();
 
+      console.log('✅ New wallet created with address:', walletData.walletAddress);
       return {
         isNew: true,
         wallet: {
+          id: result[0].id,
           address: walletData.walletAddress,
           privateKey: walletData.privateKey,
           seedPhrase: walletData.seedPhrase,
+          createdAt: result[0].createdAt,
         }
       };
     } catch (error) {
-      console.error('❌ Error creating/retrieving email wallet:', error);
+      console.error('❌ Error creating email wallet:', error);
       throw error;
     }
   }
 
   /**
-   * Gets wallet data for an email address
-   * Returns decrypted wallet information
+   * Gets all wallets for an email address
+   * Returns list of wallets (without private keys for security)
    */
-  async getEmailWallet(email: string) {
+  async getEmailWallets(email: string) {
     try {
-      console.log('🔍 Finding email wallet for:', email);
+      console.log('🔍 Finding all wallets for email:', email);
 
       const wallets = await db.select()
         .from(emailWallets)
-        .where(eq(emailWallets.email, email));
+        .where(eq(emailWallets.email, email))
+        .orderBy(desc(emailWallets.createdAt));
 
-      if (wallets.length === 0) {
-        console.log('❌ No wallet found for email:', email);
+      console.log(`✅ Found ${wallets.length} wallet(s) for email:`, email);
+      
+      return wallets.map(wallet => ({
+        id: wallet.id,
+        address: wallet.walletAddress,
+        createdAt: wallet.createdAt,
+        lastLogin: wallet.lastLogin,
+      }));
+    } catch (error) {
+      console.error('❌ Error retrieving email wallets:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets a specific wallet by ID for an email
+   * Returns decrypted wallet information
+   */
+  async getEmailWalletById(email: string, walletId: number) {
+    try {
+      console.log('🔍 Finding wallet by ID:', walletId, 'for email:', email);
+
+      const wallets = await db.select()
+        .from(emailWallets)
+        .where(eq(emailWallets.id, walletId));
+
+      if (wallets.length === 0 || wallets[0].email !== email) {
+        console.log('❌ Wallet not found or email mismatch');
         return null;
       }
 
@@ -356,17 +362,18 @@ class Storage {
       // Update last login
       await db.update(emailWallets)
         .set({ lastLogin: new Date() })
-        .where(eq(emailWallets.email, email));
+        .where(eq(emailWallets.id, walletId));
 
       console.log('✅ Email wallet found');
       return {
+        id: wallet.id,
         address: wallet.walletAddress,
         privateKey: this.decrypt(wallet.encryptedPrivateKey),
         seedPhrase: this.decrypt(wallet.encryptedSeedPhrase),
         createdAt: wallet.createdAt,
       };
     } catch (error) {
-      console.error('❌ Error retrieving email wallet:', error);
+      console.error('❌ Error retrieving email wallet by ID:', error);
       throw error;
     }
   }

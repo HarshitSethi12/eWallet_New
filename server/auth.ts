@@ -273,10 +273,10 @@ export function setupAuth(app: express.Express) {
       const proto = req.get('x-forwarded-proto') || req.protocol;
 
 
-  // Email login - retrieve existing wallet and authenticate
+  // Email login - retrieve wallet list for selection
   app.post('/auth/email/login', async (req, res) => {
     try {
-      const { email, otp } = req.body;
+      const { email, otp, walletId } = req.body;
       
       if (!email || !otp) {
         return res.status(400).json({ error: 'Email and OTP are required' });
@@ -296,54 +296,77 @@ export function setupAuth(app: express.Express) {
       // OTP is valid, remove from cache
       otpCache.del(email);
 
-      // Retrieve existing wallet from database
-      const walletData = await storage.getEmailWallet(email);
+      // Retrieve all wallets for this email
+      const wallets = await storage.getEmailWallets(email);
       
-      if (!walletData) {
+      if (wallets.length === 0) {
         return res.status(404).json({ 
-          error: 'No wallet found for this email. Please create a new wallet first.',
+          error: 'No wallets found for this email. Please create a new wallet first.',
           shouldCreateWallet: true
         });
       }
 
-      // Create user session with wallet data
-      const emailUser = {
-        id: `email_${email}`,
-        email: email,
-        name: email.split('@')[0],
-        provider: 'email',
-        walletAddress: walletData.address,
-        picture: null
-      };
+      // If walletId is provided, login to that specific wallet
+      if (walletId) {
+        const walletData = await storage.getEmailWalletById(email, walletId);
+        
+        if (!walletData) {
+          return res.status(404).json({ error: 'Wallet not found' });
+        }
 
-      req.session.user = emailUser;
-      req.session.email = email;
-      req.session.isEmailVerified = true;
+        // Create user session with selected wallet
+        const emailUser = {
+          id: `email_${email}_${walletId}`,
+          email: email,
+          name: email.split('@')[0],
+          provider: 'email',
+          walletAddress: walletData.address,
+          walletId: walletId,
+          picture: null
+        };
 
-      // Track login session
-      const sessionData = {
-        userId: null,
-        email: email,
-        name: emailUser.name,
-        walletAddress: walletData.address,
-        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
-        userAgent: req.get('User-Agent') || 'unknown',
-        sessionId: req.sessionID,
-      };
+        req.session.user = emailUser;
+        req.session.email = email;
+        req.session.walletId = walletId;
+        req.session.isEmailVerified = true;
 
-      try {
-        const sessionDbId = await storage.createUserSession(sessionData);
-        req.session.sessionDbId = sessionDbId;
-      } catch (dbError) {
-        console.warn('Warning: Could not create database session:', dbError);
+        // Track login session
+        const sessionData = {
+          userId: null,
+          email: email,
+          name: emailUser.name,
+          walletAddress: walletData.address,
+          ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+          userAgent: req.get('User-Agent') || 'unknown',
+          sessionId: req.sessionID,
+        };
+
+        try {
+          const sessionDbId = await storage.createUserSession(sessionData);
+          req.session.sessionDbId = sessionDbId;
+        } catch (dbError) {
+          console.warn('Warning: Could not create database session:', dbError);
+        }
+
+        return res.json({ 
+          success: true, 
+          message: 'Login successful',
+          user: emailUser,
+          wallet: {
+            id: walletData.id,
+            address: walletData.address,
+            createdAt: walletData.createdAt,
+          },
+          loginComplete: true
+        });
       }
 
+      // If no walletId, return wallet list for user to choose
       res.json({ 
         success: true, 
-        message: 'Login successful',
-        user: emailUser,
-        wallet: walletData,
-        isExistingUser: true
+        message: 'OTP verified - please select a wallet',
+        wallets: wallets,
+        requiresWalletSelection: true
       });
     } catch (error) {
       console.error('Email login error:', error);
@@ -565,22 +588,12 @@ export function setupAuth(app: express.Express) {
       // OTP is valid, remove from cache
       otpCache.del(email);
 
-      // Check if wallet already exists for this email
-      const existingWallet = await storage.emailHasWallet(email);
-      
-      if (existingWallet) {
-        return res.status(400).json({ 
-          error: 'A wallet already exists for this email. Please use "Login with BitWallet" instead.',
-          shouldLogin: true
-        });
-      }
-
-      // Generate new Ethereum wallet
+      // Always generate a new Ethereum wallet
       const ethers = await import('ethers');
       const wallet = ethers.Wallet.createRandom();
       
-      // Store wallet in database (encrypted)
-      const result = await storage.createOrGetEmailWallet({
+      // Store new wallet in database (encrypted)
+      const result = await storage.createEmailWallet({
         email: email,
         walletAddress: wallet.address,
         privateKey: wallet.privateKey,
@@ -589,16 +602,18 @@ export function setupAuth(app: express.Express) {
 
       // Create user session
       const emailUser = {
-        id: `email_${email}`,
+        id: `email_${email}_${result.wallet.id}`,
         email: email,
         name: email.split('@')[0],
         provider: 'email',
         walletAddress: wallet.address,
+        walletId: result.wallet.id,
         picture: null
       };
 
       req.session.user = emailUser;
       req.session.email = email;
+      req.session.walletId = result.wallet.id;
       req.session.isEmailVerified = true;
 
       // Track login session
@@ -624,7 +639,7 @@ export function setupAuth(app: express.Express) {
         message: 'Email verified and wallet created successfully',
         user: emailUser,
         wallet: result.wallet,
-        isNewWallet: result.isNew
+        isNewWallet: true
       });
     } catch (error) {
       console.error('Verify email OTP error:', error);

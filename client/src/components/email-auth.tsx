@@ -14,10 +14,12 @@ interface EmailAuthProps {
 }
 
 export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
-  const [step, setStep] = useState<'email' | 'otp' | 'wallet'>('email');
+  const [step, setStep] = useState<'email' | 'otp' | 'walletSelect' | 'wallet'>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [walletData, setWalletData] = useState<any>(null);
+  const [walletList, setWalletList] = useState<any[]>([]);
+  const [selectedWalletId, setSelectedWalletId] = useState<number | null>(null);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [showSeedPhrase, setShowSeedPhrase] = useState(false);
   const { toast } = useToast();
@@ -65,14 +67,14 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
   });
 
   const verifyOtpMutation = useMutation({
-    mutationFn: async ({ emailAddress, otpCode }: { emailAddress: string; otpCode: string }) => {
+    mutationFn: async ({ emailAddress, otpCode, walletId }: { emailAddress: string; otpCode: string; walletId?: number }) => {
       const endpoint = isLoginMode ? '/auth/email/login' : '/auth/email/verify-otp';
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: emailAddress, otp: otpCode }),
+        body: JSON.stringify({ email: emailAddress, otp: otpCode, walletId }),
       });
 
       if (!response.ok) {
@@ -83,8 +85,16 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
       return response.json();
     },
     onSuccess: (data) => {
-      if (isLoginMode) {
-        // Login mode - redirect directly to dashboard
+      if (isLoginMode && data.requiresWalletSelection) {
+        // Login mode - show wallet selection
+        setWalletList(data.wallets);
+        setStep('walletSelect');
+        toast({
+          title: 'Select Your Wallet',
+          description: `Found ${data.wallets.length} wallet(s) for this email`,
+        });
+      } else if (isLoginMode && data.loginComplete) {
+        // Wallet selected - redirect to dashboard
         toast({
           title: 'Success!',
           description: 'Login successful',
@@ -101,23 +111,11 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
       }
     },
     onError: (error: any) => {
-      if (error.message.includes('already exists')) {
-        toast({
-          title: 'Wallet Already Exists',
-          description: 'This email already has a wallet. Redirecting to login...',
-          variant: 'destructive',
-        });
-        // Switch to login mode after 2 seconds
-        setTimeout(() => {
-          window.location.href = '/?login=true';
-        }, 2000);
-      } else {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
     },
   });
 
@@ -221,6 +219,73 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
               {sendOtpMutation.isPending ? 'Sending...' : 'Send Verification Code'}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Wallet Selection Step (Login Mode)
+  if (step === 'walletSelect') {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Key className="w-6 h-6 text-blue-600" />
+          </div>
+          <CardTitle>Select Your Wallet</CardTitle>
+          <p className="text-sm text-gray-600">
+            Choose which wallet to login to
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {walletList.map((wallet) => (
+              <Button
+                key={wallet.id}
+                variant={selectedWalletId === wallet.id ? "default" : "outline"}
+                className="w-full justify-start text-left h-auto py-4"
+                onClick={() => setSelectedWalletId(wallet.id)}
+              >
+                <div className="flex flex-col items-start gap-1 w-full">
+                  <div className="font-mono text-sm truncate w-full">
+                    {wallet.address}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Created: {new Date(wallet.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </Button>
+            ))}
+          </div>
+          <div className="space-y-2 mt-4">
+            <Button
+              className="w-full"
+              disabled={!selectedWalletId || verifyOtpMutation.isPending}
+              onClick={() => {
+                if (selectedWalletId) {
+                  verifyOtpMutation.mutate({ 
+                    emailAddress: email, 
+                    otpCode: otp, 
+                    walletId: selectedWalletId 
+                  });
+                }
+              }}
+            >
+              {verifyOtpMutation.isPending ? 'Logging in...' : 'Login to Selected Wallet'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setStep('email');
+                setWalletList([]);
+                setSelectedWalletId(null);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
