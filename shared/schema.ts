@@ -62,12 +62,23 @@ export const metamaskUsers = pgTable("metamask_users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const emailWallets = pgTable("email_wallets", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  walletAddress: text("wallet_address").notNull().unique(),
+  encryptedPrivateKey: text("encrypted_private_key").notNull(),
+  encryptedSeedPhrase: text("encrypted_seed_phrase").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastLogin: timestamp("last_login").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true });
 export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true });
 export const insertContactSchema = createInsertSchema(contacts).omit({ id: true });
 export const insertUserSessionSchema = createInsertSchema(userSessions).omit({ id: true });
 export const insertMetaMaskUserSchema = createInsertSchema(metamaskUsers).omit({ id: true });
+export const insertEmailWalletSchema = createInsertSchema(emailWallets).omit({ id: true });
 
 export const selectUserSchema = z.object({
   id: z.number(),
@@ -89,3 +100,5 @@ export type UserSession = typeof userSessions.$inferSelect;
 export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
 export type MetaMaskUser = typeof metamaskUsers.$inferSelect;
 export type InsertMetaMaskUser = z.infer<typeof insertMetaMaskUserSchema>;
+export type EmailWallet = typeof emailWallets.$inferSelect;
+export type InsertEmailWallet = z.infer<typeof insertEmailWalletSchema>;

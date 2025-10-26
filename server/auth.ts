@@ -273,7 +273,7 @@ export function setupAuth(app: express.Express) {
       const proto = req.get('x-forwarded-proto') || req.protocol;
 
 
-  // Email login - check if wallet exists and authenticate
+  // Email login - retrieve existing wallet and authenticate
   app.post('/auth/email/login', async (req, res) => {
     try {
       const { email, otp } = req.body;
@@ -296,15 +296,23 @@ export function setupAuth(app: express.Express) {
       // OTP is valid, remove from cache
       otpCache.del(email);
 
-      // Check if user/wallet exists in database
-      // For now, we'll create a session without wallet data
-      // In a production app, you'd query your database for existing wallet
+      // Retrieve existing wallet from database
+      const walletData = await storage.getEmailWallet(email);
       
+      if (!walletData) {
+        return res.status(404).json({ 
+          error: 'No wallet found for this email. Please create a new wallet first.',
+          shouldCreateWallet: true
+        });
+      }
+
+      // Create user session with wallet data
       const emailUser = {
         id: `email_${email}`,
         email: email,
         name: email.split('@')[0],
         provider: 'email',
+        walletAddress: walletData.address,
         picture: null
       };
 
@@ -317,6 +325,7 @@ export function setupAuth(app: express.Express) {
         userId: null,
         email: email,
         name: emailUser.name,
+        walletAddress: walletData.address,
         ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
         userAgent: req.get('User-Agent') || 'unknown',
         sessionId: req.sessionID,
@@ -333,7 +342,7 @@ export function setupAuth(app: express.Express) {
         success: true, 
         message: 'Login successful',
         user: emailUser,
-        // In production, you'd return the existing wallet data from database
+        wallet: walletData,
         isExistingUser: true
       });
     } catch (error) {
@@ -556,15 +565,27 @@ export function setupAuth(app: express.Express) {
       // OTP is valid, remove from cache
       otpCache.del(email);
 
-      // Generate Ethereum wallet
+      // Check if wallet already exists for this email
+      const existingWallet = await storage.emailHasWallet(email);
+      
+      if (existingWallet) {
+        return res.status(400).json({ 
+          error: 'A wallet already exists for this email. Please use "Login with BitWallet" instead.',
+          shouldLogin: true
+        });
+      }
+
+      // Generate new Ethereum wallet
       const ethers = await import('ethers');
       const wallet = ethers.Wallet.createRandom();
       
-      const walletData = {
-        address: wallet.address,
+      // Store wallet in database (encrypted)
+      const result = await storage.createOrGetEmailWallet({
+        email: email,
+        walletAddress: wallet.address,
         privateKey: wallet.privateKey,
         seedPhrase: wallet.mnemonic?.phrase || '',
-      };
+      });
 
       // Create user session
       const emailUser = {
@@ -602,7 +623,8 @@ export function setupAuth(app: express.Express) {
         success: true, 
         message: 'Email verified and wallet created successfully',
         user: emailUser,
-        wallet: walletData
+        wallet: result.wallet,
+        isNewWallet: result.isNew
       });
     } catch (error) {
       console.error('Verify email OTP error:', error);

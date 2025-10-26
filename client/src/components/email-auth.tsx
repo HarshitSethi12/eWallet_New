@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -32,12 +31,12 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
         },
         body: JSON.stringify({ email: emailAddress }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to send OTP');
       }
-      
+
       return response.json();
     },
     onSuccess: (data) => {
@@ -46,7 +45,7 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
         title: 'OTP Sent!',
         description: `Verification code sent to ${email}`,
       });
-      
+
       // In development, show the OTP
       if (data.otp) {
         toast({
@@ -75,12 +74,12 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
         },
         body: JSON.stringify({ email: emailAddress, otp: otpCode }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to verify OTP');
       }
-      
+
       return response.json();
     },
     onSuccess: (data) => {
@@ -101,19 +100,31 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
         });
       }
     },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+    onError: (error: any) => {
+      if (error.message.includes('already exists')) {
+        toast({
+          title: 'Wallet Already Exists',
+          description: 'This email already has a wallet. Redirecting to login...',
+          variant: 'destructive',
+        });
+        // Switch to login mode after 2 seconds
+        setTimeout(() => {
+          window.location.href = '/?login=true';
+        }, 2000);
+      } else {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    
+
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -124,14 +135,14 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
       });
       return;
     }
-    
+
     sendOtpMutation.mutate(email);
   };
 
   const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!otp || otp.length !== 6) return;
-    
+
     verifyOtpMutation.mutate({ emailAddress: email, otpCode: otp });
   };
 
@@ -155,7 +166,7 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
       seedPhrase: walletData.seedPhrase,
       createdAt: new Date().toISOString()
     };
-    
+
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -163,7 +174,7 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
     a.download = `bitwallet-backup-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    
+
     toast({
       title: 'Backup Downloaded',
       description: 'Keep this file safe and secure',
@@ -202,8 +213,8 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
                 We'll send you a verification code
               </p>
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full"
               disabled={sendOtpMutation.isPending || !email}
             >
@@ -248,13 +259,13 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
               </InputOTP>
             </div>
             <div className="space-y-2">
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full"
                 disabled={verifyOtpMutation.isPending || otp.length !== 6}
               >
-                {verifyOtpMutation.isPending 
-                  ? (isLoginMode ? 'Logging in...' : 'Creating Wallet...') 
+                {verifyOtpMutation.isPending
+                  ? (isLoginMode ? 'Logging in...' : 'Creating Wallet...')
                   : (isLoginMode ? 'Verify & Login' : 'Verify & Create Wallet')
                 }
               </Button>
@@ -300,7 +311,7 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
       <CardContent className="space-y-6">
         <Alert className="bg-yellow-50 border-yellow-200">
           <AlertDescription className="text-yellow-800">
-            ⚠️ <strong>Important:</strong> Save your seed phrase and private key in a secure location. 
+            ⚠️ <strong>Important:</strong> Save your seed phrase and private key in a secure location.
             You'll need them to recover your wallet. Never share them with anyone!
           </AlertDescription>
         </Alert>

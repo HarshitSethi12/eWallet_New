@@ -6,14 +6,46 @@ import { db } from './db';                      // Database connection instance
 import { 
   userSessions,                               // User sessions table schema
   metamaskUsers,                              // MetaMask users table schema
+  emailWallets,                               // Email wallets table schema
   InsertUserSession,                          // TypeScript type for inserting user sessions
-  InsertMetaMaskUser                          // TypeScript type for inserting MetaMask users
+  InsertMetaMaskUser,                         // TypeScript type for inserting MetaMask users
+  InsertEmailWallet                           // TypeScript type for inserting email wallets
 } from '@shared/schema';
 import { eq, desc } from 'drizzle-orm';        // Database query operators
+import crypto from 'crypto';                   // Encryption utilities
 
 // ===== STORAGE CLASS =====
 // This class handles all database operations for the application
 class Storage {
+  // Encryption key for wallet data (should be stored in environment variable in production)
+  private readonly ENCRYPTION_KEY = process.env.WALLET_ENCRYPTION_KEY || 'fallback-encryption-key-change-in-production-32-chars!!';
+  private readonly ALGORITHM = 'aes-256-cbc';
+
+  /**
+   * Encrypts sensitive wallet data
+   */
+  private encrypt(text: string): string {
+    const iv = crypto.randomBytes(16);
+    const key = crypto.createHash('sha256').update(this.ENCRYPTION_KEY).digest();
+    const cipher = crypto.createCipheriv(this.ALGORITHM, key, iv);
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return iv.toString('hex') + ':' + encrypted;
+  }
+
+  /**
+   * Decrypts sensitive wallet data
+   */
+  private decrypt(text: string): string {
+    const parts = text.split(':');
+    const iv = Buffer.from(parts[0], 'hex');
+    const encrypted = parts[1];
+    const key = crypto.createHash('sha256').update(this.ENCRYPTION_KEY).digest();
+    const decipher = crypto.createDecipheriv(this.ALGORITHM, key, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  }
   
   // ===== USER SESSION MANAGEMENT =====
   
@@ -237,6 +269,121 @@ class Storage {
     } catch (error) {
       console.error('❌ Error finding MetaMask user:', error);
       throw error;
+    }
+  }
+
+  // ===== EMAIL WALLET MANAGEMENT =====
+
+  /**
+   * Creates a new email wallet or returns existing one
+   * Prevents duplicate wallets for the same email
+   */
+  async createOrGetEmailWallet(walletData: {
+    email: string;
+    walletAddress: string;
+    privateKey: string;
+    seedPhrase: string;
+  }) {
+    try {
+      console.log('🔐 Creating/retrieving email wallet for:', walletData.email);
+
+      // Check if wallet already exists for this email
+      const existing = await db.select()
+        .from(emailWallets)
+        .where(eq(emailWallets.email, walletData.email));
+
+      if (existing.length > 0) {
+        console.log('✅ Email wallet already exists, returning existing wallet');
+        // Update last login time
+        await db.update(emailWallets)
+          .set({ lastLogin: new Date() })
+          .where(eq(emailWallets.email, walletData.email));
+
+        return {
+          isNew: false,
+          wallet: {
+            address: existing[0].walletAddress,
+            privateKey: this.decrypt(existing[0].encryptedPrivateKey),
+            seedPhrase: this.decrypt(existing[0].encryptedSeedPhrase),
+          }
+        };
+      }
+
+      // Create new wallet
+      console.log('🆕 Creating new email wallet');
+      const result = await db.insert(emailWallets)
+        .values({
+          email: walletData.email,
+          walletAddress: walletData.walletAddress,
+          encryptedPrivateKey: this.encrypt(walletData.privateKey),
+          encryptedSeedPhrase: this.encrypt(walletData.seedPhrase),
+        })
+        .returning();
+
+      return {
+        isNew: true,
+        wallet: {
+          address: walletData.walletAddress,
+          privateKey: walletData.privateKey,
+          seedPhrase: walletData.seedPhrase,
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error creating/retrieving email wallet:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets wallet data for an email address
+   * Returns decrypted wallet information
+   */
+  async getEmailWallet(email: string) {
+    try {
+      console.log('🔍 Finding email wallet for:', email);
+
+      const wallets = await db.select()
+        .from(emailWallets)
+        .where(eq(emailWallets.email, email));
+
+      if (wallets.length === 0) {
+        console.log('❌ No wallet found for email:', email);
+        return null;
+      }
+
+      const wallet = wallets[0];
+      
+      // Update last login
+      await db.update(emailWallets)
+        .set({ lastLogin: new Date() })
+        .where(eq(emailWallets.email, email));
+
+      console.log('✅ Email wallet found');
+      return {
+        address: wallet.walletAddress,
+        privateKey: this.decrypt(wallet.encryptedPrivateKey),
+        seedPhrase: this.decrypt(wallet.encryptedSeedPhrase),
+        createdAt: wallet.createdAt,
+      };
+    } catch (error) {
+      console.error('❌ Error retrieving email wallet:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Checks if an email already has a wallet
+   */
+  async emailHasWallet(email: string): Promise<boolean> {
+    try {
+      const wallets = await db.select()
+        .from(emailWallets)
+        .where(eq(emailWallets.email, email));
+      
+      return wallets.length > 0;
+    } catch (error) {
+      console.error('❌ Error checking email wallet:', error);
+      return false;
     }
   }
 
