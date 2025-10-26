@@ -25,6 +25,7 @@ import { TransactionList } from "@/components/transaction-list";
 import { DexSwap } from "@/components/dex-swap";
 import { FloatingChatWidget } from "@/components/floating-chat-widget";
 import { EnhancedTokenList } from "@/components/enhanced-token-list";
+import { WalletSwitcher } from "@/components/wallet-switcher";
 
 // Icons from Lucide React
 import { 
@@ -704,6 +705,11 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Wallet Switcher (only for email users with multiple wallets) */}
+        {user?.provider === 'email' && (
+          <WalletSwitcher onCreateNew={() => setLocation('/')} />
         )}
 
         {/* Four Section Grid Layout */}

@@ -877,6 +877,63 @@ export function setupAuth(app: express.Express) {
       res.status(500).json({ error: 'Failed to check wallet count' });
     }
   });
+
+  // Get all wallets for current user's email
+  app.get('/auth/email/wallets', async (req, res) => {
+    try {
+      if (!req.session?.user?.email) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      const email = req.session.user.email;
+      const wallets = await storage.getEmailWallets(email);
+
+      res.json(wallets);
+    } catch (error) {
+      console.error('Get wallets error:', error);
+      res.status(500).json({ error: 'Failed to get wallets' });
+    }
+  });
+
+  // Switch to a different wallet
+  app.post('/auth/email/switch-wallet', async (req, res) => {
+    try {
+      const { walletId } = req.body;
+
+      if (!req.session?.user?.email) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      if (!walletId) {
+        return res.status(400).json({ error: 'Wallet ID is required' });
+      }
+
+      const email = req.session.user.email;
+      const walletData = await storage.getEmailWalletById(email, walletId);
+
+      if (!walletData) {
+        return res.status(404).json({ error: 'Wallet not found' });
+      }
+
+      // Update session with new wallet
+      req.session.user.walletAddress = walletData.address;
+      req.session.user.walletId = walletId;
+      req.session.walletId = walletId;
+
+      res.json({
+        success: true,
+        message: 'Wallet switched successfully',
+        wallet: {
+          id: walletData.id,
+          address: walletData.address,
+          createdAt: walletData.createdAt,
+        }
+      });
+    } catch (error) {
+      console.error('Switch wallet error:', error);
+      res.status(500).json({ error: 'Failed to switch wallet' });
+    }
+  });
 }
 
 // Create and export the auth router
