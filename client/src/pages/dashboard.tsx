@@ -209,6 +209,20 @@ export default function Dashboard() {
   // Use wallet address from authenticated user (MetaMask login) or MetaMask hook
   const walletAddress = user?.walletAddress || account;
 
+  // ===== PORTFOLIO CALCULATIONS (MOVED UP) =====
+  // Calculate total portfolio value from real MetaMask balances
+  const totalPortfolioValue = realBalances.length > 0 
+    ? realBalances.reduce((sum, token) => sum + (token.balanceUSD || 0), 0)
+    : 0;
+
+  // Mock initial investment amount for profit/loss calculation (only if we have real balances)
+  const initialInvestment = realBalances.length > 0 ? totalPortfolioValue * 0.85 : 0;
+
+  // Calculate portfolio performance percentage
+  const portfolioChange = initialInvestment > 0 
+    ? ((totalPortfolioValue - initialInvestment) / initialInvestment) * 100 
+    : 0;
+
   // ===== REAL TRANSACTION STATE =====
   const [realTransactions, setRealTransactions] = useState<any[]>([]);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
@@ -559,20 +573,6 @@ export default function Dashboard() {
       logoURI: 'https://tokens.1inch.io/0xa0b86a33e6c48e46f4d8d2c6a24e8f3a8f8f6f6f.png'
     }
   ];
-
-  // ===== PORTFOLIO CALCULATIONS =====
-  // Calculate total portfolio value from real MetaMask balances
-  const totalPortfolioValue = realBalances.length > 0 
-    ? realBalances.reduce((sum, token) => sum + (token.balanceUSD || 0), 0)
-    : 0;
-
-  // Mock initial investment amount for profit/loss calculation (only if we have real balances)
-  const initialInvestment = realBalances.length > 0 ? totalPortfolioValue * 0.85 : 0;
-
-  // Calculate portfolio performance percentage
-  const portfolioChange = initialInvestment > 0 
-    ? ((totalPortfolioValue - initialInvestment) / initialInvestment) * 100 
-    : 0;
 
   // ===== RENDER LOGIC =====
   // Redirect to home if user is not logged in
