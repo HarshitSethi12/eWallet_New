@@ -292,6 +292,7 @@ function WelcomePage() {
   // ===== STATE FOR MODALS =====
   const [showPhoneAuth, setShowPhoneAuth] = useState(false);
   const [showEmailWalletCreation, setShowEmailWalletCreation] = useState(false);
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
 
   // ===== ERROR HANDLING EFFECT =====
   // Check URL parameters for authentication errors when the page loads
@@ -591,6 +592,7 @@ function WelcomePage() {
               <Button
                 size="lg"
                 className="btn-primary w-full px-6 sm:px-8 py-4 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
+                onClick={() => setShowEmailLogin(true)}
               >
                 <WalletIcon className="h-6 w-6" />
                 <span className="font-semibold">Login with BitWallet</span>
@@ -632,6 +634,13 @@ function WelcomePage() {
       <Dialog open={showEmailWalletCreation} onOpenChange={setShowEmailWalletCreation}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <EmailAuth onSuccess={handleWalletCreationSuccess} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Login Dialog */}
+      <Dialog open={showEmailLogin} onOpenChange={setShowEmailLogin}>
+        <DialogContent className="sm:max-w-md">
+          <EmailAuth onSuccess={handleWalletCreationSuccess} isLoginMode={true} />
         </DialogContent>
       </Dialog>
     </div>

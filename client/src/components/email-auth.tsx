@@ -11,9 +11,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface EmailAuthProps {
   onSuccess: (walletData: any) => void;
+  isLoginMode?: boolean;
 }
 
-export function EmailAuth({ onSuccess }: EmailAuthProps) {
+export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
   const [step, setStep] = useState<'email' | 'otp' | 'wallet'>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -66,7 +67,8 @@ export function EmailAuth({ onSuccess }: EmailAuthProps) {
 
   const verifyOtpMutation = useMutation({
     mutationFn: async ({ emailAddress, otpCode }: { emailAddress: string; otpCode: string }) => {
-      const response = await fetch('/auth/email/verify-otp', {
+      const endpoint = isLoginMode ? '/auth/email/login' : '/auth/email/verify-otp';
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -82,12 +84,22 @@ export function EmailAuth({ onSuccess }: EmailAuthProps) {
       return response.json();
     },
     onSuccess: (data) => {
-      setWalletData(data.wallet);
-      setStep('wallet');
-      toast({
-        title: 'Success!',
-        description: 'Email verified and wallet created successfully',
-      });
+      if (isLoginMode) {
+        // Login mode - redirect directly to dashboard
+        toast({
+          title: 'Success!',
+          description: 'Login successful',
+        });
+        onSuccess(data);
+      } else {
+        // Creation mode - show wallet details
+        setWalletData(data.wallet);
+        setStep('wallet');
+        toast({
+          title: 'Success!',
+          description: 'Email verified and wallet created successfully',
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -170,9 +182,9 @@ export function EmailAuth({ onSuccess }: EmailAuthProps) {
           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Mail className="w-6 h-6 text-blue-600" />
           </div>
-          <CardTitle>Create Your Wallet</CardTitle>
+          <CardTitle>{isLoginMode ? 'Login to Your Wallet' : 'Create Your Wallet'}</CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Enter your email to create a self-custodial wallet
+            {isLoginMode ? 'Enter your registered email to login' : 'Enter your email to create a self-custodial wallet'}
           </p>
         </CardHeader>
         <CardContent>
@@ -241,7 +253,10 @@ export function EmailAuth({ onSuccess }: EmailAuthProps) {
                 className="w-full"
                 disabled={verifyOtpMutation.isPending || otp.length !== 6}
               >
-                {verifyOtpMutation.isPending ? 'Creating Wallet...' : 'Verify & Create Wallet'}
+                {verifyOtpMutation.isPending 
+                  ? (isLoginMode ? 'Logging in...' : 'Creating Wallet...') 
+                  : (isLoginMode ? 'Verify & Login' : 'Verify & Create Wallet')
+                }
               </Button>
               <Button
                 type="button"

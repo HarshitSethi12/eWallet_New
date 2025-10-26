@@ -272,6 +272,77 @@ export function setupAuth(app: express.Express) {
       const host = req.get('host');
       const proto = req.get('x-forwarded-proto') || req.protocol;
 
+
+  // Email login - check if wallet exists and authenticate
+  app.post('/auth/email/login', async (req, res) => {
+    try {
+      const { email, otp } = req.body;
+      
+      if (!email || !otp) {
+        return res.status(400).json({ error: 'Email and OTP are required' });
+      }
+
+      // Get stored OTP from cache
+      const storedOtp = otpCache.get(email);
+      
+      if (!storedOtp) {
+        return res.status(400).json({ error: 'OTP expired or invalid' });
+      }
+
+      if (storedOtp !== otp) {
+        return res.status(400).json({ error: 'Invalid OTP' });
+      }
+
+      // OTP is valid, remove from cache
+      otpCache.del(email);
+
+      // Check if user/wallet exists in database
+      // For now, we'll create a session without wallet data
+      // In a production app, you'd query your database for existing wallet
+      
+      const emailUser = {
+        id: `email_${email}`,
+        email: email,
+        name: email.split('@')[0],
+        provider: 'email',
+        picture: null
+      };
+
+      req.session.user = emailUser;
+      req.session.email = email;
+      req.session.isEmailVerified = true;
+
+      // Track login session
+      const sessionData = {
+        userId: null,
+        email: email,
+        name: emailUser.name,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        sessionId: req.sessionID,
+      };
+
+      try {
+        const sessionDbId = await storage.createUserSession(sessionData);
+        req.session.sessionDbId = sessionDbId;
+      } catch (dbError) {
+        console.warn('Warning: Could not create database session:', dbError);
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Login successful',
+        user: emailUser,
+        // In production, you'd return the existing wallet data from database
+        isExistingUser: true
+      });
+    } catch (error) {
+      console.error('Email login error:', error);
+      res.status(500).json({ error: 'Failed to login' });
+    }
+  });
+
+
       // Always use https for production deployment
       const baseUrl = process.env.NODE_ENV === 'production' 
         ? `https://${host}` 
