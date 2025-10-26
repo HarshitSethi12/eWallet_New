@@ -1,9 +1,8 @@
-
 // ===== IMPORT SECTION =====
 // Import database configuration and schema definitions
 
 import { db } from './db';                      // Database connection instance
-import { 
+import {
   userSessions,                               // User sessions table schema
   metamaskUsers,                              // MetaMask users table schema
   emailWallets,                               // Email wallets table schema
@@ -46,9 +45,9 @@ class Storage {
     decrypted += decipher.final('utf8');
     return decrypted;
   }
-  
+
   // ===== USER SESSION MANAGEMENT =====
-  
+
   /**
    * Creates a new user session record in the database
    * This tracks when users log in and their session details
@@ -65,7 +64,7 @@ class Storage {
   }) {
     try {
       console.log('💾 Creating user session in database...');
-      
+
       // Insert new session record into database
       const result = await db.insert(userSessions).values({
         userId: sessionData.userId,
@@ -95,10 +94,10 @@ class Storage {
   async endUserSession(sessionId: number) {
     try {
       console.log('💾 Ending user session:', sessionId);
-      
+
       // Get the session to calculate duration
       const sessions = await db.select().from(userSessions).where(eq(userSessions.id, sessionId));
-      
+
       if (sessions.length === 0) {
         console.warn('⚠️ Session not found:', sessionId);
         return;
@@ -106,9 +105,9 @@ class Storage {
 
       const session = sessions[0];
       const endTime = new Date();
-      
+
       // Calculate session duration in seconds
-      const duration = session.startTime 
+      const duration = session.startTime
         ? Math.floor((endTime.getTime() - session.startTime.getTime()) / 1000)
         : null;
 
@@ -136,10 +135,10 @@ class Storage {
   async getAllSessions() {
     try {
       console.log('📊 Fetching all user sessions...');
-      
+
       // Get all sessions ordered by most recent first
       const sessions = await db.select().from(userSessions).orderBy(desc(userSessions.startTime));
-      
+
       console.log('✅ Retrieved', sessions.length, 'sessions');
       return sessions;
     } catch (error) {
@@ -155,13 +154,13 @@ class Storage {
   async getActiveSessions() {
     try {
       console.log('📊 Fetching active user sessions...');
-      
+
       // Get only sessions where isActive is true
       const activeSessions = await db.select()
         .from(userSessions)
         .where(eq(userSessions.isActive, true))
         .orderBy(desc(userSessions.startTime));
-      
+
       console.log('✅ Retrieved', activeSessions.length, 'active sessions');
       return activeSessions;
     } catch (error) {
@@ -177,13 +176,13 @@ class Storage {
   async getSessionsByEmail(email: string) {
     try {
       console.log('📊 Fetching sessions for email:', email);
-      
+
       // Get all sessions for the specified email
       const sessions = await db.select()
         .from(userSessions)
         .where(eq(userSessions.email, email))
         .orderBy(desc(userSessions.startTime));
-      
+
       console.log('✅ Retrieved', sessions.length, 'sessions for email:', email);
       return sessions;
     } catch (error) {
@@ -205,7 +204,7 @@ class Storage {
   }) {
     try {
       console.log('🦊 Creating/updating MetaMask user:', userData.address);
-      
+
       // Try to find existing user first
       const existingUsers = await db.select()
         .from(metamaskUsers)
@@ -214,7 +213,7 @@ class Storage {
       if (existingUsers.length > 0) {
         // User exists, update their information
         console.log('📝 Updating existing MetaMask user');
-        
+
         const result = await db.update(metamaskUsers)
           .set({
             displayName: userData.displayName,
@@ -228,7 +227,7 @@ class Storage {
       } else {
         // User doesn't exist, create new record
         console.log('🆕 Creating new MetaMask user');
-        
+
         const result = await db.insert(metamaskUsers)
           .values({
             address: userData.address,
@@ -254,7 +253,7 @@ class Storage {
   async getMetaMaskUserByAddress(address: string) {
     try {
       console.log('🔍 Finding MetaMask user by address:', address);
-      
+
       const users = await db.select()
         .from(metamaskUsers)
         .where(eq(metamaskUsers.address, address));
@@ -327,7 +326,7 @@ class Storage {
         .orderBy(desc(emailWallets.createdAt));
 
       console.log(`✅ Found ${wallets.length} wallet(s) for email:`, email);
-      
+
       return wallets.map(wallet => ({
         id: wallet.id,
         address: wallet.walletAddress,
@@ -358,7 +357,7 @@ class Storage {
       }
 
       const wallet = wallets[0];
-      
+
       // Update last login
       await db.update(emailWallets)
         .set({ lastLogin: new Date() })
@@ -386,7 +385,7 @@ class Storage {
       const wallets = await db.select()
         .from(emailWallets)
         .where(eq(emailWallets.email, email));
-      
+
       return wallets.length > 0;
     } catch (error) {
       console.error('❌ Error checking email wallet:', error);
@@ -400,11 +399,11 @@ class Storage {
   async deleteEmailWallets(email: string): Promise<number> {
     try {
       console.log('🗑️ Deleting all wallets for email:', email);
-      
+
       const result = await db.delete(emailWallets)
         .where(eq(emailWallets.email, email))
         .returning({ id: emailWallets.id });
-      
+
       console.log('✅ Deleted', result.length, 'wallet(s) for email:', email);
       return result.length;
     } catch (error) {
@@ -421,7 +420,7 @@ class Storage {
       const wallets = await db.select()
         .from(emailWallets)
         .where(eq(emailWallets.email, email));
-      
+
       return wallets.length;
     } catch (error) {
       console.error('❌ Error counting email wallets:', error);
@@ -429,7 +428,23 @@ class Storage {
     }
   }
 
-  // ===== DATABASE MAINTENANCE =====
+  // ===== ADMIN GET METHODS =====
+  // Get all email wallets
+  async getAllEmailWallets() {
+    return await db.select().from(emailWallets).orderBy(desc(emailWallets.createdAt));
+  }
+
+  // Get all sessions
+  async getAllSessions() {
+    return await db.select().from(userSessions).orderBy(desc(userSessions.startTime));
+  }
+
+  // Get all MetaMask users
+  async getAllMetaMaskUsers() {
+    return await db.select().from(metamaskUsers).orderBy(desc(metamaskUsers.createdAt));
+  }
+
+  // ===== GET METHODS =====
 
   /**
    * Cleans up old inactive sessions from the database
@@ -438,7 +453,7 @@ class Storage {
   async cleanupOldSessions(daysOld: number = 30) {
     try {
       console.log(`🧹 Cleaning up sessions older than ${daysOld} days...`);
-      
+
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysOld);
 
@@ -463,7 +478,7 @@ class Storage {
   async getDatabaseStats() {
     try {
       console.log('📊 Gathering database statistics...');
-      
+
       // Get counts of different record types
       const totalSessions = await db.select().from(userSessions);
       const activeSessions = await db.select().from(userSessions).where(eq(userSessions.isActive, true));

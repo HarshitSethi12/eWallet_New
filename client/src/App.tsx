@@ -18,7 +18,8 @@ import { useAuth, AuthProvider } from "@/hooks/use-auth";
 // Page components
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import AdminSessions from "@/pages/admin-sessions";
+import AdminSessionsPage from './pages/admin-sessions';
+import AdminDatabasePage from './pages/admin-database';
 import Dashboard from "@/pages/dashboard";
 // Import the FloatingChatWidget component
 import { FloatingChatWidget } from "@/components/floating-chat-widget";
@@ -133,7 +134,8 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
 
       {/* Admin sessions page route - for session management */}
-      <Route path="/admin/sessions" component={AdminSessions} />
+      <Route path="/admin/sessions" component={AdminSessionsPage} />
+      <Route path="/admin-database" element={<AdminDatabasePage />} />
 
       {/* Send and receive routes - currently redirect to Home */}
       <Route path="/send" component={Home} />
@@ -209,7 +211,7 @@ export default function App() {
           {/* ===== TOAST NOTIFICATIONS ===== */}
           {/* Global toast notification system */}
           <Toaster />
-          
+
           {/* Floating chat widget */}
           <FloatingChatWidget />
         </div>

@@ -134,9 +134,9 @@ router.get("/tokens/oneinch", async (req, res) => {
 
     // Use correct 1inch Spot Price API endpoint for Ethereum (chain ID 1)
     const oneInchUrl = `https://api.1inch.dev/price/v1.1/1`;
-    
+
     console.log('🔗 1inch Spot Price API URL:', oneInchUrl);
-    
+
     const response = await fetch(oneInchUrl, {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -149,7 +149,7 @@ router.get("/tokens/oneinch", async (req, res) => {
       const errorText = await response.text();
       console.error(`❌ 1inch API returned ${response.status}: ${response.statusText}`);
       console.error('❌ Response body:', errorText);
-      
+
       return res.json({
         success: false,
         message: `1inch API error: ${response.status} ${response.statusText}`,
@@ -162,20 +162,20 @@ router.get("/tokens/oneinch", async (req, res) => {
     const priceData = await response.json() as Record<string, string>;
     console.log('✅ Real 1inch price data fetched successfully');
     console.log('📊 Number of tokens from 1inch:', Object.keys(priceData).length);
-    
+
     // Known token info for popular Ethereum tokens (with proper address mapping)
     const knownTokens: Record<string, { symbol: string; name: string }> = {
       // ETH (native token, special address)
       '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee': { symbol: 'ETH', name: 'Ethereum' },
       '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': { symbol: 'WETH', name: 'Wrapped Ether' },
-      
+
       // Stablecoins
       '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': { symbol: 'USDC', name: 'USD Coin' },
       '0xdac17f958d2ee523a2206206994597c13d831ec7': { symbol: 'USDT', name: 'Tether USD' },
       '0x6b175474e89094c44da98b954eedeac495271d0f': { symbol: 'DAI', name: 'Dai Stablecoin' },
       '0x4fabb145d64652a948d72533023f6e7a623c7c53': { symbol: 'BUSD', name: 'Binance USD' },
       '0x8e870d67f660d95d5be530380d0ec0bd388289e1': { symbol: 'USDP', name: 'Pax Dollar' },
-      
+
       // Major DeFi tokens
       '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': { symbol: 'WBTC', name: 'Wrapped Bitcoin' },
       '0x514910771af9ca656af840dff83e8264ecf986ca': { symbol: 'LINK', name: 'Chainlink' },
@@ -208,7 +208,7 @@ router.get("/tokens/oneinch", async (req, res) => {
 
     // Convert 1inch response to our format and fetch real prices from CoinGecko
     const tokenAddresses = Object.keys(priceData);
-    
+
     // Map of Ethereum token addresses to CoinGecko IDs
     const addressToCoinGeckoId: Record<string, string> = {
       '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee': 'ethereum',
@@ -264,7 +264,7 @@ router.get("/tokens/oneinch", async (req, res) => {
             'User-Agent': 'BitWallet/1.0'
           }
         }, 5000);
-        
+
         if (cgResponse.ok) {
           coinGeckoPrices = await cgResponse.json();
           console.log('✅ Fetched CoinGecko prices for 1inch tokens');
@@ -285,7 +285,7 @@ router.get("/tokens/oneinch", async (req, res) => {
       // Get price from CoinGecko
       const coinGeckoId = addressToCoinGeckoId[normalizedAddress];
       const cgData = coinGeckoId ? coinGeckoPrices[coinGeckoId] : null;
-      
+
       let priceUSD = 0;
       let change24h = 0;
       let marketCap = 0;
@@ -331,7 +331,7 @@ router.get("/tokens/oneinch", async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error fetching 1inch prices:', normalizeError(error));
-    
+
     // NO FALLBACK - Return empty list as requested by user
     return res.json({
       success: false,
@@ -365,9 +365,9 @@ router.get("/tokens", async (req, res) => {
     // Try to fetch real prices from CoinGecko
     const coinGeckoIds = sushiTokens.map(token => token.coinGeckoId).join(',');
     const coinGeckoUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoIds}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`;
-    
+
     console.log('🔗 CoinGecko API URL:', coinGeckoUrl);
-    
+
     const response = await fetchWithTimeout(coinGeckoUrl, {
       headers: {
         'Accept': 'application/json',
@@ -379,10 +379,10 @@ router.get("/tokens", async (req, res) => {
       const coinGeckoData = await response.json() as CoinGeckoSimpleResponse;
       console.log('✅ Real CoinGecko data fetched successfully');
       console.log('📊 ETH price from CoinGecko:', coinGeckoData.ethereum?.usd);
-      
+
       const formattedTokens = sushiTokens.map(token => {
         const priceData = coinGeckoData[token.coinGeckoId];
-        
+
         if (priceData && priceData.usd) {
           return {
             symbol: token.symbol,
@@ -407,7 +407,7 @@ router.get("/tokens", async (req, res) => {
 
       return res.json({
         success: true,
-        message: `Successfully fetched ${formattedTokens.length} real SushiSwap token prices`,
+        message: `Successfully fetched ${formattedTokens.length} SushiSwap token prices`,
         tokens: formattedTokens,
         validCount: formattedTokens.length,
         errorCount: sushiTokens.length - formattedTokens.length,
@@ -419,10 +419,10 @@ router.get("/tokens", async (req, res) => {
     }
   } catch (error) {
     console.error('❌ Error fetching real prices, falling back to static data:', normalizeError(error));
-    
+
     // Fallback to static data only if API fails
     console.log('🍣 Using enhanced SushiSwap fallback prices...');
-    
+
     const currentTime = Date.now();
     const formattedTokens = sushiTokens.map(token => {
       // Generate realistic prices based on token
@@ -477,7 +477,7 @@ router.get("/tokens", async (req, res) => {
 router.get("/crypto-prices-top25", async (req, res) => {
   try {
     console.log('🔄 Fetching top 25 crypto prices from CoinGecko...');
-    
+
     const response = await fetch(
       'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=25&page=1&sparkline=false&price_change_percentage=24h',
       {
@@ -492,17 +492,17 @@ router.get("/crypto-prices-top25", async (req, res) => {
     if (response.ok) {
       const data = await response.json();
       console.log('✅ Top 25 CoinGecko prices fetched successfully:', data.length, 'tokens');
-      
+
       // Remove duplicates by symbol and ID to ensure uniqueness
       const uniqueCoins = data.filter((coin: any, index: number, arr: any[]) => 
         arr.findIndex((c: any) => 
           c.symbol.toUpperCase() === coin.symbol.toUpperCase() || c.id === coin.id
         ) === index
       );
-      
+
       // Ensure we have exactly 25 unique tokens
       const limitedData = uniqueCoins.slice(0, 25);
-      
+
       const formattedData = limitedData.map((coin: any) => ({
         id: coin.id,
         symbol: coin.symbol.toUpperCase(),
@@ -518,7 +518,7 @@ router.get("/crypto-prices-top25", async (req, res) => {
       console.log('📊 Unique coins filtered:', uniqueCoins.length);
       console.log('📊 Final formatted data count:', formattedData.length);
       console.log('📊 Coin symbols:', formattedData.map((c: any) => c.symbol).join(', '));
-      
+
       // If we got less than 25 from API, pad with fallback tokens
       if (formattedData.length < 25) {
         const fallbackTokens = [
@@ -526,18 +526,18 @@ router.get("/crypto-prices-top25", async (req, res) => {
           { id: 'near', symbol: 'NEAR', name: 'NEAR Protocol', current_price: 6.20, price_change_percentage_24h: 4.2, market_cap: 7200000000, total_volume: 380000000, image: 'https://assets.coingecko.com/coins/images/10365/small/near_icon.png', market_cap_rank: 24 },
           { id: 'aptos', symbol: 'APT', name: 'Aptos', current_price: 12.80, price_change_percentage_24h: 3.9, market_cap: 6800000000, total_volume: 320000000, image: 'https://assets.coingecko.com/coins/images/26455/small/aptos_round.png', market_cap_rank: 25 }
         ];
-        
+
         const needed = 25 - formattedData.length;
         formattedData.push(...fallbackTokens.slice(0, needed));
       }
-      
+
       return res.json(formattedData);
     } else {
       throw new Error(`HTTP ${response.status}`);
     }
   } catch (error) {
     console.error('❌ Error fetching top 25 crypto prices:', normalizeError(error));
-    
+
     // Complete fallback with exactly 25 tokens
     const fallbackData = [
       { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', current_price: 98750, price_change_percentage_24h: 2.5, market_cap: 1950000000000, total_volume: 25000000000, image: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png', market_cap_rank: 1 },
@@ -566,87 +566,9 @@ router.get("/crypto-prices-top25", async (req, res) => {
       { id: 'near', symbol: 'NEAR', name: 'NEAR Protocol', current_price: 6.20, price_change_percentage_24h: 4.2, market_cap: 7200000000, total_volume: 380000000, image: 'https://assets.coingecko.com/coins/images/10365/small/near_icon.png', market_cap_rank: 24 },
       { id: 'aptos', symbol: 'APT', name: 'Aptos', current_price: 12.80, price_change_percentage_24h: 3.9, market_cap: 6800000000, total_volume: 320000000, image: 'https://assets.coingecko.com/coins/images/26455/small/aptos_round.png', market_cap_rank: 25 }
     ];
-    
+
     console.log('📊 Using fallback data with exactly', fallbackData.length, 'tokens');
     res.json(fallbackData);
-  }
-});
-
-// GET /api/crypto-prices - Update main crypto prices endpoint to also fetch top 25
-router.get("/api/crypto-prices", async (req, res) => {
-  try {
-    console.log('🔄 Fetching top 25 crypto prices from CoinGecko...');
-    
-    const response = await fetch(
-      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=25&page=1&sparkline=false&price_change_percentage=24h',
-      {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'BitWallet/1.0'
-        },
-        // timeout: 15000  // Not supported in fetch
-      }
-    );
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Top 25 CoinGecko prices fetched successfully:', data.length, 'tokens');
-      
-      // Transform to match the expected format
-      const transformedData: Record<string, { symbol: string; name: string; current_price: number; price_change_percentage_24h: number; market_cap: number; total_volume: number; image: string; market_cap_rank: number; usd: number; usd_24h_change: number; }> = {};
-      data.forEach((coin: any) => {
-        transformedData[coin.id] = {
-          symbol: coin.symbol.toUpperCase(),
-          name: coin.name,
-          current_price: coin.current_price || 0,
-          price_change_percentage_24h: coin.price_change_percentage_24h || 0,
-          market_cap: coin.market_cap || 0,
-          total_volume: coin.total_volume || 0,
-          image: coin.image,
-          market_cap_rank: coin.market_cap_rank,
-          usd: coin.current_price || 0,
-          usd_24h_change: coin.price_change_percentage_24h || 0
-        };
-      });
-      
-      return res.json(transformedData);
-    } else {
-      throw new Error(`HTTP ${response.status}`);
-    }
-  } catch (error) {
-    console.error('❌ CoinGecko API error:', error);
-
-    // Return updated fallback data with current realistic prices
-    const fallbackData = {
-      bitcoin: { usd: 95420.50, usd_24h_change: 2.34, symbol: 'BTC', name: 'Bitcoin', current_price: 95420.50, price_change_percentage_24h: 2.34, market_cap: 1950000000000, total_volume: 25000000000, market_cap_rank: 1 },
-      ethereum: { usd: 3650.25, usd_24h_change: 1.45, symbol: 'ETH', name: 'Ethereum', current_price: 3650.25, price_change_percentage_24h: 1.45, market_cap: 440000000000, total_volume: 15000000000, market_cap_rank: 2 },
-      tether: { usd: 1.00, usd_24h_change: 0.01, symbol: 'USDT', name: 'Tether', current_price: 1.00, price_change_percentage_24h: 0.01, market_cap: 120000000000, total_volume: 45000000000, market_cap_rank: 3 },
-      solana: { usd: 235.40, usd_24h_change: 3.21, symbol: 'SOL', name: 'Solana', current_price: 235.40, price_change_percentage_24h: 3.21, market_cap: 118000000000, total_volume: 3500000000, market_cap_rank: 4 },
-      binancecoin: { usd: 690.20, usd_24h_change: 0.87, symbol: 'BNB', name: 'BNB', current_price: 690.20, price_change_percentage_24h: 0.87, market_cap: 103000000000, total_volume: 2100000000, market_cap_rank: 5 },
-      'usd-coin': { usd: 1.00, usd_24h_change: 0.00, symbol: 'USDC', name: 'USDC', current_price: 1.00, price_change_percentage_24h: 0.00, market_cap: 40000000000, total_volume: 5500000000, market_cap_rank: 6 },
-      ripple: { usd: 2.52, usd_24h_change: 1.92, symbol: 'XRP', name: 'XRP', current_price: 2.52, price_change_percentage_24h: 1.92, market_cap: 140000000000, total_volume: 8500000000, market_cap_rank: 7 },
-      cardano: { usd: 1.02, usd_24h_change: 1.67, symbol: 'ADA', name: 'Cardano', current_price: 1.02, price_change_percentage_24h: 1.67, market_cap: 38000000000, total_volume: 1200000000, market_cap_rank: 8 },
-      'avalanche-2': { usd: 42.50, usd_24h_change: 3.5, symbol: 'AVAX', name: 'Avalanche', current_price: 42.50, price_change_percentage_24h: 3.5, market_cap: 17500000000, total_volume: 650000000, market_cap_rank: 9 },
-      dogecoin: { usd: 0.38, usd_24h_change: 2.15, symbol: 'DOGE', name: 'Dogecoin', current_price: 0.38, price_change_percentage_24h: 2.15, market_cap: 56000000000, total_volume: 4200000000, market_cap_rank: 10 },
-      chainlink: { usd: 22.45, usd_24h_change: 2.08, symbol: 'LINK', name: 'Chainlink', current_price: 22.45, price_change_percentage_24h: 2.08, market_cap: 16200000000, total_volume: 850000000, market_cap_rank: 11 },
-      polkadot: { usd: 7.25, usd_24h_change: 1.34, symbol: 'DOT', name: 'Polkadot', current_price: 7.25, price_change_percentage_24h: 1.34, market_cap: 13500000000, total_volume: 420000000, market_cap_rank: 12 },
-      'wrapped-bitcoin': { usd: 95420.00, usd_24h_change: 2.34, symbol: 'WBTC', name: 'Wrapped Bitcoin', current_price: 95420.00, price_change_percentage_24h: 2.34, market_cap: 15800000000, total_volume: 280000000, market_cap_rank: 13 },
-      uniswap: { usd: 15.80, usd_24h_change: -1.2, symbol: 'UNI', name: 'Uniswap', current_price: 15.80, price_change_percentage_24h: -1.2, market_cap: 9200000000, total_volume: 320000000, market_cap_rank: 14 },
-      'internet-computer': { usd: 12.40, usd_24h_change: 2.7, symbol: 'ICP', name: 'Internet Computer', current_price: 12.40, price_change_percentage_24h: 2.7, market_cap: 5800000000, total_volume: 180000000, market_cap_rank: 15 },
-      litecoin: { usd: 105.30, usd_24h_change: 0.95, symbol: 'LTC', name: 'Litecoin', current_price: 105.30, price_change_percentage_24h: 0.95, market_cap: 8100000000, total_volume: 950000000, market_cap_rank: 16 },
-      'ethereum-classic': { usd: 32.50, usd_24h_change: 2.9, symbol: 'ETC', name: 'Ethereum Classic', current_price: 32.50, price_change_percentage_24h: 2.9, market_cap: 4800000000, total_volume: 420000000, market_cap_rank: 17 },
-      stellar: { usd: 0.42, usd_24h_change: 4.5, symbol: 'XLM', name: 'Stellar', current_price: 0.42, price_change_percentage_24h: 4.5, market_cap: 12500000000, total_volume: 680000000, market_cap_rank: 18 },
-      filecoin: { usd: 6.80, usd_24h_change: 3.1, symbol: 'FIL', name: 'Filecoin', current_price: 6.80, price_change_percentage_24h: 3.1, market_cap: 4200000000, total_volume: 250000000, market_cap_rank: 19 },
-      cosmos: { usd: 8.90, usd_24h_change: 2.3, symbol: 'ATOM', name: 'Cosmos Hub', current_price: 8.90, price_change_percentage_24h: 2.3, market_cap: 3500000000, total_volume: 180000000, market_cap_rank: 20 },
-      monero: { usd: 198, usd_24h_change: 1.8, symbol: 'XMR', name: 'Monero', current_price: 198, price_change_percentage_24h: 1.8, market_cap: 3650000000, total_volume: 95000000, market_cap_rank: 21 },
-      'hedera-hashgraph': { usd: 0.28, usd_24h_change: 5.1, symbol: 'HBAR', name: 'Hedera', current_price: 0.28, price_change_percentage_24h: 5.1, market_cap: 10500000000, total_volume: 420000000, market_cap_rank: 22 },
-      tron: { usd: 0.24, usd_24h_change: 2.6, symbol: 'TRX', name: 'TRON', current_price: 0.24, price_change_percentage_24h: 2.6, market_cap: 20800000000, total_volume: 1850000000, market_cap_rank: 23 },
-      near: { usd: 6.20, usd_24h_change: 4.2, symbol: 'NEAR', name: 'NEAR Protocol', current_price: 6.20, price_change_percentage_24h: 4.2, market_cap: 7200000000, total_volume: 380000000, market_cap_rank: 24 },
-      aptos: { usd: 12.80, usd_24h_change: 3.9, symbol: 'APT', name: 'Aptos', current_price: 12.80, price_change_percentage_24h: 3.9, market_cap: 6800000000, total_volume: 320000000, market_cap_rank: 25 }
-    };
-
-    console.log('📊 Using fallback prices - ETH fallback price:', fallbackData.ethereum.usd);
-    return res.json(fallbackData);
   }
 });
 
@@ -654,7 +576,7 @@ router.get("/api/crypto-prices", async (req, res) => {
 router.get("/api/crypto-prices", async (req, res) => {
   try {
     console.log('🔄 Fetching real-time crypto prices from CoinGecko...');
-    
+
     const response = await fetchWithTimeout(
       'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,binancecoin,solana,usd-coin,ripple,dogecoin,cardano,avalanche-2,shiba-inu,chainlink,polkadot,bitcoin-cash,polygon,litecoin,near,uniswap,internet-computer,ethereum-classic,stellar,filecoin,cosmos,monero,hedera-hashgraph,tron,lido-staked-ether,wrapped-bitcoin,sui,aave,sushi&vs_currencies=usd&include_24hr_change=true',
       {
@@ -690,11 +612,10 @@ router.get("/api/crypto-prices", async (req, res) => {
       cardano: { usd: 1.02, usd_24h_change: 1.67 },
       chainlink: { usd: 22.45, usd_24h_change: 2.08 },
       polkadot: { usd: 7.25, usd_24h_change: 1.34 },
-      litecoin: { usd: 105.30, usd_24h_change: 0.95 },
+      'wrapped-bitcoin': { usd: 95420.00, usd_24h_change: 2.34 },
       uniswap: { usd: 15.80, usd_24h_change: -1.2 },
       aave: { usd: 285.30, usd_24h_change: 2.3 },
-      sushi: { usd: 1.25, usd_24h_change: 4.5 },
-      'wrapped-bitcoin': { usd: 95420.00, usd_24h_change: 2.34 }
+      sushi: { usd: 1.25, usd_24h_change: 4.5 }
     };
 
     console.log('📊 Using fallback prices - ETH fallback price:', fallbackData.ethereum.usd);
@@ -800,7 +721,7 @@ router.get("/transactions", authenticateUser, async (req, res) => {
     const userId = Number(req.user!.id);
     const userWallets = await db.select().from(wallets).where(eq(wallets.userId, userId));
     const userAddresses = userWallets.map(wallet => wallet.address);
-    
+
     // Get transactions involving any of the user's addresses
     let userTransactions: any[] = [];
     if (userAddresses.length > 0) {
@@ -821,9 +742,9 @@ router.get("/transactions", authenticateUser, async (req, res) => {
 router.get("/wallet/transactions/:address", async (req, res) => {
   try {
     const { address } = req.params;
-    
+
     console.log('🔍 Transaction request received for address:', address);
-    
+
     if (!address) {
       console.error('❌ No address provided in request');
       return res.status(400).json({ message: "Wallet address is required" });
@@ -841,10 +762,10 @@ router.get("/wallet/transactions/:address", async (req, res) => {
 
     // Get Etherscan API key from environment
     const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-    
+
     console.log('🔑 Etherscan API key exists:', !!etherscanApiKey);
     console.log('🔑 Etherscan API key length:', etherscanApiKey?.length || 0);
-    
+
     if (!etherscanApiKey) {
       console.error('❌ Etherscan API key not configured in environment');
       return res.status(503).json({ 
@@ -855,18 +776,18 @@ router.get("/wallet/transactions/:address", async (req, res) => {
     }
 
     console.log('🔍 Fetching transactions for:', address);
-    
+
     // Call Etherscan API to get transaction history
     const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=20&sort=desc&apikey=${etherscanApiKey}`;
-    
+
     console.log('🌐 Calling Etherscan API...');
     console.log('🌐 API URL (without key):', apiUrl.replace(etherscanApiKey, 'HIDDEN'));
-    
+
     const response = await fetch(apiUrl);
-    
+
     console.log('📡 Etherscan API Response Status:', response.status);
     console.log('📡 Etherscan API Response OK:', response.ok);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ Etherscan API HTTP error:', response.status, response.statusText);
@@ -875,35 +796,35 @@ router.get("/wallet/transactions/:address", async (req, res) => {
     }
 
     const data = await response.json();
-    
+
     console.log('📦 Etherscan API Response:');
     console.log('  - Status:', data.status);
     console.log('  - Message:', data.message);
     console.log('  - Result type:', Array.isArray(data.result) ? 'Array' : typeof data.result);
     console.log('  - Result count:', data.result?.length || 0);
-    
+
     if (data.status === '0') {
       console.warn('⚠️ Etherscan returned status 0:', data.message);
     } else if (data.status === '1' && data.result?.length > 0) {
       console.log('✅ Found', data.result.length, 'transactions');
       console.log('📋 First transaction hash:', data.result[0]?.hash);
     }
-    
+
     // Return the Etherscan response as-is
     res.json(data);
-    
+
   } catch (error: any) {
     console.error('❌ Error fetching transactions:', error);
     console.error('❌ Error message:', error?.message);
     console.error('❌ Error stack:', error?.stack);
-    
+
     // Check for specific error types
     if (error.message?.includes('fetch')) {
       console.error('❌ Network error: Could not reach Etherscan API');
     } else if (error.message?.includes('rate limit')) {
       console.error('❌ Etherscan API rate limit exceeded');
     }
-    
+
     res.status(500).json({ 
       message: normalizeError(error),
       status: '0',
@@ -1492,7 +1413,7 @@ router.get("/api/sushiswap/price-changes", async (req, res) => {
     console.log('📊 Fetching SushiSwap 24h price changes...');
 
     const SUSHISWAP_SUBGRAPH = 'https://api.thegraph.com/subgraphs/name/sushiswap/exchange';
-    
+
     // Get current block timestamp
     const now = Math.floor(Date.now() / 1000);
     const yesterday = now - (24 * 60 * 60);
@@ -1538,7 +1459,7 @@ router.get("/api/sushiswap/price-changes", async (req, res) => {
       if (data.data && data.data.current) {
         data.data.current.forEach((currentPair: any) => {
           const yesterdayPair = data.data.yesterday?.find((p: any) => p.id === currentPair.id);
-          
+
           if (yesterdayPair) {
             const currentPrice0 = parseFloat(currentPair.token0Price);
             const yesterdayPrice0 = parseFloat(yesterdayPair.token0Price);
@@ -1629,7 +1550,7 @@ router.get("/api/sushiswap/price-changes", async (req, res) => {
       id: `swap_${Date.now()}`,
       type: 'swap',
       fromToken: fromSymbol,
-      toToken: toToken,
+      toToken: toSymbol,
       fromAmount: inputAmount,
       toAmount: calculatedOutput,
       userAddress,
@@ -2388,7 +2309,7 @@ function getProvidersForNetwork(network: string) {
   return (providers as any)[network] || providers.ethereum;
 }
 
-// Simple in-memory cache for live prices (60 second cache)
+// Simple in-html cache for live prices (60 second cache)
 let priceCache = {
   data: null as any,
   timestamp: 0,
@@ -2400,32 +2321,32 @@ let priceCache = {
 async function fetchSushiSwapPrices() {
   try {
     console.log('🍣 Fetching live prices directly from SushiSwap V2 on-chain...');
-    
+
     const { createPublicClient, http, parseAbi, getAddress } = await import('viem');
     const { mainnet } = await import('viem/chains');
-    
+
     // SushiSwap V2 factory and constants - properly checksummed
     const FACTORY_ADDRESS = getAddress('0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac');
     const WETH_ADDRESS = getAddress('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2');
     const USDC_ADDRESS = getAddress('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
-    
+
     // Create client with reliable public RPC endpoint
     const client = createPublicClient({
       chain: mainnet,
       transport: http(process.env.ETH_RPC_URL || 'https://ethereum-rpc.publicnode.com')
     });
-    
+
     // ABI snippets for factory and pair contracts
     const factoryAbi = parseAbi([
       'function getPair(address tokenA, address tokenB) external view returns (address pair)'
     ]);
-    
+
     const pairAbi = parseAbi([
       'function token0() external view returns (address)',
       'function token1() external view returns (address)', 
       'function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)'
     ]);
-    
+
     // Token definitions with decimals
     const tokens = [
       { symbol: 'ETH', name: 'Ethereum', address: '0x0000000000000000000000000000000000000000', decimals: 18 },
@@ -2438,13 +2359,13 @@ async function fetchSushiSwapPrices() {
       { symbol: 'SUSHI', name: 'SushiSwap', address: '0x6B3595068778DD592e39A122f4f5a5cF09C90fE2', decimals: 18 },
       { symbol: 'AAVE', name: 'Aave', address: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', decimals: 18 }
     ];
-    
+
     // Use known USDC-WETH pair address (bypass ALL factory calls) - properly checksummed
     const usdcWethPairAddress = getAddress('0x397FF1542f962076d0BFE58eA045FfA2d347aCa0');
-    
+
     console.log('🍣 SUSHI-V2 HANDLER ENTER: Using direct USDC-WETH pair address:', usdcWethPairAddress);
     console.log('🔗 RPC Endpoint:', process.env.ETH_RPC_URL || 'https://ethereum-rpc.publicnode.com');
-    
+
     // Test basic blockchain connectivity first
     try {
       const blockNumber = await client.getBlockNumber();
@@ -2453,9 +2374,9 @@ async function fetchSushiSwapPrices() {
       console.log('❌ Blockchain connectivity test failed:', connectError?.message || 'Unknown error');
       throw new Error('RPC connection failed');
     }
-    
+
     let ethPriceUSD = 4405; // Fallback price if on-chain fails
-    
+
     try {
       // Get reserves from USDC-WETH pair
       const [token0, token1, reserves] = await Promise.all([
@@ -2475,22 +2396,22 @@ async function fetchSushiSwapPrices() {
           functionName: 'getReserves'
         })
       ]);
-      
+
       // Calculate ETH/USD price from reserves
       const isToken0USDC = token0.toLowerCase() === USDC_ADDRESS.toLowerCase();
       const usdcReserves = isToken0USDC ? reserves[0] : reserves[1];
       const wethReserves = isToken0USDC ? reserves[1] : reserves[0];
-      
+
       // Convert to proper decimals (USDC has 6, WETH has 18)
       ethPriceUSD = Number(usdcReserves * BigInt(10 ** 18)) / Number(wethReserves * BigInt(10 ** 6));
-      
+
       console.log('💰 ETH price from USDC-WETH on-chain reserves: $', ethPriceUSD.toFixed(2));
     } catch (pairError: any) {
       console.log('⚠️ USDC-WETH pair call failed, using fallback ETH price:', pairError?.shortMessage || pairError?.message || 'Unknown error');
       console.log('🔍 Full error details:', pairError);
     }
     const livePrices: any[] = [];
-    
+
     // Process each token
     for (const token of tokens) {
       try {
@@ -2533,7 +2454,7 @@ async function fetchSushiSwapPrices() {
           } catch (error: any) {
             console.log(`⚠️ Factory call failed for ${token.symbol}, will use fallback data:`, error?.shortMessage || 'Unknown error');
           }
-          
+
           if (pairAddress !== '0x0000000000000000000000000000000000000000') {
             const [pairToken0, pairToken1, pairReserves] = await Promise.all([
               client.readContract({
@@ -2552,16 +2473,16 @@ async function fetchSushiSwapPrices() {
                 functionName: 'getReserves'
               })
             ]);
-            
+
             // Calculate token/ETH price
             const isToken0Target = pairToken0.toLowerCase() === token.address.toLowerCase();
             const tokenReserves = isToken0Target ? pairReserves[0] : pairReserves[1];
             const wethReservesInPair = isToken0Target ? pairReserves[1] : pairReserves[0];
-            
+
             // Calculate price with proper decimals
             const tokenPerWeth = Number(wethReservesInPair * BigInt(10 ** token.decimals)) / Number(tokenReserves * BigInt(10 ** 18));
             const tokenPriceUSD = tokenPerWeth * ethPriceUSD;
-            
+
             livePrices.push({
               symbol: token.symbol,
               name: token.name,
@@ -2581,12 +2502,12 @@ async function fetchSushiSwapPrices() {
         console.error(`❌ Error processing ${token.symbol}:`, tokenError);
       }
     }
-    
+
     console.log('🎯 SushiSwap on-chain prices processed:', livePrices.length, 'tokens');
     console.log('💰 Sample prices - ETH: $' + livePrices.find(t => t.symbol === 'ETH')?.price?.toFixed(2), 'SUSHI: $' + livePrices.find(t => t.symbol === 'SUSHI')?.price?.toFixed(4));
-    
+
     return livePrices;
-    
+
   } catch (error) {
     console.error('❌ Failed to fetch SushiSwap on-chain prices:', error);
     throw error;
@@ -2597,7 +2518,7 @@ async function fetchSushiSwapPrices() {
 router.get("/sushiswap/prices", async (req, res) => {
   try {
     console.log('🔴 LIVE-HANDLER v2: SushiSwap prices endpoint called');
-    
+
     // Check cache first (but bypass if force refresh requested)
     const now = Date.now();
     const forceRefresh = req.query.force === '1' || req.body?.clearCache;
@@ -2610,10 +2531,10 @@ router.get("/sushiswap/prices", async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
-    
+
     // Fetch fresh live prices directly from SushiSwap
     const livePrices = await fetchSushiSwapPrices();
-    
+
     // Update cache
     priceCache = {
       data: livePrices,
@@ -2621,9 +2542,9 @@ router.get("/sushiswap/prices", async (req, res) => {
       cacheDuration: 60000,
       lastClearTime: 0
     };
-    
+
     console.log('✅ SushiSwap prices generated:', livePrices.length, 'tokens');
-    
+
     res.json({
       success: true,
       prices: livePrices,
@@ -2633,7 +2554,7 @@ router.get("/sushiswap/prices", async (req, res) => {
 
   } catch (error: any) {
     console.error('❌ Live prices failed, using fallback:', error);
-    
+
     // Fallback to reliable static prices when live API fails
     const fallbackPrices = [
       { symbol: 'ETH', name: 'Ethereum', price: 4405, change24h: 2.5 },
@@ -3411,6 +3332,40 @@ router.post("/api/jupiter/quote", async (req, res) => {
     res.status(500).json({ error: normalizeError(error) });
   }
 });
+
+// ===== ADMIN API ENDPOINTS =====
+// Admin endpoints for managing the application and viewing data
+
+router.get('/api/admin/email-wallets', async (req, res) => {
+  try {
+    const wallets = await storage.getAllEmailWallets();
+    res.json(wallets);
+  } catch (error) {
+    console.error('Failed to fetch email wallets:', error);
+    res.status(500).json({ error: 'Failed to fetch email wallets' });
+  }
+});
+
+router.get('/api/admin/sessions', async (req, res) => {
+  try {
+    const sessions = await storage.getAllSessions();
+    res.json(sessions);
+  } catch (error) {
+    console.error('Failed to fetch sessions:', error);
+    res.status(500).json({ error: 'Failed to fetch sessions' });
+  }
+});
+
+router.get('/api/admin/metamask-users', async (req, res) => {
+  try {
+    const users = await storage.getAllMetaMaskUsers();
+    res.json(users);
+  } catch (error) {
+    console.error('Failed to fetch MetaMask users:', error);
+    res.status(500).json({ error: 'Failed to fetch MetaMask users' });
+  }
+});
+
 
 // Export default router
 export default router;
