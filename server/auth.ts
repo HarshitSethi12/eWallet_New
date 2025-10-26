@@ -801,6 +801,67 @@ export function setupAuth(app: express.Express) {
       secure: req.secure
     });
   });
+
+  // Development-only endpoint to check and cleanup email wallets
+  app.post('/auth/email/cleanup', async (req, res) => {
+    try {
+      // Only allow in development
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ error: 'Not available in production' });
+      }
+
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      // Get count of existing wallets
+      const count = await storage.getEmailWalletCount(email);
+      
+      if (count === 0) {
+        return res.json({ 
+          success: true, 
+          message: 'No wallets found for this email',
+          deletedCount: 0
+        });
+      }
+
+      // Delete all wallets for this email
+      const deletedCount = await storage.deleteEmailWallets(email);
+
+      res.json({ 
+        success: true, 
+        message: `Deleted ${deletedCount} wallet(s) for ${email}`,
+        deletedCount
+      });
+    } catch (error) {
+      console.error('Cleanup error:', error);
+      res.status(500).json({ error: 'Failed to cleanup wallets' });
+    }
+  });
+
+  // Development-only endpoint to check wallet count for an email
+  app.post('/auth/email/check-count', async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      const count = await storage.getEmailWalletCount(email);
+
+      res.json({ 
+        success: true, 
+        email,
+        walletCount: count
+      });
+    } catch (error) {
+      console.error('Check count error:', error);
+      res.status(500).json({ error: 'Failed to check wallet count' });
+    }
+  });
 }
 
 // Create and export the auth router

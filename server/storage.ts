@@ -387,6 +387,41 @@ class Storage {
     }
   }
 
+  /**
+   * Deletes all wallets for an email address (admin/cleanup function)
+   */
+  async deleteEmailWallets(email: string): Promise<number> {
+    try {
+      console.log('🗑️ Deleting all wallets for email:', email);
+      
+      const result = await db.delete(emailWallets)
+        .where(eq(emailWallets.email, email))
+        .returning({ id: emailWallets.id });
+      
+      console.log('✅ Deleted', result.length, 'wallet(s) for email:', email);
+      return result.length;
+    } catch (error) {
+      console.error('❌ Error deleting email wallets:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets count of all wallets for an email (for debugging)
+   */
+  async getEmailWalletCount(email: string): Promise<number> {
+    try {
+      const wallets = await db.select()
+        .from(emailWallets)
+        .where(eq(emailWallets.email, email));
+      
+      return wallets.length;
+    } catch (error) {
+      console.error('❌ Error counting email wallets:', error);
+      return 0;
+    }
+  }
+
   // ===== DATABASE MAINTENANCE =====
 
   /**
