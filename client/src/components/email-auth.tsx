@@ -180,6 +180,7 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
   };
 
   const handleContinueToDashboard = () => {
+    console.log('✅ Redirecting to dashboard with wallet data:', walletData);
     onSuccess(walletData);
   };
 

@@ -29,7 +29,7 @@ import { HorizontalPriceTicker } from "@/components/horizontal-price-ticker";
 // React core library
 import React, { useState, useEffect } from "react";
 // Dialog components for modals
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 // Phone and Email authentication components
 import { PhoneAuth } from "@/components/phone-auth";
 import { EmailAuth } from "@/components/email-auth";
@@ -451,6 +451,19 @@ function WelcomePage() {
     }, 500);
   };
 
+  // ===== EMAIL LOGIN SUCCESS HANDLER =====
+  // Redirects to dashboard after successful email login
+  const handleEmailLoginSuccess = () => {
+    console.log('✅ Email logged in');
+    setShowEmailLogin(false);
+
+    // Small delay to ensure session is saved
+    setTimeout(() => {
+      setLocation('/dashboard');
+    }, 500);
+  };
+
+
   return (
     <div className="container max-w-4xl mx-auto px-3 sm:px-4 space-y-8 sm:space-y-12 md:space-y-16 py-6 sm:py-8 md:py-12">
       {/* Show authentication status if user is logged in */}
@@ -632,15 +645,27 @@ function WelcomePage() {
 
       {/* Email Wallet Creation Dialog */}
       <Dialog open={showEmailWalletCreation} onOpenChange={setShowEmailWalletCreation}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <EmailAuth onSuccess={handleWalletCreationSuccess} />
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Email Wallet</DialogTitle>
+            <DialogDescription>
+              Create a new self-custodial wallet using your email
+            </DialogDescription>
+          </DialogHeader>
+          <EmailAuth onSuccess={handleWalletCreationSuccess} isLoginMode={false} />
         </DialogContent>
       </Dialog>
 
       {/* Email Login Dialog */}
       <Dialog open={showEmailLogin} onOpenChange={setShowEmailLogin}>
-        <DialogContent className="sm:max-w-md">
-          <EmailAuth onSuccess={handleWalletCreationSuccess} isLoginMode={true} />
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Login with Email</DialogTitle>
+            <DialogDescription>
+              Login to your existing wallet using email verification
+            </DialogDescription>
+          </DialogHeader>
+          <EmailAuth onSuccess={handleEmailLoginSuccess} isLoginMode={true} />
         </DialogContent>
       </Dialog>
     </div>
