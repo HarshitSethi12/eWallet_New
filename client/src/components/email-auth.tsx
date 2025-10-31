@@ -305,7 +305,7 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
           </p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
+          <form onSubmit={handleVerifyOtp} className="space-y-6">
             <div className="flex justify-center">
               <InputOTP
                 maxLength={6}
@@ -323,10 +323,10 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
                 </InputOTPGroup>
               </InputOTP>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3"
                 disabled={verifyOtpMutation.isPending || otp.length !== 6}
               >
                 {verifyOtpMutation.isPending
@@ -348,11 +348,11 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
               <Button
                 type="button"
                 variant="link"
-                className="text-sm"
+                className="text-sm text-blue-600"
                 onClick={() => sendOtpMutation.mutate(email)}
                 disabled={sendOtpMutation.isPending}
               >
-                Resend Code
+                {sendOtpMutation.isPending ? 'Sending...' : 'Resend Code'}
               </Button>
             </div>
           </form>
