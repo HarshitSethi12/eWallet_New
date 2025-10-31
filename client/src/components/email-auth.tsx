@@ -181,7 +181,17 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
 
   const handleContinueToDashboard = () => {
     console.log('✅ Redirecting to dashboard with wallet data:', walletData);
-    onSuccess(walletData);
+    
+    // Ensure we pass the complete wallet object with session data
+    const completeWalletData = {
+      ...walletData,
+      email: email,
+      provider: 'email',
+      isNewWallet: true
+    };
+    
+    console.log('📦 Complete wallet data being passed:', completeWalletData);
+    onSuccess(completeWalletData);
   };
 
   // Email Step

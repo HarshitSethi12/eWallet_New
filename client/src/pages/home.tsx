@@ -442,13 +442,15 @@ function WelcomePage() {
   // ===== WALLET CREATION SUCCESS HANDLER =====
   // Redirects to dashboard after successful wallet creation
   const handleWalletCreationSuccess = (walletData: any) => {
-    console.log('✅ Wallet created:', walletData);
+    console.log('✅ Wallet created successfully:', walletData);
+    console.log('📧 Email:', walletData.email);
+    console.log('🏦 Address:', walletData.address);
+    
     setShowEmailWalletCreation(false);
 
-    // Small delay to ensure session is saved
-    setTimeout(() => {
-      setLocation('/dashboard');
-    }, 500);
+    // Force a page reload to ensure session is loaded
+    console.log('🔄 Redirecting to dashboard...');
+    window.location.href = '/dashboard';
   };
 
   // ===== EMAIL LOGIN SUCCESS HANDLER =====

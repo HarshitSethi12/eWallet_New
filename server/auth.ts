@@ -16,6 +16,9 @@ declare module 'express-session' {
     sessionDbId?: number;
     phoneNumber?: string;
     isPhoneVerified?: boolean;
+    email?: string; // Add email to session data
+    walletId?: string; // Add walletId to session data
+    isEmailVerified?: boolean; // Add isEmailVerified to session data
   }
 }
 
@@ -59,12 +62,12 @@ export function setupAuth(app: express.Express) {
       if (!req.session) {
         req.session = {} as any;
       }
-      
+
       // Ensure user property exists
       if (req.session.user === undefined) {
         req.session.user = null;
       }
-      
+
       // Debug middleware to log session state
       console.log('🔍 Session Debug:', {
         sessionID: req.sessionID || 'no-session-id',
@@ -73,7 +76,7 @@ export function setupAuth(app: express.Express) {
         cookieSecure: req.session.cookie?.secure || false,
         userAgent: req.get('User-Agent')?.substring(0, 50) || 'no-user-agent'
       });
-      
+
       next();
     } catch (error) {
       console.error('Session initialization error:', error);
@@ -100,7 +103,7 @@ export function setupAuth(app: express.Express) {
       // For Replit, always use https regardless of environment
       const baseUrl = `https://${host}`;
       const redirectUri = `${baseUrl}/auth/callback`;
-      
+
       // Validate that we have the required OAuth credentials
       if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
         console.error('Missing Google OAuth credentials');
@@ -127,7 +130,7 @@ export function setupAuth(app: express.Express) {
       params.set('redirect_uri', redirectUri);
       params.set('response_type', 'code');
       params.set('scope', 'openid email profile');
-      
+
       const url = `${oauthBaseUrl}?${params.toString()}`;
 
       console.log('Generated OAuth URL:', url);
@@ -277,14 +280,14 @@ export function setupAuth(app: express.Express) {
   app.post('/auth/email/login', async (req, res) => {
     try {
       const { email, otp, walletId } = req.body;
-      
+
       if (!email || !otp) {
         return res.status(400).json({ error: 'Email and OTP are required' });
       }
 
       // Get stored OTP from cache
       const storedOtp = otpCache.get(email);
-      
+
       if (!storedOtp) {
         return res.status(400).json({ error: 'OTP expired or invalid' });
       }
@@ -298,7 +301,7 @@ export function setupAuth(app: express.Express) {
 
       // Retrieve all wallets for this email
       const wallets = await storage.getEmailWallets(email);
-      
+
       if (wallets.length === 0) {
         return res.status(404).json({ 
           error: 'No wallets found for this email. Please create a new wallet first.',
@@ -309,14 +312,14 @@ export function setupAuth(app: express.Express) {
       // If walletId is provided, login to that specific wallet
       if (walletId) {
         const walletData = await storage.getEmailWalletById(email, walletId);
-        
+
         if (!walletData) {
           return res.status(404).json({ error: 'Wallet not found' });
         }
 
         // Create user session with selected wallet
         const emailUser = {
-          id: `email_${email}_${walletId}`,
+          id: `email_${email}_${walletData.id}`,
           email: email,
           name: email.split('@')[0],
           provider: 'email',
@@ -373,7 +376,6 @@ export function setupAuth(app: express.Express) {
       res.status(500).json({ error: 'Failed to login' });
     }
   });
-
 
       // Always use https for production deployment
       const baseUrl = process.env.NODE_ENV === 'production' 
@@ -462,7 +464,7 @@ export function setupAuth(app: express.Express) {
       if (!req.session) {
         return res.status(401).json({ error: 'No session found' });
       }
-      
+
       // Check if user exists in session
       if (req.session.user) {
         res.json(req.session.user);
@@ -479,7 +481,7 @@ export function setupAuth(app: express.Express) {
   app.post('/auth/email/send-otp', async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ error: 'Email is required' });
       }
@@ -492,10 +494,10 @@ export function setupAuth(app: express.Express) {
 
       // Generate 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      
+
       // Store OTP in cache with email as key
       otpCache.set(email, otp);
-      
+
       console.log(`Generated OTP for ${email}: ${otp}`);
 
       const emailHtml = `
@@ -517,7 +519,7 @@ export function setupAuth(app: express.Express) {
             subject: 'Your BitWallet Verification Code',
             html: emailHtml,
           });
-          
+
           console.log(`✅ Email sent via Resend to ${email}`);
           return res.json({ 
             success: true, 
@@ -540,7 +542,7 @@ export function setupAuth(app: express.Express) {
             text: `Your verification code is: ${otp}. This code will expire in 5 minutes.`,
             html: emailHtml
           });
-          
+
           console.log(`✅ Email sent via SendGrid to ${email}`);
           return res.json({ 
             success: true, 
@@ -569,14 +571,14 @@ export function setupAuth(app: express.Express) {
   app.post('/auth/email/verify-otp', async (req, res) => {
     try {
       const { email, otp } = req.body;
-      
+
       if (!email || !otp) {
         return res.status(400).json({ error: 'Email and OTP are required' });
       }
 
       // Get stored OTP from cache
       const storedOtp = otpCache.get(email);
-      
+
       if (!storedOtp) {
         return res.status(400).json({ error: 'OTP expired or invalid' });
       }
@@ -591,7 +593,7 @@ export function setupAuth(app: express.Express) {
       // Always generate a new Ethereum wallet
       const ethers = await import('ethers');
       const wallet = ethers.Wallet.createRandom();
-      
+
       // Store new wallet in database (encrypted)
       const result = await storage.createEmailWallet({
         email: email,
@@ -651,7 +653,7 @@ export function setupAuth(app: express.Express) {
   app.post('/auth/phone/send-otp', async (req, res) => {
     try {
       const { phoneNumber } = req.body;
-      
+
       if (!phoneNumber) {
         return res.status(400).json({ error: 'Phone number is required' });
       }
@@ -664,10 +666,10 @@ export function setupAuth(app: express.Express) {
 
       // Generate 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      
+
       // Store OTP in cache with phone number as key
       otpCache.set(phoneNumber, otp);
-      
+
       console.log(`Generated OTP for ${phoneNumber}: ${otp}`);
 
       // Send OTP via SMS
@@ -678,7 +680,7 @@ export function setupAuth(app: express.Express) {
             from: process.env.TWILIO_PHONE_NUMBER,
             to: phoneNumber
           });
-          
+
           res.json({ 
             success: true, 
             message: 'OTP sent successfully',
@@ -711,14 +713,14 @@ export function setupAuth(app: express.Express) {
   app.post('/auth/phone/verify-otp', async (req, res) => {
     try {
       const { phoneNumber, otp } = req.body;
-      
+
       if (!phoneNumber || !otp) {
         return res.status(400).json({ error: 'Phone number and OTP are required' });
       }
 
       // Get stored OTP from cache
       const storedOtp = otpCache.get(phoneNumber);
-      
+
       if (!storedOtp) {
         return res.status(400).json({ error: 'OTP expired or invalid' });
       }
@@ -826,14 +828,14 @@ export function setupAuth(app: express.Express) {
       }
 
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ error: 'Email is required' });
       }
 
       // Get count of existing wallets
       const count = await storage.getEmailWalletCount(email);
-      
+
       if (count === 0) {
         return res.json({ 
           success: true, 
@@ -860,7 +862,7 @@ export function setupAuth(app: express.Express) {
   app.post('/auth/email/check-count', async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ error: 'Email is required' });
       }
@@ -955,7 +957,7 @@ authRouter.post('/metamask', async (req, res) => {
     // Set JSON headers explicitly and early
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'no-cache');
-    
+
     console.log('🦊 MetaMask authentication request received');
     console.log('🦊 Request body keys:', Object.keys(req.body || {}));
     console.log('🦊 Content-Type:', req.get('Content-Type'));
@@ -1064,7 +1066,7 @@ authRouter.post('/metamask', async (req, res) => {
 
   } catch (error) {
     console.error('❌ MetaMask authentication error:', error);
-    
+
     // Ensure we always return JSON even on unexpected errors
     return sendJsonError(500, 'MetaMask authentication failed');
   }
