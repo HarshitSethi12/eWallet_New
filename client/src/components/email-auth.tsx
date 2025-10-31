@@ -478,20 +478,20 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-2 pt-4">
+        <div className="space-y-3 pt-6 border-t border-gray-200 mt-6">
+          <Button
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 text-base"
+            onClick={handleContinueToDashboard}
+          >
+            Go to Dashboard
+          </Button>
           <Button
             className="w-full"
+            variant="outline"
             onClick={handleDownloadBackup}
           >
             <Download className="h-4 w-4 mr-2" />
             Download Backup File
-          </Button>
-          <Button
-            className="w-full"
-            variant="default"
-            onClick={handleContinueToDashboard}
-          >
-            Continue to Dashboard
           </Button>
         </div>
       </CardContent>
