@@ -936,6 +936,51 @@ export function setupAuth(app: express.Express) {
       res.status(500).json({ error: 'Failed to switch wallet' });
     }
   });
+
+  // Delete a specific wallet
+  app.delete('/auth/email/delete-wallet/:walletId', async (req, res) => {
+    try {
+      const { walletId } = req.params;
+
+      if (!req.session?.user?.email) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      if (!walletId) {
+        return res.status(400).json({ error: 'Wallet ID is required' });
+      }
+
+      const email = req.session.user.email;
+      const walletIdNum = parseInt(walletId, 10);
+
+      // Check if user has more than one wallet
+      const walletCount = await storage.getEmailWalletCount(email);
+
+      if (walletCount <= 1) {
+        return res.status(400).json({ error: 'Cannot delete your only wallet. You must have at least one wallet.' });
+      }
+
+      // Check if trying to delete the currently active wallet
+      if (req.session.user.walletId === walletIdNum) {
+        return res.status(400).json({ error: 'Cannot delete the currently active wallet. Please switch to a different wallet first.' });
+      }
+
+      // Delete the wallet
+      const deleted = await storage.deleteEmailWalletById(email, walletIdNum);
+
+      if (!deleted) {
+        return res.status(404).json({ error: 'Wallet not found or you do not have permission to delete it' });
+      }
+
+      res.json({
+        success: true,
+        message: 'Wallet deleted successfully'
+      });
+    } catch (error) {
+      console.error('Delete wallet error:', error);
+      res.status(500).json({ error: 'Failed to delete wallet' });
+    }
+  });
 }
 
 // Create and export the auth router

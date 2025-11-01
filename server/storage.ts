@@ -428,6 +428,41 @@ class Storage {
     }
   }
 
+  /**
+   * Deletes a specific wallet by ID for an email address
+   * Only allows deletion if the user owns the wallet (email matches)
+   */
+  async deleteEmailWalletById(email: string, walletId: number): Promise<boolean> {
+    try {
+      console.log('🗑️ Deleting wallet ID:', walletId, 'for email:', email);
+
+      // First verify the wallet belongs to this email
+      const wallets = await db.select()
+        .from(emailWallets)
+        .where(eq(emailWallets.id, walletId));
+
+      if (wallets.length === 0 || wallets[0].email !== email) {
+        console.log('❌ Wallet not found or email mismatch');
+        return false;
+      }
+
+      // Delete the wallet
+      const result = await db.delete(emailWallets)
+        .where(eq(emailWallets.id, walletId))
+        .returning({ id: emailWallets.id });
+
+      if (result.length > 0) {
+        console.log('✅ Wallet deleted successfully:', walletId);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('❌ Error deleting email wallet:', error);
+      throw error;
+    }
+  }
+
   // ===== ADMIN GET METHODS =====
   // Get all email wallets
   async getAllEmailWallets() {
