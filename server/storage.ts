@@ -463,6 +463,50 @@ class Storage {
     }
   }
 
+  /**
+   * ADMIN ONLY: Force delete any wallet by ID without restrictions
+   * This bypasses all safety checks (email verification, active wallet check, etc.)
+   */
+  async adminForceDeleteWallet(walletId: number): Promise<{ success: boolean; wallet?: any; error?: string }> {
+    try {
+      console.log('⚠️ ADMIN: Force deleting wallet ID:', walletId);
+
+      // Get wallet info before deletion
+      const wallets = await db.select()
+        .from(emailWallets)
+        .where(eq(emailWallets.id, walletId));
+
+      if (wallets.length === 0) {
+        return { success: false, error: 'Wallet not found' };
+      }
+
+      const wallet = wallets[0];
+
+      // Delete the wallet
+      const result = await db.delete(emailWallets)
+        .where(eq(emailWallets.id, walletId))
+        .returning({ id: emailWallets.id });
+
+      if (result.length > 0) {
+        console.log('✅ ADMIN: Wallet deleted successfully:', walletId);
+        return {
+          success: true,
+          wallet: {
+            id: wallet.id,
+            email: wallet.email,
+            address: wallet.walletAddress,
+            createdAt: wallet.createdAt,
+          }
+        };
+      }
+
+      return { success: false, error: 'Delete operation failed' };
+    } catch (error) {
+      console.error('❌ ADMIN: Error force deleting wallet:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // ===== ADMIN GET METHODS =====
   // Get all email wallets
   async getAllEmailWallets() {

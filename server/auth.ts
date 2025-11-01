@@ -880,6 +880,68 @@ export function setupAuth(app: express.Express) {
     }
   });
 
+  // Admin endpoint to delete any wallet by ID (bypasses all restrictions)
+  app.delete('/auth/admin/delete-wallet/:walletId', async (req, res) => {
+    try {
+      // Only allow in development or with admin authentication
+      if (process.env.NODE_ENV === 'production') {
+        // In production, you should add proper admin authentication here
+        // For now, we'll restrict it to development only
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      const { walletId } = req.params;
+
+      if (!walletId) {
+        return res.status(400).json({ error: 'Wallet ID is required' });
+      }
+
+      const walletIdNum = parseInt(walletId, 10);
+
+      if (isNaN(walletIdNum)) {
+        return res.status(400).json({ error: 'Invalid wallet ID' });
+      }
+
+      // Get wallet info before deletion
+      const { db } = await import('./db');
+      const { emailWallets } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+
+      const wallets = await db.select()
+        .from(emailWallets)
+        .where(eq(emailWallets.id, walletIdNum));
+
+      if (wallets.length === 0) {
+        return res.status(404).json({ error: 'Wallet not found' });
+      }
+
+      const wallet = wallets[0];
+
+      // Delete the wallet directly from database (bypassing storage restrictions)
+      const result = await db.delete(emailWallets)
+        .where(eq(emailWallets.id, walletIdNum))
+        .returning({ id: emailWallets.id });
+
+      if (result.length > 0) {
+        console.log('✅ Admin deleted wallet:', walletIdNum, 'for email:', wallet.email);
+        return res.json({
+          success: true,
+          message: 'Wallet deleted successfully',
+          deletedWallet: {
+            id: wallet.id,
+            email: wallet.email,
+            address: wallet.walletAddress,
+          }
+        });
+      }
+
+      return res.status(500).json({ error: 'Failed to delete wallet' });
+    } catch (error) {
+      console.error('Admin delete wallet error:', error);
+      res.status(500).json({ error: 'Failed to delete wallet' });
+    }
+  });
+
   // Get all wallets for current user's email
   app.get('/auth/email/wallets', async (req, res) => {
     try {
