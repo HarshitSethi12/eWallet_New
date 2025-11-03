@@ -724,24 +724,32 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-3">
                   {user?.provider === 'metamask' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-green-700 font-medium">
-                        {realBalances.length > 0 ? 'Real Balance' : 'MetaMask Connected'}
+                    <>
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-green-700 font-medium">
+                          {realBalances.length > 0 ? 'Real Balance' : 'MetaMask Connected'}
+                        </span>
+                      </div>
+                      {user.walletAddress && (
+                        <span className="text-sm text-gray-600 font-mono">
+                          {user.walletAddress.slice(0, 6)}...{user.walletAddress.slice(-4)}
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {user?.provider === 'email' && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm text-blue-700 font-medium">
+                        Self-Custodial Wallet
                       </span>
                     </div>
-                  )}
-                  {user?.provider === 'metamask' && user.walletAddress && (
-                    <span className="text-sm text-gray-600 font-mono">
-                      {user.walletAddress.slice(0, 6)}...{user.walletAddress.slice(-4)}
-                    </span>
                   )}
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold">${totalPortfolioValue.toFixed(2)}</p>
-                  <p className="text-sm text-gray-500">
-                    {realBalances.length > 0 ? 'Real' : 'Mock'} Portfolio Value
-                  </p>
+                  <p className="text-sm text-gray-500">Portfolio Value</p>
                 </div>
               </div>
             </CardHeader>
@@ -802,9 +810,9 @@ export default function Dashboard() {
                   )) : (
                     <div className="text-center py-8">
                       <p className="text-sm text-gray-500">
-                        {user?.provider === 'metamask' && user?.walletAddress 
+                        {user?.provider === 'metamask' 
                           ? 'No tokens found in your wallet' 
-                          : 'Connect MetaMask to view your holdings'}
+                          : 'Your wallet is empty. Add funds to get started!'}
                       </p>
                     </div>
                   )}
@@ -863,9 +871,9 @@ export default function Dashboard() {
                     <div className="text-center">
                       <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm text-gray-500">
-                        {user?.provider === 'metamask' && user?.walletAddress 
+                        {user?.provider === 'metamask' 
                           ? 'No data to display' 
-                          : 'Connect MetaMask to view performance'}
+                          : 'Add funds to your wallet to view performance'}
                       </p>
                     </div>
                   </div>
@@ -982,9 +990,9 @@ export default function Dashboard() {
                     <div className="text-center">
                       <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm text-gray-500">
-                        {user?.provider === 'metamask' && user?.walletAddress 
+                        {user?.provider === 'metamask' 
                           ? 'No assets to display' 
-                          : 'Connect MetaMask to view allocation'}
+                          : 'Add funds to your wallet to view allocation'}
                       </p>
                     </div>
                   </div>
