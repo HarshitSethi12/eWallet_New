@@ -74,6 +74,7 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ email: emailAddress, otp: otpCode, walletId }),
       });
 
@@ -94,12 +95,23 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
           description: `Found ${data.wallets.length} wallet(s) for this email`,
         });
       } else if (isLoginMode && data.loginComplete) {
-        // Wallet selected - redirect to dashboard
+        // Wallet selected - login complete, redirect to dashboard
+        console.log('✅ Login complete, redirecting to dashboard with data:', data);
         toast({
           title: 'Success!',
           description: 'Login successful',
         });
-        onSuccess(data);
+        
+        // Pass the complete data to parent component which will redirect to dashboard
+        const loginData = {
+          ...data.user,
+          wallet: data.wallet,
+          provider: 'email',
+          isNewWallet: false
+        };
+        
+        console.log('📦 Passing login data to parent:', loginData);
+        onSuccess(loginData);
       } else {
         // Creation mode - show wallet details
         setWalletData(data.wallet);
@@ -270,7 +282,7 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
           </div>
           <div className="space-y-2 mt-4">
             <Button
-              className="w-full"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3"
               disabled={!selectedWalletId || verifyOtpMutation.isPending}
               onClick={() => {
                 if (selectedWalletId) {
@@ -282,7 +294,7 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
                 }
               }}
             >
-              {verifyOtpMutation.isPending ? 'Logging in...' : 'Login to Selected Wallet'}
+              {verifyOtpMutation.isPending ? 'Logging in...' : 'Go to Dashboard'}
             </Button>
             <Button
               type="button"
