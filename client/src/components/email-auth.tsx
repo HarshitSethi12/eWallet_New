@@ -69,21 +69,45 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
   const verifyOtpMutation = useMutation({
     mutationFn: async ({ emailAddress, otpCode, walletId }: { emailAddress: string; otpCode: string; walletId?: number }) => {
       const endpoint = isLoginMode ? '/auth/email/login' : '/auth/email/verify-otp';
+      
+      console.log('🔐 Verifying OTP:', { endpoint, isLoginMode, hasWalletId: !!walletId });
+      
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         credentials: 'include',
         body: JSON.stringify({ email: emailAddress, otp: otpCode, walletId }),
       });
 
+      console.log('📡 Response status:', response.status, response.statusText);
+      console.log('📡 Response headers:', {
+        contentType: response.headers.get('content-type'),
+      });
+
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('❌ Non-JSON response received:', textResponse.substring(0, 200));
+        throw new Error('Server error: Expected JSON response but received HTML. Please try again.');
+      }
+
       if (!response.ok) {
-        const error = await response.json();
+        let error;
+        try {
+          error = await response.json();
+        } catch (parseError) {
+          throw new Error('Failed to verify OTP. Please try again.');
+        }
         throw new Error(error.error || 'Failed to verify OTP');
       }
 
-      return response.json();
+      const data = await response.json();
+      console.log('✅ OTP verification response:', data);
+      return data;
     },
     onSuccess: (data) => {
       if (isLoginMode && data.requiresWalletSelection) {

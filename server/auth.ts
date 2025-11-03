@@ -278,10 +278,16 @@ export function setupAuth(app: express.Express) {
 
   // Email login - retrieve wallet list for selection
   app.post('/auth/email/login', async (req, res) => {
+    // Ensure JSON response headers
+    res.setHeader('Content-Type', 'application/json');
+    
     try {
       const { email, otp, walletId } = req.body;
 
+      console.log('📧 Email login request:', { email: email ? 'provided' : 'missing', otp: otp ? 'provided' : 'missing', walletId });
+
       if (!email || !otp) {
+        console.error('❌ Missing email or OTP');
         return res.status(400).json({ error: 'Email and OTP are required' });
       }
 
@@ -289,12 +295,16 @@ export function setupAuth(app: express.Express) {
       const storedOtp = otpCache.get(email);
 
       if (!storedOtp) {
+        console.error('❌ OTP not found or expired for:', email);
         return res.status(400).json({ error: 'OTP expired or invalid' });
       }
 
       if (storedOtp !== otp) {
+        console.error('❌ Invalid OTP for:', email);
         return res.status(400).json({ error: 'Invalid OTP' });
       }
+
+      console.log('✅ OTP verified for:', email);
 
       // OTP is valid, remove from cache
       otpCache.del(email);
@@ -302,7 +312,10 @@ export function setupAuth(app: express.Express) {
       // Retrieve all wallets for this email
       const wallets = await storage.getEmailWallets(email);
 
+      console.log('📊 Found', wallets.length, 'wallets for:', email);
+
       if (wallets.length === 0) {
+        console.warn('⚠️ No wallets found for:', email);
         return res.status(404).json({ 
           error: 'No wallets found for this email. Please create a new wallet first.',
           shouldCreateWallet: true
@@ -311,9 +324,12 @@ export function setupAuth(app: express.Express) {
 
       // If walletId is provided, login to that specific wallet
       if (walletId) {
+        console.log('🔐 Attempting login to wallet ID:', walletId);
+        
         const walletData = await storage.getEmailWalletById(email, walletId);
 
         if (!walletData) {
+          console.error('❌ Wallet not found:', walletId);
           return res.status(404).json({ error: 'Wallet not found' });
         }
 
@@ -333,6 +349,8 @@ export function setupAuth(app: express.Express) {
         req.session.walletId = walletId;
         req.session.isEmailVerified = true;
 
+        console.log('✅ Session created for user:', emailUser.email);
+
         // Track login session
         const sessionData = {
           userId: null,
@@ -347,8 +365,9 @@ export function setupAuth(app: express.Express) {
         try {
           const sessionDbId = await storage.createUserSession(sessionData);
           req.session.sessionDbId = sessionDbId;
+          console.log('✅ Database session created:', sessionDbId);
         } catch (dbError) {
-          console.warn('Warning: Could not create database session:', dbError);
+          console.warn('⚠️ Warning: Could not create database session:', dbError);
         }
 
         return res.json({ 
@@ -365,6 +384,7 @@ export function setupAuth(app: express.Express) {
       }
 
       // If no walletId, return wallet list for user to choose
+      console.log('📋 Returning wallet list for selection');
       res.json({ 
         success: true, 
         message: 'OTP verified - please select a wallet',
@@ -372,8 +392,11 @@ export function setupAuth(app: express.Express) {
         requiresWalletSelection: true
       });
     } catch (error) {
-      console.error('Email login error:', error);
-      res.status(500).json({ error: 'Failed to login' });
+      console.error('❌ Email login error:', error);
+      res.status(500).json({ 
+        error: 'Failed to login',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
