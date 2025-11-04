@@ -69,6 +69,26 @@ app.use((req, res, next) => {
   next();
 });
 
+// Global error handler for auth endpoints to ensure JSON responses
+app.use('/auth/*', (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('❌ Auth endpoint error:', err);
+  
+  // Ensure JSON response
+  res.setHeader('Content-Type', 'application/json');
+  
+  // If headers already sent, delegate to default error handler
+  if (res.headersSent) {
+    return next(err);
+  }
+  
+  // Return JSON error
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.message || 'Internal server error',
+    details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

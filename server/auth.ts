@@ -278,13 +278,14 @@ export function setupAuth(app: express.Express) {
 
   // Email login - retrieve wallet list for selection
   app.post('/auth/email/login', async (req, res, next) => {
+    // Set JSON headers at the VERY FIRST LINE before anything else
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache');
+    
     // Wrap everything in try-catch to ensure we always return JSON
     try {
       console.log('📧 Email login endpoint hit');
-      
-      // Set JSON headers at the very start, before any processing
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Cache-Control', 'no-cache');
+      console.log('📧 Request body:', JSON.stringify(req.body));
       
       const { email, otp, walletId } = req.body;
 
@@ -327,8 +328,20 @@ export function setupAuth(app: express.Express) {
       // OTP is valid, remove from cache
       otpCache.del(email);
 
+      console.log('🔍 Retrieving wallets for email:', email);
+      
       // Retrieve all wallets for this email
-      const wallets = await storage.getEmailWallets(email);
+      let wallets;
+      try {
+        wallets = await storage.getEmailWallets(email);
+      } catch (storageError) {
+        console.error('❌ Error retrieving wallets:', storageError);
+        return res.status(500).json({ 
+          success: false,
+          error: 'Failed to retrieve wallets. Please try again.',
+          details: storageError instanceof Error ? storageError.message : 'Unknown error'
+        });
+      }
 
       console.log('📊 Found', wallets.length, 'wallets for:', email);
 
@@ -345,7 +358,17 @@ export function setupAuth(app: express.Express) {
       if (walletId) {
         console.log('🔐 Attempting login to wallet ID:', walletId);
         
-        const walletData = await storage.getEmailWalletById(email, walletId);
+        let walletData;
+        try {
+          walletData = await storage.getEmailWalletById(email, walletId);
+        } catch (walletError) {
+          console.error('❌ Error retrieving wallet by ID:', walletError);
+          return res.status(500).json({ 
+            success: false,
+            error: 'Failed to retrieve wallet. Please try again.',
+            details: walletError instanceof Error ? walletError.message : 'Unknown error'
+          });
+        }
 
         if (!walletData) {
           console.error('❌ Wallet not found:', walletId);
