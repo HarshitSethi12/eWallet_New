@@ -278,11 +278,11 @@ export function setupAuth(app: express.Express) {
 
   // Email login - retrieve wallet list for selection
   app.post('/auth/email/login', async (req, res) => {
+    // Set JSON headers immediately before any other operations
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache');
+    
     try {
-      // Ensure JSON response headers at the very start
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Cache-Control', 'no-cache');
-      
       const { email, otp, walletId } = req.body;
 
       console.log('📧 Email login request:', { email: email ? 'provided' : 'missing', otp: otp ? 'provided' : 'missing', walletId });
@@ -408,7 +408,6 @@ export function setupAuth(app: express.Express) {
     } catch (error) {
       console.error('❌ Email login error:', error);
       // Ensure JSON error response even on exceptions
-      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({ 
         error: 'Failed to login',
         details: error instanceof Error ? error.message : 'Unknown error'
