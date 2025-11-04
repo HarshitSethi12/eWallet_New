@@ -278,10 +278,11 @@ export function setupAuth(app: express.Express) {
 
   // Email login - retrieve wallet list for selection
   app.post('/auth/email/login', async (req, res) => {
-    // Ensure JSON response headers
-    res.setHeader('Content-Type', 'application/json');
-    
     try {
+      // Ensure JSON response headers at the very start
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-cache');
+      
       const { email, otp, walletId } = req.body;
 
       console.log('📧 Email login request:', { email: email ? 'provided' : 'missing', otp: otp ? 'provided' : 'missing', walletId });
@@ -344,12 +345,24 @@ export function setupAuth(app: express.Express) {
           picture: null
         };
 
+        // Save session synchronously to ensure it's persisted before responding
         req.session.user = emailUser;
         req.session.email = email;
         req.session.walletId = walletId;
         req.session.isEmailVerified = true;
 
-        console.log('✅ Session created for user:', emailUser.email);
+        // Wait for session to be saved
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) {
+              console.error('❌ Session save error:', err);
+              reject(err);
+            } else {
+              console.log('✅ Session saved successfully for:', emailUser.email);
+              resolve();
+            }
+          });
+        });
 
         // Track login session
         const sessionData = {
@@ -370,7 +383,8 @@ export function setupAuth(app: express.Express) {
           console.warn('⚠️ Warning: Could not create database session:', dbError);
         }
 
-        return res.json({ 
+        console.log('✅ Sending login success response');
+        return res.status(200).json({ 
           success: true, 
           message: 'Login successful',
           user: emailUser,
@@ -385,7 +399,7 @@ export function setupAuth(app: express.Express) {
 
       // If no walletId, return wallet list for user to choose
       console.log('📋 Returning wallet list for selection');
-      res.json({ 
+      return res.status(200).json({ 
         success: true, 
         message: 'OTP verified - please select a wallet',
         wallets: wallets,
@@ -393,7 +407,9 @@ export function setupAuth(app: express.Express) {
       });
     } catch (error) {
       console.error('❌ Email login error:', error);
-      res.status(500).json({ 
+      // Ensure JSON error response even on exceptions
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(500).json({ 
         error: 'Failed to login',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
