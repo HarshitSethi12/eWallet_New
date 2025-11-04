@@ -277,23 +277,30 @@ export function setupAuth(app: express.Express) {
 
 
   // Email login - retrieve wallet list for selection
-  app.post('/auth/email/login', async (req, res) => {
+  app.post('/auth/email/login', async (req, res, next) => {
+    // Wrap everything in try-catch to ensure we always return JSON
     try {
       console.log('📧 Email login endpoint hit');
-      console.log('📧 Request headers:', req.headers);
-      console.log('📧 Request body:', req.body);
       
-      // Set JSON headers immediately at the start
+      // Set JSON headers at the very start, before any processing
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Cache-Control', 'no-cache');
       
       const { email, otp, walletId } = req.body;
 
-      console.log('📧 Email login request:', { email: email ? 'provided' : 'missing', otp: otp ? 'provided' : 'missing', walletId });
+      console.log('📧 Email login request:', { 
+        email: email ? 'provided' : 'missing', 
+        otp: otp ? 'provided' : 'missing', 
+        walletId: walletId || 'not provided' 
+      });
 
+      // Validate required fields
       if (!email || !otp) {
         console.error('❌ Missing email or OTP');
-        return res.status(400).json({ error: 'Email and OTP are required' });
+        return res.status(400).json({ 
+          success: false,
+          error: 'Email and OTP are required' 
+        });
       }
 
       // Get stored OTP from cache
@@ -301,12 +308,18 @@ export function setupAuth(app: express.Express) {
 
       if (!storedOtp) {
         console.error('❌ OTP not found or expired for:', email);
-        return res.status(400).json({ error: 'OTP expired or invalid' });
+        return res.status(400).json({ 
+          success: false,
+          error: 'OTP expired or invalid. Please request a new code.' 
+        });
       }
 
       if (storedOtp !== otp) {
         console.error('❌ Invalid OTP for:', email);
-        return res.status(400).json({ error: 'Invalid OTP' });
+        return res.status(400).json({ 
+          success: false,
+          error: 'Invalid OTP. Please check the code and try again.' 
+        });
       }
 
       console.log('✅ OTP verified for:', email);
@@ -322,6 +335,7 @@ export function setupAuth(app: express.Express) {
       if (wallets.length === 0) {
         console.warn('⚠️ No wallets found for:', email);
         return res.status(404).json({ 
+          success: false,
           error: 'No wallets found for this email. Please create a new wallet first.',
           shouldCreateWallet: true
         });
@@ -335,7 +349,10 @@ export function setupAuth(app: express.Express) {
 
         if (!walletData) {
           console.error('❌ Wallet not found:', walletId);
-          return res.status(404).json({ error: 'Wallet not found' });
+          return res.status(404).json({ 
+            success: false,
+            error: 'Wallet not found' 
+          });
         }
 
         // Create user session with selected wallet
@@ -349,7 +366,12 @@ export function setupAuth(app: express.Express) {
           picture: null
         };
 
-        // Save session synchronously to ensure it's persisted before responding
+        // Initialize session if it doesn't exist
+        if (!req.session) {
+          req.session = {} as any;
+        }
+
+        // Save session synchronously
         req.session.user = emailUser;
         req.session.email = email;
         req.session.walletId = walletId;
@@ -409,6 +431,7 @@ export function setupAuth(app: express.Express) {
         wallets: wallets,
         requiresWalletSelection: true
       });
+
     } catch (error) {
       console.error('❌ Email login error:', error);
       console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
@@ -419,7 +442,8 @@ export function setupAuth(app: express.Express) {
       
       // Return JSON error response
       return res.status(500).json({ 
-        error: 'Failed to login',
+        success: false,
+        error: 'Failed to login. Please try again.',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
