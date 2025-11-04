@@ -275,7 +275,108 @@ export function setupAuth(app: express.Express) {
       const host = req.get('host');
       const proto = req.get('x-forwarded-proto') || req.protocol;
 
+      // Always use https for production deployment
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? `https://${host}` 
+        : `${proto}://${host}`;
 
+      const redirectUri = `${baseUrl}/auth/callback`;
+
+      const params = new URLSearchParams({
+        client_id: process.env.APPLE_CLIENT_ID || '',
+        redirect_uri: redirectUri,
+        response_type: 'code id_token',
+        scope: 'name email',
+        response_mode: 'form_post',
+        state: state,
+      });
+
+      const appleAuthUrl = `https://appleid.apple.com/auth/authorize?${params}`;
+      res.redirect(appleAuthUrl);
+    } catch (error) {
+      console.error('Apple auth error:', error);
+      res.redirect('/?error=apple_auth_failed');
+    }
+  });
+
+  app.post('/auth/apple/callback', async (req, res) => {
+    try {
+      const { code, id_token, state } = req.body;
+
+      if (!state || state !== req.session.state) {
+        return res.redirect('/?error=invalid_state');
+      }
+
+      if (!id_token) {
+        return res.redirect('/?error=no_id_token');
+      }
+
+      // Decode the ID token (Apple sends user info in the JWT)
+      const decoded = jwt.decode(id_token) as any;
+
+      if (!decoded) {
+        return res.redirect('/?error=invalid_token');
+      }
+
+      // Create user object similar to Google's format
+      const appleUser = {
+        id: decoded.sub,
+        email: decoded.email,
+        name: decoded.name || `Apple User`,
+        given_name: decoded.name?.split(' ')[0] || 'Apple',
+        family_name: decoded.name?.split(' ').slice(1).join(' ') || 'User',
+        picture: null, // Apple doesn't provide profile pictures
+        provider: 'apple'
+      };
+
+      req.session.user = appleUser;
+
+      // Track login session
+      const sessionData = {
+        userId: null,
+        email: appleUser.email,
+        name: appleUser.name,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        sessionId: req.sessionID,
+      };
+
+      try {
+        const sessionDbId = await storage.createUserSession(sessionData);
+        req.session.sessionDbId = sessionDbId;
+      } catch (dbError) {
+        console.warn('Warning: Could not create database session:', dbError);
+        // Continue without database session tracking
+      }
+
+      res.redirect('/?authenticated=true&provider=apple');
+    } catch (error) {
+      console.error('Apple callback error:', error);
+      res.redirect('/?error=apple_callback_failed');
+    }
+  });
+
+  app.get('/auth/user', (req, res) => {
+    try {
+      // Check if session exists
+      if (!req.session) {
+        return res.status(401).json({ error: 'No session found' });
+      }
+
+      // Check if user exists in session
+      if (req.session.user) {
+        res.json(req.session.user);
+      } else {
+        res.status(401).json({ error: 'Not authenticated' });
+      }
+    } catch (error) {
+      console.error('Auth user endpoint error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Email/OTP authentication routes
+  
   // Email login - retrieve wallet list for selection
   app.post('/auth/email/login', async (req, res, next) => {
     // Set JSON headers at the VERY FIRST LINE before anything else
@@ -471,108 +572,7 @@ export function setupAuth(app: express.Express) {
       });
     }
   });
-
-      // Always use https for production deployment
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? `https://${host}` 
-        : `${proto}://${host}`;
-
-      const redirectUri = `${baseUrl}/auth/callback`;
-
-      const params = new URLSearchParams({
-        client_id: process.env.APPLE_CLIENT_ID || '',
-        redirect_uri: redirectUri,
-        response_type: 'code id_token',
-        scope: 'name email',
-        response_mode: 'form_post',
-        state: state,
-      });
-
-      const appleAuthUrl = `https://appleid.apple.com/auth/authorize?${params}`;
-      res.redirect(appleAuthUrl);
-    } catch (error) {
-      console.error('Apple auth error:', error);
-      res.redirect('/?error=apple_auth_failed');
-    }
-  });
-
-  app.post('/auth/apple/callback', async (req, res) => {
-    try {
-      const { code, id_token, state } = req.body;
-
-      if (!state || state !== req.session.state) {
-        return res.redirect('/?error=invalid_state');
-      }
-
-      if (!id_token) {
-        return res.redirect('/?error=no_id_token');
-      }
-
-      // Decode the ID token (Apple sends user info in the JWT)
-      const decoded = jwt.decode(id_token) as any;
-
-      if (!decoded) {
-        return res.redirect('/?error=invalid_token');
-      }
-
-      // Create user object similar to Google's format
-      const appleUser = {
-        id: decoded.sub,
-        email: decoded.email,
-        name: decoded.name || `Apple User`,
-        given_name: decoded.name?.split(' ')[0] || 'Apple',
-        family_name: decoded.name?.split(' ').slice(1).join(' ') || 'User',
-        picture: null, // Apple doesn't provide profile pictures
-        provider: 'apple'
-      };
-
-      req.session.user = appleUser;
-
-      // Track login session
-      const sessionData = {
-        userId: null,
-        email: appleUser.email,
-        name: appleUser.name,
-        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
-        userAgent: req.get('User-Agent') || 'unknown',
-        sessionId: req.sessionID,
-      };
-
-      try {
-        const sessionDbId = await storage.createUserSession(sessionData);
-        req.session.sessionDbId = sessionDbId;
-      } catch (dbError) {
-        console.warn('Warning: Could not create database session:', dbError);
-        // Continue without database session tracking
-      }
-
-      res.redirect('/?authenticated=true&provider=apple');
-    } catch (error) {
-      console.error('Apple callback error:', error);
-      res.redirect('/?error=apple_callback_failed');
-    }
-  });
-
-  app.get('/auth/user', (req, res) => {
-    try {
-      // Check if session exists
-      if (!req.session) {
-        return res.status(401).json({ error: 'No session found' });
-      }
-
-      // Check if user exists in session
-      if (req.session.user) {
-        res.json(req.session.user);
-      } else {
-        res.status(401).json({ error: 'Not authenticated' });
-      }
-    } catch (error) {
-      console.error('Auth user endpoint error:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  // Email/OTP authentication routes
+  
   app.post('/auth/email/send-otp', async (req, res) => {
     try {
       const { email } = req.body;
