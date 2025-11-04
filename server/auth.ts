@@ -86,6 +86,19 @@ export function setupAuth(app: express.Express) {
     }
   });
 
+  // DIAGNOSTIC: Log ALL POST requests to /auth routes
+  app.use('/auth/*', (req, res, next) => {
+    if (req.method === 'POST') {
+      console.log('🚨🚨🚨 POST REQUEST TO AUTH DETECTED 🚨🚨🚨');
+      console.log('Full URL:', req.originalUrl);
+      console.log('Path:', req.path);
+      console.log('Method:', req.method);
+      console.log('Headers:', req.headers);
+      console.log('Body:', req.body);
+    }
+    next();
+  });
+
   app.get('/auth/google', async (req, res) => {
     try {
       // Validate environment variables first
