@@ -123,7 +123,7 @@ export default function Dashboard() {
   // Get current user data from authentication context
   const { user, logout, isLoggingOut, checkSessionStatus } = useAuth();
   // Hook to disconnect MetaMask wallet
-  const { disconnectWallet } = useMetaMask();
+  const { disconnectWallet, connectMetaMask, isMetaMaskConnected, account } = useMetaMask();
   // Hook to manage navigation
   const [, setLocation] = useLocation();
 
@@ -204,7 +204,6 @@ export default function Dashboard() {
   // ===== REAL WALLET BALANCE STATE =====
   const [realBalances, setRealBalances] = useState<any[]>([]);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
-  const { account } = useMetaMask();
 
   // Use wallet address from authenticated user (MetaMask login) or MetaMask hook
   const walletAddress = user?.walletAddress || account;
@@ -268,10 +267,10 @@ export default function Dashboard() {
 
         // Check if we got valid data
         console.log('🔍 Checking API response validity...');
-        
+
         if (data.status === '1' && data.result && Array.isArray(data.result)) {
           console.log('✅ Valid transaction data received, count:', data.result.length);
-          
+
           // Transform Etherscan transactions to our format
           const transactions = data.result.slice(0, 10).map((tx: any) => {
             const isReceived = tx.to && tx.to.toLowerCase() === walletAddress.toLowerCase();
@@ -326,7 +325,7 @@ export default function Dashboard() {
           console.log('⚠️ Etherscan returned status 0');
           console.log('⚠️ Message:', data.message);
           console.log('⚠️ Full response:', JSON.stringify(data, null, 2));
-          
+
           if (data.message === 'No transactions found') {
             console.log('ℹ️ Wallet has no transaction history');
           } else if (data.message?.includes('rate limit')) {
@@ -336,7 +335,7 @@ export default function Dashboard() {
           } else {
             console.log('⚠️ Unknown status 0 message:', data.message);
           }
-          
+
           setRealTransactions([]);
         } else {
           console.warn('⚠️ Unexpected API response format');
@@ -515,32 +514,32 @@ export default function Dashboard() {
     const data = [];
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
-    
+
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date(now - i * dayMs);
       const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      
+
       // Generate realistic portfolio value changes
       const baseValue = totalPortfolioValue > 0 ? totalPortfolioValue : 5000;
       const volatility = baseValue * 0.02; // 2% daily volatility
       const trend = (days - i) * (baseValue * 0.001); // Slight upward trend
       const randomChange = (Math.random() - 0.5) * volatility;
       const value = Math.max(baseValue * 0.85 + trend + randomChange, 0);
-      
+
       data.push({
         date: dateStr,
         value: parseFloat(value.toFixed(2)),
         profit: parseFloat((value - baseValue * 0.85).toFixed(2))
       });
     }
-    
+
     return data;
   }, [selectedTimeframe, totalPortfolioValue]);
 
   // ===== ASSET ALLOCATION DATA =====
   const assetAllocationData = React.useMemo(() => {
     if (realBalances.length === 0) return [];
-    
+
     return realBalances.map((token: any, index: number) => ({
       name: token.symbol,
       value: token.balanceUSD || 0,
@@ -1008,6 +1007,38 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* Bottom Section - Connect MetaMask Prompt - Only show if not logged in via BitWallet */}
+        {!isMetaMaskConnected && !user && (
+          <div className="col-span-full">
+            <Card className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-orange-500 rounded-lg">
+                      <Wallet className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-orange-900 dark:text-orange-100">
+                        Connect your MetaMask wallet to view portfolio
+                      </h3>
+                      <p className="text-sm text-orange-700 dark:text-orange-300">
+                        Real-time balance tracking for all your tokens
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={connectMetaMask}
+                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                  >
+                    Connect MetaMask
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+
         {/* Empty state for portfolio holdings when no wallet - only show for non-email users */}
         {realBalances.length === 0 && !isLoadingBalances && !(user?.provider === 'metamask' && user?.walletAddress) && user?.provider !== 'email' && (
           <div className="col-span-2 text-center py-12">
@@ -1165,10 +1196,10 @@ function PerformanceChart({ data, timeframe }: { data: any[], timeframe: string 
 // ===== ASSET ALLOCATION CHART COMPONENT =====
 function AssetAllocationChart({ data }: { data: any[] }) {
   const RADIAN = Math.PI / 180;
-  
+
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
     if (percent < 0.05) return null; // Don't show labels for very small slices
-    
+
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);

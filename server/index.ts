@@ -56,17 +56,22 @@ setupAuth(app);
 
 // Add middleware to safely initialize user session object
 app.use((req, res, next) => {
-  // Initialize session if it doesn't exist
-  if (!req.session) {
-    req.session = {} as any;
-  }
+  try {
+    // Initialize session if it doesn't exist
+    if (!req.session) {
+      req.session = {} as any;
+    }
 
-  // Ensure user property exists
-  if (!req.session.user) {
-    req.session.user = null;
-  }
+    // Ensure user property exists
+    if (!req.session.user) {
+      req.session.user = null;
+    }
 
-  next();
+    next();
+  } catch (error) {
+    console.error('Session initialization error:', error);
+    next();
+  }
 });
 
 // Global error handler for auth endpoints to ensure JSON responses
