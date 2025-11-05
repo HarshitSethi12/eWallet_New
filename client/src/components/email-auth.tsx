@@ -17,6 +17,7 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
   const [step, setStep] = useState<'email' | 'otp' | 'walletSelect' | 'wallet'>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [verificationToken, setVerificationToken] = useState<string>('');
   const [walletData, setWalletData] = useState<any>(null);
   const [walletList, setWalletList] = useState<any[]>([]);
   const [selectedWalletId, setSelectedWalletId] = useState<number | null>(null);
@@ -113,6 +114,7 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
       if (isLoginMode && data.requiresWalletSelection) {
         // Login mode - show wallet selection
         setWalletList(data.wallets);
+        setVerificationToken(data.verificationToken || ''); // Store verification token
         setStep('walletSelect');
         toast({
           title: 'Select Your Wallet',
@@ -310,10 +312,47 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
               disabled={!selectedWalletId || verifyOtpMutation.isPending}
               onClick={() => {
                 if (selectedWalletId) {
-                  verifyOtpMutation.mutate({ 
-                    emailAddress: email, 
-                    otpCode: otp, 
-                    walletId: selectedWalletId 
+                  // Send request with verification token instead of OTP
+                  const response = fetch('/auth/email/login', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Accept': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ 
+                      email: email, 
+                      verificationToken: verificationToken,
+                      walletId: selectedWalletId 
+                    }),
+                  }).then(async (res) => {
+                    if (!res.ok) {
+                      const error = await res.json();
+                      throw new Error(error.error || 'Failed to login');
+                    }
+                    return res.json();
+                  }).then((data) => {
+                    console.log('✅ Login complete, redirecting to dashboard with data:', data);
+                    toast({
+                      title: 'Success!',
+                      description: 'Login successful',
+                    });
+                    
+                    const loginData = {
+                      ...data.user,
+                      wallet: data.wallet,
+                      provider: 'email',
+                      isNewWallet: false
+                    };
+                    
+                    console.log('📦 Passing login data to parent:', loginData);
+                    onSuccess(loginData);
+                  }).catch((error) => {
+                    toast({
+                      title: 'Error',
+                      description: error.message,
+                      variant: 'destructive',
+                    });
                   });
                 }
               }}

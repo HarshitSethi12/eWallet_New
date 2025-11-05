@@ -25,6 +25,9 @@ declare module 'express-session' {
 // OTP cache - stores OTP codes for 5 minutes
 const otpCache = new NodeCache({ stdTTL: 300 });
 
+// Email verification tokens - stores temporary tokens after OTP verification (5 minutes)
+const emailVerificationTokens = new NodeCache({ stdTTL: 300 });
+
 // Initialize Twilio client
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
   ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
@@ -401,46 +404,75 @@ export function setupAuth(app: express.Express) {
       console.log('📧 Email login endpoint hit');
       console.log('📧 Request body:', JSON.stringify(req.body));
       
-      const { email, otp, walletId } = req.body;
+      const { email, otp, walletId, verificationToken } = req.body;
 
       console.log('📧 Email login request:', { 
         email: email ? 'provided' : 'missing', 
         otp: otp ? 'provided' : 'missing', 
+        verificationToken: verificationToken ? 'provided' : 'missing',
         walletId: walletId || 'not provided' 
       });
 
       // Validate required fields
-      if (!email || !otp) {
-        console.error('❌ Missing email or OTP');
+      if (!email) {
+        console.error('❌ Missing email');
         return res.status(400).json({ 
           success: false,
-          error: 'Email and OTP are required' 
+          error: 'Email is required' 
         });
       }
 
-      // Get stored OTP from cache
-      const storedOtp = otpCache.get(email);
+      // Check if this is a wallet selection (verificationToken provided)
+      if (verificationToken && walletId) {
+        console.log('🔑 Verifying with token for wallet selection');
+        
+        // Verify the token
+        const storedEmail = emailVerificationTokens.get(verificationToken);
+        
+        if (!storedEmail || storedEmail !== email) {
+          console.error('❌ Invalid or expired verification token');
+          return res.status(400).json({ 
+            success: false,
+            error: 'Verification expired. Please login again.' 
+          });
+        }
+        
+        console.log('✅ Verification token valid, proceeding to wallet selection');
+        // Continue to wallet selection below (don't return here)
+      } else {
+        // Initial login - verify OTP
+        if (!otp) {
+          console.error('❌ Missing OTP');
+          return res.status(400).json({ 
+            success: false,
+            error: 'OTP is required' 
+          });
+        }
 
-      if (!storedOtp) {
-        console.error('❌ OTP not found or expired for:', email);
-        return res.status(400).json({ 
-          success: false,
-          error: 'OTP expired or invalid. Please request a new code.' 
-        });
+        // Get stored OTP from cache
+        const storedOtp = otpCache.get(email);
+
+        if (!storedOtp) {
+          console.error('❌ OTP not found or expired for:', email);
+          return res.status(400).json({ 
+            success: false,
+            error: 'OTP expired or invalid. Please request a new code.' 
+          });
+        }
+
+        if (storedOtp !== otp) {
+          console.error('❌ Invalid OTP for:', email);
+          return res.status(400).json({ 
+            success: false,
+            error: 'Invalid OTP. Please check the code and try again.' 
+          });
+        }
+
+        console.log('✅ OTP verified for:', email);
+
+        // OTP is valid, remove from cache
+        otpCache.del(email);
       }
-
-      if (storedOtp !== otp) {
-        console.error('❌ Invalid OTP for:', email);
-        return res.status(400).json({ 
-          success: false,
-          error: 'Invalid OTP. Please check the code and try again.' 
-        });
-      }
-
-      console.log('✅ OTP verified for:', email);
-
-      // OTP is valid, remove from cache
-      otpCache.del(email);
 
       console.log('🔍 Retrieving wallets for email:', email);
       
@@ -562,10 +594,17 @@ export function setupAuth(app: express.Express) {
 
       // If no walletId, return wallet list for user to choose
       console.log('📋 Returning wallet list for selection');
+      
+      // Generate a temporary verification token for wallet selection
+      const tempVerificationToken = crypto.randomBytes(32).toString('hex');
+      emailVerificationTokens.set(tempVerificationToken, email);
+      console.log('🔑 Generated verification token for:', email);
+      
       return res.status(200).json({ 
         success: true, 
         message: 'OTP verified - please select a wallet',
         wallets: wallets,
+        verificationToken: tempVerificationToken,
         requiresWalletSelection: true
       });
 
