@@ -139,13 +139,23 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
         console.log('📦 Passing login data to parent:', loginData);
         onSuccess(loginData);
       } else {
-        // Creation mode - show wallet details
-        setWalletData(data.wallet);
-        setStep('wallet');
+        // Creation mode - redirect directly to dashboard without showing wallet details
+        console.log('✅ Wallet created, redirecting to dashboard with data:', data);
         toast({
           title: 'Success!',
-          description: 'Email verified and wallet created successfully',
+          description: 'Wallet created successfully',
         });
+        
+        // Pass the complete data to parent component which will redirect to dashboard
+        const walletData = {
+          ...data.user,
+          wallet: data.wallet,
+          provider: 'email',
+          isNewWallet: true
+        };
+        
+        console.log('📦 Passing wallet data to parent:', walletData);
+        onSuccess(walletData);
       }
     },
     onError: (error: any) => {
@@ -447,128 +457,12 @@ export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
     );
   }
 
-  // Wallet Created Step
+  // This step should never be reached as we redirect directly to dashboard
+  // If we get here, something went wrong
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader className="text-center">
-        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Key className="w-6 h-6 text-green-600" />
-        </div>
-        <CardTitle>Wallet Created Successfully! 🎉</CardTitle>
-        <p className="text-sm text-gray-600 mt-2">
-          Your self-custodial wallet has been created. Please backup your recovery information.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <Alert className="bg-yellow-50 border-yellow-200">
-          <AlertDescription className="text-yellow-800">
-            ⚠️ <strong>Important:</strong> Save your seed phrase and private key in a secure location.
-            You'll need them to recover your wallet. Never share them with anyone!
-          </AlertDescription>
-        </Alert>
-
-        {/* Wallet Address */}
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-gray-700">Wallet Address</label>
-          <div className="flex gap-2">
-            <Input
-              value={walletData?.address || ''}
-              readOnly
-              className="font-mono text-sm"
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleCopyToClipboard(walletData?.address, 'Address')}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Seed Phrase */}
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-gray-700">Recovery Seed Phrase (12 words)</label>
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Input
-                value={showSeedPhrase ? walletData?.seedPhrase : '••••••••••••••••••••••••••••••••'}
-                readOnly
-                className="font-mono text-sm"
-                type={showSeedPhrase ? 'text' : 'password'}
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowSeedPhrase(!showSeedPhrase)}
-              >
-                {showSeedPhrase ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleCopyToClipboard(walletData?.seedPhrase, 'Seed Phrase')}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            {showSeedPhrase && (
-              <div className="grid grid-cols-3 gap-2 p-4 bg-gray-50 rounded-lg">
-                {walletData?.seedPhrase?.split(' ').map((word: string, index: number) => (
-                  <div key={index} className="flex items-center gap-2 text-sm">
-                    <span className="text-gray-500">{index + 1}.</span>
-                    <span className="font-mono">{word}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Private Key */}
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-gray-700">Private Key</label>
-          <div className="flex gap-2">
-            <Input
-              value={showPrivateKey ? walletData?.privateKey : '••••••••••••••••••••••••••••••••'}
-              readOnly
-              className="font-mono text-sm"
-              type={showPrivateKey ? 'text' : 'password'}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowPrivateKey(!showPrivateKey)}
-            >
-              {showPrivateKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleCopyToClipboard(walletData?.privateKey, 'Private Key')}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="space-y-3 pt-6 border-t border-gray-200 mt-6">
-          <Button
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 text-base"
-            onClick={handleContinueToDashboard}
-          >
-            Go to Dashboard
-          </Button>
-          <Button
-            className="w-full"
-            variant="outline"
-            onClick={handleDownloadBackup}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Download Backup File
-          </Button>
-        </div>
+    <Card className="w-full max-w-md">
+      <CardContent className="py-8 text-center">
+        <p className="text-gray-600">Redirecting to dashboard...</p>
       </CardContent>
     </Card>
   );
