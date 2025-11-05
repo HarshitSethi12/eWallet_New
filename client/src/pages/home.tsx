@@ -459,10 +459,9 @@ function WelcomePage() {
     console.log('✅ Email logged in');
     setShowEmailLogin(false);
 
-    // Small delay to ensure session is saved
-    setTimeout(() => {
-      setLocation('/dashboard');
-    }, 500);
+    // Force a page reload to ensure session is loaded
+    console.log('🔄 Redirecting to dashboard...');
+    window.location.href = '/dashboard';
   };
 
 
