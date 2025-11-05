@@ -810,8 +810,10 @@ export default function Dashboard() {
                   )) : (
                     <div className="text-center py-8">
                       <p className="text-sm text-gray-500">
-                        {user?.provider === 'metamask' 
-                          ? 'No tokens found in your wallet' 
+                        {user?.provider === 'email' 
+                          ? 'Your wallet is empty. Add funds to get started!' 
+                          : user?.provider === 'metamask'
+                          ? 'No tokens found in your wallet'
                           : 'Your wallet is empty. Add funds to get started!'}
                       </p>
                     </div>
@@ -871,8 +873,10 @@ export default function Dashboard() {
                     <div className="text-center">
                       <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm text-gray-500">
-                        {user?.provider === 'metamask' 
-                          ? 'No data to display' 
+                        {user?.provider === 'email' 
+                          ? 'Add funds to your wallet to view performance' 
+                          : user?.provider === 'metamask'
+                          ? 'No data to display'
                           : 'Add funds to your wallet to view performance'}
                       </p>
                     </div>
@@ -990,8 +994,10 @@ export default function Dashboard() {
                     <div className="text-center">
                       <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm text-gray-500">
-                        {user?.provider === 'metamask' 
-                          ? 'No assets to display' 
+                        {user?.provider === 'email' 
+                          ? 'Add funds to your wallet to view allocation' 
+                          : user?.provider === 'metamask'
+                          ? 'No assets to display'
                           : 'Add funds to your wallet to view allocation'}
                       </p>
                     </div>
@@ -1002,8 +1008,8 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Empty state for portfolio holdings when no wallet */}
-        {realBalances.length === 0 && !isLoadingBalances && !(user?.provider === 'metamask' && user?.walletAddress) && (
+        {/* Empty state for portfolio holdings when no wallet - only show for non-email users */}
+        {realBalances.length === 0 && !isLoadingBalances && !(user?.provider === 'metamask' && user?.walletAddress) && user?.provider !== 'email' && (
           <div className="col-span-2 text-center py-12">
             <p className="text-lg text-gray-600 mb-2">Connect your MetaMask wallet to view portfolio</p>
             <p className="text-sm text-gray-400 mt-1">Real-time balance tracking for all your tokens</p>
