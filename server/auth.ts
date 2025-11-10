@@ -45,8 +45,20 @@ const resendClient = process.env.RESEND_API_KEY
 
 export function setupAuth(app: express.Express) {
   // Setup session middleware FIRST
+  // Validate session secret exists
+  if (!process.env.SESSION_SECRET) {
+    throw new Error(
+      '🔒 CRITICAL: SESSION_SECRET must be set in Replit Secrets!\n' +
+      'Go to Tools → Secrets and add SESSION_SECRET with a secure random string.'
+    );
+  }
+
+  if (process.env.SESSION_SECRET.length < 32) {
+    throw new Error('SESSION_SECRET must be at least 32 characters long!');
+  }
+
   app.use(session({
-    secret: process.env.SESSION_SECRET || 'fallback-secret-key-for-dev',
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: true, // Changed to true for better compatibility
     cookie: {

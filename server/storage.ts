@@ -16,8 +16,28 @@ import crypto from 'crypto';                   // Encryption utilities
 // ===== STORAGE CLASS =====
 // This class handles all database operations for the application
 class Storage {
-  // Encryption key for wallet data (should be stored in environment variable in production)
-  private readonly ENCRYPTION_KEY = process.env.WALLET_ENCRYPTION_KEY || 'fallback-encryption-key-change-in-production-32-chars!!';
+  // Encryption key for wallet data - MUST be set in Replit Secrets
+  private readonly ENCRYPTION_KEY: string;
+
+  constructor() {
+    // Enforce encryption key - fail fast if not set
+    if (!process.env.WALLET_ENCRYPTION_KEY) {
+      throw new Error(
+        '🔒 CRITICAL: WALLET_ENCRYPTION_KEY must be set in Replit Secrets!\n' +
+        'Go to Tools → Secrets and add WALLET_ENCRYPTION_KEY with a secure 32+ character random string.\n' +
+        'Generate one using: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+      );
+    }
+
+    if (process.env.WALLET_ENCRYPTION_KEY.length < 32) {
+      throw new Error(
+        '🔒 CRITICAL: WALLET_ENCRYPTION_KEY must be at least 32 characters long!\n' +
+        'Current length: ' + process.env.WALLET_ENCRYPTION_KEY.length
+      );
+    }
+
+    this.ENCRYPTION_KEY = process.env.WALLET_ENCRYPTION_KEY;
+  }
   private readonly ALGORITHM = 'aes-256-cbc';
 
   /**
