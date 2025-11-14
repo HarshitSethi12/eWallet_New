@@ -15,55 +15,11 @@ import crypto from 'crypto';                   // Encryption utilities
 
 // ===== STORAGE CLASS =====
 // This class handles all database operations for the application
+// SELF-CUSTODIAL: No encryption needed - private keys never stored on server!
 class Storage {
-  // Encryption key for wallet data - MUST be set in Replit Secrets
-  private readonly ENCRYPTION_KEY: string;
-
   constructor() {
-    // Enforce encryption key - fail fast if not set
-    if (!process.env.WALLET_ENCRYPTION_KEY) {
-      throw new Error(
-        '🔒 CRITICAL: WALLET_ENCRYPTION_KEY must be set in Replit Secrets!\n' +
-        'Go to Tools → Secrets and add WALLET_ENCRYPTION_KEY with a secure 32+ character random string.\n' +
-        'Generate one using: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
-      );
-    }
-
-    if (process.env.WALLET_ENCRYPTION_KEY.length < 32) {
-      throw new Error(
-        '🔒 CRITICAL: WALLET_ENCRYPTION_KEY must be at least 32 characters long!\n' +
-        'Current length: ' + process.env.WALLET_ENCRYPTION_KEY.length
-      );
-    }
-
-    this.ENCRYPTION_KEY = process.env.WALLET_ENCRYPTION_KEY;
-  }
-  private readonly ALGORITHM = 'aes-256-cbc';
-
-  /**
-   * Encrypts sensitive wallet data
-   */
-  private encrypt(text: string): string {
-    const iv = crypto.randomBytes(16);
-    const key = crypto.createHash('sha256').update(this.ENCRYPTION_KEY).digest();
-    const cipher = crypto.createCipheriv(this.ALGORITHM, key, iv);
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
-  }
-
-  /**
-   * Decrypts sensitive wallet data
-   */
-  private decrypt(text: string): string {
-    const parts = text.split(':');
-    const iv = Buffer.from(parts[0], 'hex');
-    const encrypted = parts[1];
-    const key = crypto.createHash('sha256').update(this.ENCRYPTION_KEY).digest();
-    const decipher = crypto.createDecipheriv(this.ALGORITHM, key, iv);
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
+    // No encryption key required for self-custodial wallets
+    console.log('✅ Storage initialized - Self-custodial mode (no private key storage)');
   }
 
   // ===== USER SESSION MANAGEMENT =====
@@ -294,34 +250,42 @@ class Storage {
   // ===== EMAIL WALLET MANAGEMENT =====
 
   /**
-   * Creates a new email wallet (allows multiple wallets per email)
+   * Creates a new self-custodial email wallet
+   * SELF-CUSTODIAL: Private keys NEVER stored on server!
+   * Only stores: email (canonicalized), password hash (bcrypt), salt, public address, chain
    */
   async createEmailWallet(walletData: {
     email: string;
+    passwordHash: string;
+    salt: string;
     walletAddress: string;
-    privateKey: string;
-    seedPhrase: string;
+    chain: 'ETH' | 'BTC' | 'SOL';
   }) {
     try {
-      console.log('🔐 Creating new email wallet for:', walletData.email);
+      // Canonicalize email (lowercase) for consistent login
+      const canonicalEmail = walletData.email.toLowerCase().trim();
+      
+      console.log('🔐 Creating new self-custodial wallet for:', canonicalEmail);
+      console.log('📍 Chain:', walletData.chain, 'Address:', walletData.walletAddress);
 
-      // Self-custodial: Only store email and wallet address
-      // Private keys and seed phrases never touch the server!
       const result = await db.insert(emailWallets)
         .values({
-          email: walletData.email,
+          email: canonicalEmail,
+          passwordHash: walletData.passwordHash,
+          salt: walletData.salt,
           walletAddress: walletData.walletAddress,
-          // encryptedPrivateKey and encryptedSeedPhrase are removed
+          chain: walletData.chain,
         })
         .returning();
 
-      console.log('✅ New wallet created with address:', walletData.walletAddress);
+      console.log('✅ Self-custodial wallet created (no private keys stored!)');
       return {
         isNew: true,
         wallet: {
           id: result[0].id,
-          address: walletData.walletAddress,
-          // Private key and seed phrase are not returned from the server
+          email: result[0].email,
+          address: result[0].walletAddress,
+          chain: result[0].chain,
           createdAt: result[0].createdAt,
         }
       };

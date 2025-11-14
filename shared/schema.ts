@@ -64,9 +64,13 @@ export const metamaskUsers = pgTable("metamask_users", {
 
 export const emailWallets = pgTable('email_wallets', {
   id: serial('id').primaryKey(),
-  email: text('email').notNull(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(), // Argon2id hash for authentication
+  salt: text('salt').notNull(), // Random salt for key derivation
   walletAddress: text('wallet_address').notNull(),
-  // Private keys no longer stored on server - self-custodial!
+  chain: text('chain').notNull().default('ETH'), // Blockchain: ETH, BTC, SOL
+  // SELF-CUSTODIAL: Private keys never stored on server!
+  // Keys are derived client-side from password using Argon2id + BIP39
   createdAt: timestamp('created_at').defaultNow(),
   lastLogin: timestamp('last_login'),
 });
@@ -79,7 +83,10 @@ export const insertUserSessionSchema = createInsertSchema(userSessions).omit({ i
 export const insertMetaMaskUserSchema = createInsertSchema(metamaskUsers).omit({ id: true });
 export const insertEmailWalletSchema = createInsertSchema(emailWallets).pick({
   email: true,
+  passwordHash: true,
+  salt: true,
   walletAddress: true,
+  chain: true,
 });
 
 export const selectUserSchema = z.object({
