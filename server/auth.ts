@@ -39,7 +39,7 @@ if (process.env.SENDGRID_API_KEY) {
 }
 
 // Initialize Resend (alternative to SendGrid, easier for development)
-const resendClient = process.env.RESEND_API_KEY 
+const resendClient = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
@@ -304,8 +304,8 @@ export function setupAuth(app: express.Express) {
       const proto = req.get('x-forwarded-proto') || req.protocol;
 
       // Always use https for production deployment
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? `https://${host}` 
+      const baseUrl = process.env.NODE_ENV === 'production'
+        ? `https://${host}`
         : `${proto}://${host}`;
 
       const redirectUri = `${baseUrl}/auth/callback`;
@@ -404,60 +404,60 @@ export function setupAuth(app: express.Express) {
   });
 
   // Email/OTP authentication routes
-  
+
   // Email login - retrieve wallet list for selection
   app.post('/auth/email/login', async (req, res, next) => {
     // Set JSON headers at the VERY FIRST LINE before anything else
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'no-cache');
-    
+
     // Wrap everything in try-catch to ensure we always return JSON
     try {
       console.log('📧 Email login endpoint hit');
       console.log('📧 Request body:', JSON.stringify(req.body));
-      
+
       const { email, otp, walletId, verificationToken } = req.body;
 
-      console.log('📧 Email login request:', { 
-        email: email ? 'provided' : 'missing', 
-        otp: otp ? 'provided' : 'missing', 
+      console.log('📧 Email login request:', {
+        email: email ? 'provided' : 'missing',
+        otp: otp ? 'provided' : 'missing',
         verificationToken: verificationToken ? 'provided' : 'missing',
-        walletId: walletId || 'not provided' 
+        walletId: walletId || 'not provided'
       });
 
       // Validate required fields
       if (!email) {
         console.error('❌ Missing email');
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          error: 'Email is required' 
+          error: 'Email is required'
         });
       }
 
       // Check if this is a wallet selection (verificationToken provided)
       if (verificationToken && walletId) {
         console.log('🔑 Verifying with token for wallet selection');
-        
+
         // Verify the token
         const storedEmail = emailVerificationTokens.get(verificationToken);
-        
+
         if (!storedEmail || storedEmail !== email) {
           console.error('❌ Invalid or expired verification token');
-          return res.status(400).json({ 
+          return res.status(400).json({
             success: false,
-            error: 'Verification expired. Please login again.' 
+            error: 'Verification expired. Please login again.'
           });
         }
-        
+
         console.log('✅ Verification token valid, proceeding to wallet selection');
         // Continue to wallet selection below (don't return here)
       } else {
         // Initial login - verify OTP
         if (!otp) {
           console.error('❌ Missing OTP');
-          return res.status(400).json({ 
+          return res.status(400).json({
             success: false,
-            error: 'OTP is required' 
+            error: 'OTP is required'
           });
         }
 
@@ -466,17 +466,17 @@ export function setupAuth(app: express.Express) {
 
         if (!storedOtp) {
           console.error('❌ OTP not found or expired for:', email);
-          return res.status(400).json({ 
+          return res.status(400).json({
             success: false,
-            error: 'OTP expired or invalid. Please request a new code.' 
+            error: 'OTP expired or invalid. Please request a new code.'
           });
         }
 
         if (storedOtp !== otp) {
           console.error('❌ Invalid OTP for:', email);
-          return res.status(400).json({ 
+          return res.status(400).json({
             success: false,
-            error: 'Invalid OTP. Please check the code and try again.' 
+            error: 'Invalid OTP. Please check the code and try again.'
           });
         }
 
@@ -487,14 +487,14 @@ export function setupAuth(app: express.Express) {
       }
 
       console.log('🔍 Retrieving wallets for email:', email);
-      
+
       // Retrieve all wallets for this email
       let wallets;
       try {
         wallets = await storage.getEmailWallets(email);
       } catch (storageError) {
         console.error('❌ Error retrieving wallets:', storageError);
-        return res.status(500).json({ 
+        return res.status(500).json({
           success: false,
           error: 'Failed to retrieve wallets. Please try again.',
           details: storageError instanceof Error ? storageError.message : 'Unknown error'
@@ -505,7 +505,7 @@ export function setupAuth(app: express.Express) {
 
       if (wallets.length === 0) {
         console.warn('⚠️ No wallets found for:', email);
-        return res.status(404).json({ 
+        return res.status(404).json({
           success: false,
           error: 'No wallets found for this email. Please create a new wallet first.',
           shouldCreateWallet: true
@@ -515,13 +515,13 @@ export function setupAuth(app: express.Express) {
       // If walletId is provided, login to that specific wallet
       if (walletId) {
         console.log('🔐 Attempting login to wallet ID:', walletId);
-        
+
         let walletData;
         try {
           walletData = await storage.getEmailWalletById(email, walletId);
         } catch (walletError) {
           console.error('❌ Error retrieving wallet by ID:', walletError);
-          return res.status(500).json({ 
+          return res.status(500).json({
             success: false,
             error: 'Failed to retrieve wallet. Please try again.',
             details: walletError instanceof Error ? walletError.message : 'Unknown error'
@@ -530,9 +530,9 @@ export function setupAuth(app: express.Express) {
 
         if (!walletData) {
           console.error('❌ Wallet not found:', walletId);
-          return res.status(404).json({ 
+          return res.status(404).json({
             success: false,
-            error: 'Wallet not found' 
+            error: 'Wallet not found'
           });
         }
 
@@ -591,8 +591,8 @@ export function setupAuth(app: express.Express) {
         }
 
         console.log('✅ Sending login success response');
-        return res.status(200).json({ 
-          success: true, 
+        return res.status(200).json({
+          success: true,
           message: 'Login successful',
           user: emailUser,
           wallet: {
@@ -606,14 +606,14 @@ export function setupAuth(app: express.Express) {
 
       // If no walletId, return wallet list for user to choose
       console.log('📋 Returning wallet list for selection');
-      
+
       // Generate a temporary verification token for wallet selection
       const tempVerificationToken = crypto.randomBytes(32).toString('hex');
       emailVerificationTokens.set(tempVerificationToken, email);
       console.log('🔑 Generated verification token for:', email);
-      
-      return res.status(200).json({ 
-        success: true, 
+
+      return res.status(200).json({
+        success: true,
         message: 'OTP verified - please select a wallet',
         wallets: wallets,
         verificationToken: tempVerificationToken,
@@ -623,20 +623,20 @@ export function setupAuth(app: express.Express) {
     } catch (error) {
       console.error('❌ Email login error:', error);
       console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      
+
       // Ensure JSON headers are set even in error case
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Cache-Control', 'no-cache');
-      
+
       // Return JSON error response
-      return res.status(500).json({ 
+      return res.status(500).json({
         success: false,
         error: 'Failed to login. Please try again.',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
-  
+
   app.post('/auth/email/send-otp', async (req, res) => {
     try {
       const { email } = req.body;
@@ -680,8 +680,8 @@ export function setupAuth(app: express.Express) {
           });
 
           console.log(`✅ Email sent via Resend to ${email}`);
-          return res.json({ 
-            success: true, 
+          return res.json({
+            success: true,
             message: 'OTP sent successfully via email',
             ...(process.env.NODE_ENV === 'development' && { otp })
           });
@@ -703,8 +703,8 @@ export function setupAuth(app: express.Express) {
           });
 
           console.log(`✅ Email sent via SendGrid to ${email}`);
-          return res.json({ 
-            success: true, 
+          return res.json({
+            success: true,
             message: 'OTP sent successfully via email',
             ...(process.env.NODE_ENV === 'development' && { otp })
           });
@@ -716,10 +716,10 @@ export function setupAuth(app: express.Express) {
 
       // Development mode fallback - return OTP directly
       console.log(`⚠️ No email service configured - returning OTP in response`);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: 'OTP generated (development mode - check console)',
-        otp 
+        otp
       });
     } catch (error) {
       console.error('Send email OTP error:', error);
@@ -749,40 +749,40 @@ export function setupAuth(app: express.Express) {
       // OTP is valid, remove from cache
       otpCache.del(email);
 
-      // Always generate a new Ethereum wallet
-      const ethers = await import('ethers');
-      const wallet = ethers.Wallet.createRandom();
+      // Self-custodial: Wallet will be created on client-side
+      // Server only tracks email and wallet address
+      // Note: Wallet address will be sent from client after generation
+      let user = { email, walletAddress: null, id: 0, createdAt: null, lastLogin: null };
 
-      // Store new wallet in database (encrypted)
-      const result = await storage.createEmailWallet({
-        email: email,
-        walletAddress: wallet.address,
-        privateKey: wallet.privateKey,
-        seedPhrase: wallet.mnemonic?.phrase || '',
+      // Ensure we check if a wallet exists for this email. If not, we guide the user to create one on the client.
+      // If a wallet *does* exist, we might want to associate it with the session.
+      // For now, we'll assume the client will handle wallet creation and association.
+
+      // Update session to mark email as verified and store basic user info
+      req.session.user = user;
+      req.session.email = email;
+      req.session.isEmailVerified = true;
+      req.session.walletId = null; // No wallet ID associated server-side initially
+
+      // Save session explicitly
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error('❌ Session save error after OTP verification:', err);
+            reject(err);
+          } else {
+            console.log('✅ Session saved successfully after OTP verification for:', email);
+            resolve();
+          }
+        });
       });
 
-      // Create user session
-      const emailUser = {
-        id: `email_${email}_${result.wallet.id}`,
-        email: email,
-        name: email.split('@')[0],
-        provider: 'email',
-        walletAddress: wallet.address,
-        walletId: result.wallet.id,
-        picture: null
-      };
-
-      req.session.user = emailUser;
-      req.session.email = email;
-      req.session.walletId = result.wallet.id;
-      req.session.isEmailVerified = true;
-
-      // Track login session
+      // Track login session (without wallet details initially)
       const sessionData = {
         userId: null,
         email: email,
-        name: emailUser.name,
-        walletAddress: wallet.address,
+        name: email.split('@')[0],
+        walletAddress: null, // Wallet address is not yet known server-side
         ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
         userAgent: req.get('User-Agent') || 'unknown',
         sessionId: req.sessionID,
@@ -791,16 +791,16 @@ export function setupAuth(app: express.Express) {
       try {
         const sessionDbId = await storage.createUserSession(sessionData);
         req.session.sessionDbId = sessionDbId;
+        console.log('✅ Database session created:', sessionDbId);
       } catch (dbError) {
-        console.warn('Warning: Could not create database session:', dbError);
+        console.warn('⚠️ Warning: Could not create database session:', dbError);
       }
 
-      res.json({ 
-        success: true, 
-        message: 'Email verified and wallet created successfully',
-        user: emailUser,
-        wallet: result.wallet,
-        isNewWallet: true
+      res.json({
+        success: true,
+        message: 'Email verified. Please proceed to create or connect your wallet on the client.',
+        user: user,
+        requiresWalletCreationOrConnection: true // Flag for the client
       });
     } catch (error) {
       console.error('Verify email OTP error:', error);
@@ -840,8 +840,8 @@ export function setupAuth(app: express.Express) {
             to: phoneNumber
           });
 
-          res.json({ 
-            success: true, 
+          res.json({
+            success: true,
             message: 'OTP sent successfully',
             // Include OTP in response for development only
             ...(process.env.NODE_ENV === 'development' && { otp })
@@ -849,18 +849,18 @@ export function setupAuth(app: express.Express) {
         } catch (twilioError) {
           console.error('Twilio SMS error:', twilioError);
           // For development, still return success with OTP
-          res.json({ 
-            success: true, 
+          res.json({
+            success: true,
             message: 'OTP generated (SMS service unavailable)',
             otp // Always include OTP if SMS fails
           });
         }
       } else {
         // Development mode - return OTP directly
-        res.json({ 
-          success: true, 
+        res.json({
+          success: true,
           message: 'OTP generated (development mode)',
-          otp 
+          otp
         });
       }
     } catch (error) {
@@ -923,8 +923,8 @@ export function setupAuth(app: express.Express) {
         // Continue without database session tracking
       }
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: 'Phone verified successfully',
         user: phoneUser
       });
@@ -941,7 +941,7 @@ export function setupAuth(app: express.Express) {
         console.error('Error clearing session:', err);
         return res.status(500).json({ error: 'Failed to clear session' });
       }
-      res.clearCookie('connect.sid'); // Clear the session cookie
+      res.clearCookie('sessionId');
       res.json({ success: true, message: 'Session cleared' });
     });
   });
@@ -996,8 +996,8 @@ export function setupAuth(app: express.Express) {
       const count = await storage.getEmailWalletCount(email);
 
       if (count === 0) {
-        return res.json({ 
-          success: true, 
+        return res.json({
+          success: true,
           message: 'No wallets found for this email',
           deletedCount: 0
         });
@@ -1006,8 +1006,8 @@ export function setupAuth(app: express.Express) {
       // Delete all wallets for this email
       const deletedCount = await storage.deleteEmailWallets(email);
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: `Deleted ${deletedCount} wallet(s) for ${email}`,
         deletedCount
       });
@@ -1028,8 +1028,8 @@ export function setupAuth(app: express.Express) {
 
       const count = await storage.getEmailWalletCount(email);
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         email,
         walletCount: count
       });
@@ -1111,7 +1111,10 @@ export function setupAuth(app: express.Express) {
       const email = req.session.user.email;
       const wallets = await storage.getEmailWallets(email);
 
-      res.json(wallets);
+      // Filter out wallets that might not have an address yet (if created via self-custodial flow without client providing address)
+      const validWallets = wallets.filter(wallet => wallet.walletAddress);
+
+      res.json(validWallets);
     } catch (error) {
       console.error('Get wallets error:', error);
       res.status(500).json({ error: 'Failed to get wallets' });
@@ -1142,6 +1145,26 @@ export function setupAuth(app: express.Express) {
       req.session.user.walletAddress = walletData.address;
       req.session.user.walletId = walletId;
       req.session.walletId = walletId;
+
+      // Update the session's user object to reflect the new wallet address
+      req.session.user = {
+        ...req.session.user,
+        walletAddress: walletData.address,
+        walletId: walletId
+      };
+
+      // Save the session to persist these changes
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error('❌ Session save error during wallet switch:', err);
+            reject(err);
+          } else {
+            console.log('✅ Session saved successfully after wallet switch for:', email);
+            resolve();
+          }
+        });
+      });
 
       res.json({
         success: true,
@@ -1238,10 +1261,10 @@ authRouter.post('/metamask', async (req, res) => {
 
     // Validate required fields
     if (!message || !signature || !address) {
-      console.error('❌ Missing required fields:', { 
-        message: !!message, 
-        signature: !!signature, 
-        address: !!address 
+      console.error('❌ Missing required fields:', {
+        message: !!message,
+        signature: !!signature,
+        address: !!address
       });
       return sendJsonError(400, 'Missing required fields: message, signature, and address are required');
     }
@@ -1252,10 +1275,10 @@ authRouter.post('/metamask', async (req, res) => {
       return sendJsonError(400, 'Invalid Ethereum address format');
     }
 
-    console.log('🦊 MetaMask authentication data validated:', { 
+    console.log('🦊 MetaMask authentication data validated:', {
       address: address,
       messageLength: message.length,
-      signatureLength: signature.length 
+      signatureLength: signature.length
     });
 
     // Ensure session exists and initialize if needed
@@ -1283,6 +1306,8 @@ authRouter.post('/metamask', async (req, res) => {
 
     // Store user in session
     req.session.user = metamaskUser;
+    req.session.walletId = address; // Store the wallet address as walletId for consistency
+    req.session.isEmailVerified = true; // Assume verified for wallet login
 
     // Save session explicitly to ensure it's persisted
     await new Promise((resolve, reject) => {
@@ -1321,8 +1346,8 @@ authRouter.post('/metamask', async (req, res) => {
     }
 
     // Return success response with user data
-    const responseData = { 
-      success: true, 
+    const responseData = {
+      success: true,
       message: 'MetaMask authentication successful',
       user: metamaskUser
     };

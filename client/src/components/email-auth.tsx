@@ -1,469 +1,411 @@
+
 import React, { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { useToast } from '@/hooks/use-toast';
-import { Mail, Shield, Key, Copy, Download, Eye, EyeOff } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
+import { generateWallet, importWallet } from '@/lib/wallet-manager';
+import { Eye, EyeOff, Copy, Check, AlertTriangle } from 'lucide-react';
 
 interface EmailAuthProps {
-  onSuccess: (walletData: any) => void;
-  isLoginMode?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  mode: 'create' | 'login';
 }
 
-export function EmailAuth({ onSuccess, isLoginMode = false }: EmailAuthProps) {
-  const [step, setStep] = useState<'email' | 'otp' | 'walletSelect' | 'wallet'>('email');
+export function EmailAuth({ open, onOpenChange, mode }: EmailAuthProps) {
+  const [step, setStep] = useState<'email' | 'otp' | 'password' | 'backup'>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [verificationToken, setVerificationToken] = useState<string>('');
-  const [walletData, setWalletData] = useState<any>(null);
-  const [walletList, setWalletList] = useState<any[]>([]);
-  const [selectedWalletId, setSelectedWalletId] = useState<number | null>(null);
-  const [showPrivateKey, setShowPrivateKey] = useState(false);
-  const [showSeedPhrase, setShowSeedPhrase] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [seedPhrase, setSeedPhrase] = useState('');
+  const [importSeed, setImportSeed] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showSeed, setShowSeed] = useState(false);
+  const [seedCopied, setSeedCopied] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const sendOtpMutation = useMutation({
-    mutationFn: async (emailAddress: string) => {
-      const response = await fetch('/auth/email/send-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: emailAddress }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to send OTP');
-      }
-
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setStep('otp');
+  const handleSendOTP = async () => {
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
       toast({
-        title: 'OTP Sent!',
-        description: `Verification code sent to ${email}`,
-      });
-
-      // In development, show the OTP
-      if (data.otp) {
-        toast({
-          title: 'Development Mode',
-          description: `Your OTP is: ${data.otp}`,
-          variant: 'default',
-        });
-      }
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
         variant: 'destructive',
-      });
-    },
-  });
-
-  const verifyOtpMutation = useMutation({
-    mutationFn: async ({ emailAddress, otpCode, walletId }: { emailAddress: string; otpCode: string; walletId?: number }) => {
-      const endpoint = isLoginMode ? '/auth/email/login' : '/auth/email/verify-otp';
-      
-      console.log('🔐 Verifying OTP:', { endpoint, isLoginMode, hasWalletId: !!walletId });
-      
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email: emailAddress, otp: otpCode, walletId }),
-      });
-
-      console.log('📡 Response status:', response.status, response.statusText);
-      console.log('📡 Response headers:', {
-        contentType: response.headers.get('content-type'),
-      });
-
-      // Check content type before parsing
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const textResponse = await response.text();
-        console.error('❌ Non-JSON response received:', textResponse.substring(0, 200));
-        throw new Error('Server error: Expected JSON response but received HTML. Please try again.');
-      }
-
-      if (!response.ok) {
-        let error;
-        try {
-          error = await response.json();
-        } catch (parseError) {
-          throw new Error('Failed to verify OTP. Please try again.');
-        }
-        throw new Error(error.error || 'Failed to verify OTP');
-      }
-
-      const data = await response.json();
-      console.log('✅ OTP verification response:', data);
-      return data;
-    },
-    onSuccess: (data) => {
-      if (isLoginMode && data.requiresWalletSelection) {
-        // Login mode - show wallet selection
-        setWalletList(data.wallets);
-        setVerificationToken(data.verificationToken || ''); // Store verification token
-        setStep('walletSelect');
-        toast({
-          title: 'Select Your Wallet',
-          description: `Found ${data.wallets.length} wallet(s) for this email`,
-        });
-      } else if (isLoginMode && data.loginComplete) {
-        // Wallet selected - login complete, redirect to dashboard
-        console.log('✅ Login complete, redirecting to dashboard with data:', data);
-        toast({
-          title: 'Success!',
-          description: 'Login successful',
-        });
-        
-        // Pass the complete data to parent component which will redirect to dashboard
-        const loginData = {
-          ...data.user,
-          wallet: data.wallet,
-          provider: 'email',
-          isNewWallet: false
-        };
-        
-        console.log('📦 Passing login data to parent:', loginData);
-        onSuccess(loginData);
-      } else {
-        // Creation mode - redirect directly to dashboard without showing wallet details
-        console.log('✅ Wallet created, redirecting to dashboard with data:', data);
-        toast({
-          title: 'Success!',
-          description: 'Wallet created successfully',
-        });
-        
-        // Pass the complete data to parent component which will redirect to dashboard
-        const walletData = {
-          ...data.user,
-          wallet: data.wallet,
-          provider: 'email',
-          isNewWallet: true
-        };
-        
-        console.log('📦 Passing wallet data to parent:', walletData);
-        onSuccess(walletData);
-      }
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const handleSendOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast({
-        title: 'Invalid Email',
-        description: 'Please enter a valid email address',
-        variant: 'destructive',
+        title: 'Invalid email',
+        description: 'Please enter a valid email address'
       });
       return;
     }
 
-    sendOtpMutation.mutate(email);
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/auth/email/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      if (response.ok) {
+        setStep('otp');
+        toast({
+          title: 'OTP Sent',
+          description: 'Check your email for the verification code'
+        });
+      } else {
+        throw new Error('Failed to send OTP');
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to send OTP. Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otp || otp.length !== 6) return;
+  const handleVerifyOTP = async () => {
+    if (!otp || otp.length !== 6) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid OTP',
+        description: 'Please enter the 6-digit code'
+      });
+      return;
+    }
 
-    verifyOtpMutation.mutate({ emailAddress: email, otpCode: otp });
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/auth/email/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: otp })
+      });
+
+      if (response.ok) {
+        setStep('password');
+      } else {
+        throw new Error('Invalid OTP');
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Invalid OTP. Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleBack = () => {
-    setStep('email');
-    setOtp('');
+  const handleCreateWallet = async () => {
+    if (password.length < 8) {
+      toast({
+        variant: 'destructive',
+        title: 'Weak password',
+        description: 'Password must be at least 8 characters'
+      });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'Passwords do not match',
+        description: 'Please make sure both passwords are identical'
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Generate wallet client-side with password encryption
+      const { address, seedPhrase: phrase } = await generateWallet(email, password);
+      setSeedPhrase(phrase);
+
+      // Send only the wallet ADDRESS to server (not private key!)
+      await fetch('/api/auth/email/register-wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, walletAddress: address })
+      });
+
+      setStep('backup');
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to create wallet. Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleCopyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
+  const handleImportWallet = async () => {
+    if (password.length < 8) {
+      toast({
+        variant: 'destructive',
+        title: 'Weak password',
+        description: 'Password must be at least 8 characters'
+      });
+      return;
+    }
+
+    if (!importSeed || importSeed.split(' ').length !== 12) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid seed phrase',
+        description: 'Please enter a valid 12-word seed phrase'
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const address = await importWallet(email, importSeed, password);
+
+      await fetch('/api/auth/email/register-wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, walletAddress: address })
+      });
+
+      toast({
+        title: 'Success!',
+        description: 'Wallet imported successfully'
+      });
+
+      onOpenChange(false);
+      window.location.href = '/dashboard';
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to import wallet. Check your seed phrase.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const copySeedPhrase = () => {
+    navigator.clipboard.writeText(seedPhrase);
+    setSeedCopied(true);
+    setTimeout(() => setSeedCopied(false), 2000);
+  };
+
+  const handleBackupComplete = () => {
     toast({
-      title: 'Copied!',
-      description: `${label} copied to clipboard`,
+      title: 'Wallet created!',
+      description: 'You can now access your wallet'
     });
+    onOpenChange(false);
+    window.location.href = '/dashboard';
   };
 
-  const handleDownloadBackup = () => {
-    const backup = {
-      email: email,
-      address: walletData.address,
-      seedPhrase: walletData.seedPhrase,
-      createdAt: new Date().toISOString()
-    };
-
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `bitwallet-backup-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: 'Backup Downloaded',
-      description: 'Keep this file safe and secure',
-    });
-  };
-
-  const handleContinueToDashboard = () => {
-    console.log('✅ Redirecting to dashboard with wallet data:', walletData);
-    
-    // Ensure we pass the complete wallet object with session data
-    const completeWalletData = {
-      ...walletData,
-      email: email,
-      provider: 'email',
-      isNewWallet: true
-    };
-    
-    console.log('📦 Complete wallet data being passed:', completeWalletData);
-    onSuccess(completeWalletData);
-  };
-
-  // Email Step
-  if (step === 'email') {
-    return (
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Mail className="w-6 h-6 text-blue-600" />
-          </div>
-          <CardTitle>{isLoginMode ? 'Login to Your Wallet' : 'Create Your Wallet'}</CardTitle>
-          <p className="text-sm text-gray-600 mt-2">
-            {isLoginMode ? 'Enter your registered email to login' : 'Enter your email to create a self-custodial wallet'}
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSendOtp} className="space-y-4">
-            <div>
-              <Input
-                type="email"
-                placeholder="Enter your email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="text-center"
-                disabled={sendOtpMutation.isPending}
-              />
-              <p className="text-xs text-gray-500 mt-1 text-center">
-                We'll send you a verification code
-              </p>
-            </div>
-            <Button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700"
-              disabled={sendOtpMutation.isPending || !email}
-            >
-              {sendOtpMutation.isPending ? 'Sending...' : 'Send Verification Code'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Wallet Selection Step (Login Mode)
-  if (step === 'walletSelect') {
-    return (
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Key className="w-6 h-6 text-blue-600" />
-          </div>
-          <CardTitle>Select Your Wallet</CardTitle>
-          <p className="text-sm text-gray-600">
-            Choose which wallet to login to
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {walletList.map((wallet) => (
-              <Button
-                key={wallet.id}
-                variant={selectedWalletId === wallet.id ? "default" : "outline"}
-                className="w-full justify-start text-left h-auto py-4"
-                onClick={() => setSelectedWalletId(wallet.id)}
-              >
-                <div className="flex flex-col items-start gap-1 w-full">
-                  <div className="font-mono text-sm truncate w-full">
-                    {wallet.address}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Created: {new Date(wallet.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              </Button>
-            ))}
-          </div>
-          <div className="space-y-2 mt-4">
-            <Button
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3"
-              disabled={!selectedWalletId || verifyOtpMutation.isPending}
-              onClick={() => {
-                if (selectedWalletId) {
-                  // Send request with verification token instead of OTP
-                  const response = fetch('/auth/email/login', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Accept': 'application/json',
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ 
-                      email: email, 
-                      verificationToken: verificationToken,
-                      walletId: selectedWalletId 
-                    }),
-                  }).then(async (res) => {
-                    if (!res.ok) {
-                      const error = await res.json();
-                      throw new Error(error.error || 'Failed to login');
-                    }
-                    return res.json();
-                  }).then((data) => {
-                    console.log('✅ Login complete, redirecting to dashboard with data:', data);
-                    toast({
-                      title: 'Success!',
-                      description: 'Login successful',
-                    });
-                    
-                    const loginData = {
-                      ...data.user,
-                      wallet: data.wallet,
-                      provider: 'email',
-                      isNewWallet: false
-                    };
-                    
-                    console.log('📦 Passing login data to parent:', loginData);
-                    onSuccess(loginData);
-                  }).catch((error) => {
-                    toast({
-                      title: 'Error',
-                      description: error.message,
-                      variant: 'destructive',
-                    });
-                  });
-                }
-              }}
-            >
-              {verifyOtpMutation.isPending ? 'Logging in...' : 'Go to Dashboard'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setStep('email');
-                setWalletList([]);
-                setSelectedWalletId(null);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // OTP Verification Step
-  if (step === 'otp') {
-    return (
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-6 h-6 text-green-600" />
-          </div>
-          <CardTitle>Enter Verification Code</CardTitle>
-          <p className="text-sm text-gray-600">
-            We sent a 6-digit code to {email}
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleVerifyOtp} className="space-y-6">
-            <div className="flex justify-center">
-              <InputOTP
-                maxLength={6}
-                value={otp}
-                onChange={setOtp}
-                disabled={verifyOtpMutation.isPending}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-            <div className="space-y-3">
-              <Button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3"
-                disabled={verifyOtpMutation.isPending || otp.length !== 6}
-              >
-                {verifyOtpMutation.isPending
-                  ? (isLoginMode ? 'Logging in...' : 'Creating Wallet...')
-                  : (isLoginMode ? 'Verify & Login' : 'Verify & Create Wallet')
-                }
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleBack}
-                disabled={verifyOtpMutation.isPending}
-              >
-                Back
-              </Button>
-            </div>
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="link"
-                className="text-sm text-blue-600"
-                onClick={() => sendOtpMutation.mutate(email)}
-                disabled={sendOtpMutation.isPending}
-              >
-                {sendOtpMutation.isPending ? 'Sending...' : 'Resend Code'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // This step should never be reached as we redirect directly to dashboard
-  // If we get here, something went wrong
   return (
-    <Card className="w-full max-w-md">
-      <CardContent className="py-8 text-center">
-        <p className="text-gray-600">Redirecting to dashboard...</p>
-      </CardContent>
-    </Card>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {mode === 'create' ? 'Create Self-Custodial Wallet' : 'Access Your Wallet'}
+          </DialogTitle>
+          <DialogDescription>
+            {step === 'email' && 'Enter your email to get started'}
+            {step === 'otp' && 'Enter the verification code sent to your email'}
+            {step === 'password' && 'Create a secure password for your wallet'}
+            {step === 'backup' && '⚠️ CRITICAL: Save your seed phrase'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {step === 'email' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendOTP()}
+                />
+              </div>
+              <Button onClick={handleSendOTP} disabled={isLoading} className="w-full">
+                {isLoading ? 'Sending...' : 'Send Verification Code'}
+              </Button>
+            </>
+          )}
+
+          {step === 'otp' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="otp">Verification Code</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  placeholder="000000"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={(e) => e.key === 'Enter' && handleVerifyOTP()}
+                />
+              </div>
+              <Button onClick={handleVerifyOTP} disabled={isLoading} className="w-full">
+                {isLoading ? 'Verifying...' : 'Verify Code'}
+              </Button>
+            </>
+          )}
+
+          {step === 'password' && (
+            <>
+              <Alert className="border-yellow-500">
+                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                <AlertDescription className="text-xs">
+                  <strong>IMPORTANT:</strong> This password encrypts your wallet. If you lose it, your funds are lost FOREVER. We cannot recover it.
+                </AlertDescription>
+              </Alert>
+
+              {mode === 'create' ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Create Password (min 8 characters)</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-2"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type={showPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreateWallet()}
+                    />
+                  </div>
+
+                  <Button onClick={handleCreateWallet} disabled={isLoading} className="w-full">
+                    {isLoading ? 'Creating Wallet...' : 'Create Wallet'}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="importSeed">Seed Phrase (12 words)</Label>
+                    <textarea
+                      id="importSeed"
+                      className="w-full p-2 border rounded min-h-[80px]"
+                      placeholder="word1 word2 word3..."
+                      value={importSeed}
+                      onChange={(e) => setImportSeed(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Wallet Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleImportWallet()}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-2"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <Button onClick={handleImportWallet} disabled={isLoading} className="w-full">
+                    {isLoading ? 'Importing...' : 'Import Wallet'}
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+
+          {step === 'backup' && (
+            <>
+              <Alert className="border-red-500">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <AlertDescription className="text-xs">
+                  <strong>CRITICAL:</strong> Write down these 12 words on paper. This is the ONLY way to recover your wallet if you lose your password or device.
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label>Your Seed Phrase</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSeed(!showSeed)}
+                  >
+                    {showSeed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded border-2 border-red-500">
+                  {showSeed ? (
+                    <p className="font-mono text-sm break-words">{seedPhrase}</p>
+                  ) : (
+                    <p className="text-sm text-gray-500">Click the eye icon to reveal</p>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={copySeedPhrase}
+                  disabled={!showSeed}
+                  className="w-full"
+                >
+                  {seedCopied ? (
+                    <>
+                      <Check className="mr-2 h-4 w-4" /> Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-2 h-4 w-4" /> Copy to Clipboard
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border border-yellow-200 dark:border-yellow-800">
+                <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                  ⚠️ Never share your seed phrase with anyone. We will never ask for it. Store it securely offline.
+                </p>
+              </div>
+
+              <Button onClick={handleBackupComplete} className="w-full">
+                I've Saved My Seed Phrase
+              </Button>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

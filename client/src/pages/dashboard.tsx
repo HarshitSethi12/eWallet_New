@@ -7,6 +7,8 @@ import React, { useEffect, useState } from "react";
 // API and authentication hooks
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { getWallets, sendTransaction } from "@/lib/wallet-manager";
+import { ethers } from 'ethers';
 import { apiRequest } from "@/lib/queryClient";
 
 // UI components from our component library

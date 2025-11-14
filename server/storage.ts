@@ -305,13 +305,13 @@ class Storage {
     try {
       console.log('🔐 Creating new email wallet for:', walletData.email);
 
-      // Always create a new wallet
+      // Self-custodial: Only store email and wallet address
+      // Private keys and seed phrases never touch the server!
       const result = await db.insert(emailWallets)
         .values({
           email: walletData.email,
           walletAddress: walletData.walletAddress,
-          encryptedPrivateKey: this.encrypt(walletData.privateKey),
-          encryptedSeedPhrase: this.encrypt(walletData.seedPhrase),
+          // encryptedPrivateKey and encryptedSeedPhrase are removed
         })
         .returning();
 
@@ -321,8 +321,7 @@ class Storage {
         wallet: {
           id: result[0].id,
           address: walletData.walletAddress,
-          privateKey: walletData.privateKey,
-          seedPhrase: walletData.seedPhrase,
+          // Private key and seed phrase are not returned from the server
           createdAt: result[0].createdAt,
         }
       };
@@ -387,8 +386,7 @@ class Storage {
       return {
         id: wallet.id,
         address: wallet.walletAddress,
-        privateKey: this.decrypt(wallet.encryptedPrivateKey),
-        seedPhrase: this.decrypt(wallet.encryptedSeedPhrase),
+        // Private key and seed phrase are not decrypted or returned from the server
         createdAt: wallet.createdAt,
       };
     } catch (error) {
@@ -530,7 +528,14 @@ class Storage {
   // ===== ADMIN GET METHODS =====
   // Get all email wallets
   async getAllEmailWallets() {
-    return await db.select().from(emailWallets).orderBy(desc(emailWallets.createdAt));
+    // Returning only wallet address and related info, not sensitive keys
+    return await db.select({
+      id: emailWallets.id,
+      email: emailWallets.email,
+      walletAddress: emailWallets.walletAddress,
+      createdAt: emailWallets.createdAt,
+      lastLogin: emailWallets.lastLogin,
+    }).from(emailWallets).orderBy(desc(emailWallets.createdAt));
   }
 
   // Get all sessions
