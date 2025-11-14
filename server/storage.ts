@@ -296,6 +296,45 @@ class Storage {
   }
 
   /**
+   * Gets a single wallet by email address
+   * Returns wallet with salt and password hash for authentication
+   * Used for login
+   */
+  async getEmailWalletByEmail(email: string) {
+    try {
+      const canonicalEmail = email.toLowerCase().trim();
+      console.log('🔍 Finding wallet for email:', canonicalEmail);
+
+      const wallets = await db.select()
+        .from(emailWallets)
+        .where(eq(emailWallets.email, canonicalEmail))
+        .limit(1);
+
+      if (wallets.length === 0) {
+        console.log('❌ No wallet found for email:', canonicalEmail);
+        return null;
+      }
+
+      const wallet = wallets[0];
+      console.log('✅ Wallet found for email:', canonicalEmail);
+
+      return {
+        id: wallet.id,
+        email: wallet.email,
+        passwordHash: wallet.passwordHash,
+        salt: wallet.salt,
+        walletAddress: wallet.walletAddress,
+        chain: wallet.chain,
+        createdAt: wallet.createdAt,
+        lastLogin: wallet.lastLogin,
+      };
+    } catch (error) {
+      console.error('❌ Error finding wallet by email:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Gets all wallets for an email address
    * Returns list of wallets (without private keys for security)
    */

@@ -1,35 +1,34 @@
-
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { generateWallet, importWallet } from '@/lib/wallet-manager';
+import { deriveWalletFromPassword, generateSalt, validatePassword } from '@/lib/self-custodial-wallet';
 import { Eye, EyeOff, Copy, Check, AlertTriangle } from 'lucide-react';
+import bcrypt from 'bcryptjs';
 
 interface EmailAuthProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  mode: 'create' | 'login';
+  onSuccess: () => void;
+  isLoginMode: boolean;
 }
 
-export function EmailAuth({ open, onOpenChange, mode }: EmailAuthProps) {
-  const [step, setStep] = useState<'email' | 'otp' | 'password' | 'backup'>('email');
+export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
+  const [step, setStep] = useState<'email-password' | 'backup'>('email-password');
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [chain, setChain] = useState<'ETH' | 'BTC' | 'SOL'>('ETH');
   const [seedPhrase, setSeedPhrase] = useState('');
-  const [importSeed, setImportSeed] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showSeed, setShowSeed] = useState(false);
   const [seedCopied, setSeedCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSendOTP = async () => {
+  const handleCreateWallet = async () => {
+    // Validate email
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
       toast({
         variant: 'destructive',
@@ -39,74 +38,13 @@ export function EmailAuth({ open, onOpenChange, mode }: EmailAuthProps) {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/auth/email/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-
-      if (response.ok) {
-        setStep('otp');
-        toast({
-          title: 'OTP Sent',
-          description: 'Check your email for the verification code'
-        });
-      } else {
-        throw new Error('Failed to send OTP');
-      }
-    } catch (error) {
+    // Validate password
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to send OTP. Please try again.'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async () => {
-    if (!otp || otp.length !== 6) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid OTP',
-        description: 'Please enter the 6-digit code'
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/auth/email/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: otp })
-      });
-
-      if (response.ok) {
-        setStep('password');
-      } else {
-        throw new Error('Invalid OTP');
-      }
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Invalid OTP. Please try again.'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCreateWallet = async () => {
-    if (password.length < 8) {
-      toast({
-        variant: 'destructive',
-        title: 'Weak password',
-        description: 'Password must be at least 8 characters'
+        title: 'Password requirements not met',
+        description: passwordErrors[0]
       });
       return;
     }
@@ -122,70 +60,122 @@ export function EmailAuth({ open, onOpenChange, mode }: EmailAuthProps) {
 
     setIsLoading(true);
     try {
-      // Generate wallet client-side with password encryption
-      const { address, seedPhrase: phrase } = await generateWallet(email, password);
-      setSeedPhrase(phrase);
-
-      // Send only the wallet ADDRESS to server (not private key!)
-      await fetch('/api/auth/email/register-wallet', {
+      // Generate salt for this user
+      const salt = generateSalt();
+      
+      // Derive wallet from email + password + salt (client-side only!)
+      const wallet = await deriveWalletFromPassword(email, password, salt, chain);
+      
+      // Hash password with bcrypt for server storage
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Send ONLY email, password hash, salt, public address, and chain to server
+      const response = await fetch('/api/auth/email/create-wallet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, walletAddress: address })
+        credentials: 'include',
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          passwordHash,
+          salt,
+          walletAddress: wallet.address,
+          chain: wallet.chain
+        })
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create wallet');
+      }
+
+      // Save seed phrase to show user
+      setSeedPhrase(wallet.mnemonic);
+      setWalletAddress(wallet.address);
+      
+      // Move to backup step
       setStep('backup');
-    } catch (error) {
+      
+      toast({
+        title: 'Wallet created!',
+        description: 'Please save your recovery phrase'
+      });
+    } catch (error: any) {
+      console.error('Wallet creation error:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to create wallet. Please try again.'
+        description: error.message || 'Failed to create wallet. Please try again.'
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleImportWallet = async () => {
-    if (password.length < 8) {
+  const handleLogin = async () => {
+    // Validate email
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
       toast({
         variant: 'destructive',
-        title: 'Weak password',
-        description: 'Password must be at least 8 characters'
+        title: 'Invalid email',
+        description: 'Please enter a valid email address'
       });
       return;
     }
 
-    if (!importSeed || importSeed.split(' ').length !== 12) {
+    if (!password) {
       toast({
         variant: 'destructive',
-        title: 'Invalid seed phrase',
-        description: 'Please enter a valid 12-word seed phrase'
+        title: 'Password required',
+        description: 'Please enter your password'
       });
       return;
     }
 
     setIsLoading(true);
     try {
-      const address = await importWallet(email, importSeed, password);
-
-      await fetch('/api/auth/email/register-wallet', {
+      // Login with email and password
+      const response = await fetch('/api/auth/email/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, walletAddress: address })
+        credentials: 'include',
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          password
+        })
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Login failed');
+      }
+
+      const data = await response.json();
+      
+      // Re-derive wallet on client side to restore keys
+      const wallet = await deriveWalletFromPassword(
+        email,
+        password,
+        data.salt,
+        data.chain
+      );
+      
+      // Store wallet in sessionStorage (temporary, browser only)
+      sessionStorage.setItem('wallet_mnemonic', wallet.mnemonic);
+      sessionStorage.setItem('wallet_address', wallet.address);
+      sessionStorage.setItem('wallet_chain', wallet.chain);
+      
       toast({
-        title: 'Success!',
-        description: 'Wallet imported successfully'
+        title: 'Login successful!',
+        description: 'Welcome back'
       });
-
-      onOpenChange(false);
-      window.location.href = '/dashboard';
-    } catch (error) {
+      
+      onSuccess();
+    } catch (error: any) {
+      console.error('Login error:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to import wallet. Check your seed phrase.'
+        title: 'Login failed',
+        description: error.message || 'Invalid email or password'
       });
     } finally {
       setIsLoading(false);
@@ -199,213 +189,191 @@ export function EmailAuth({ open, onOpenChange, mode }: EmailAuthProps) {
   };
 
   const handleBackupComplete = () => {
+    // Store wallet in sessionStorage
+    sessionStorage.setItem('wallet_mnemonic', seedPhrase);
+    sessionStorage.setItem('wallet_address', walletAddress);
+    sessionStorage.setItem('wallet_chain', chain);
+    
     toast({
-      title: 'Wallet created!',
+      title: 'Setup complete!',
       description: 'You can now access your wallet'
     });
-    onOpenChange(false);
-    window.location.href = '/dashboard';
+    
+    onSuccess();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {mode === 'create' ? 'Create Self-Custodial Wallet' : 'Access Your Wallet'}
-          </DialogTitle>
-          <DialogDescription>
-            {step === 'email' && 'Enter your email to get started'}
-            {step === 'otp' && 'Enter the verification code sent to your email'}
-            {step === 'password' && 'Create a secure password for your wallet'}
-            {step === 'backup' && '⚠️ CRITICAL: Save your seed phrase'}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {step === 'email' && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendOTP()}
-                />
-              </div>
-              <Button onClick={handleSendOTP} disabled={isLoading} className="w-full">
-                {isLoading ? 'Sending...' : 'Send Verification Code'}
-              </Button>
-            </>
+    <div className="space-y-4 py-4" data-testid="email-auth-form">
+      {step === 'email-password' && (
+        <>
+          {!isLoginMode && (
+            <Alert className="border-blue-500" data-testid="alert-self-custodial">
+              <AlertTriangle className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-xs">
+                <strong>Self-Custodial Wallet:</strong> Your private keys are generated on your device and never sent to our servers. You are in full control of your funds.
+              </AlertDescription>
+            </Alert>
           )}
 
-          {step === 'otp' && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="otp">Verification Code</Label>
-                <Input
-                  id="otp"
-                  type="text"
-                  placeholder="000000"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  onKeyDown={(e) => e.key === 'Enter' && handleVerifyOTP()}
-                />
-              </div>
-              <Button onClick={handleVerifyOTP} disabled={isLoading} className="w-full">
-                {isLoading ? 'Verifying...' : 'Verify Code'}
-              </Button>
-            </>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+              data-testid="input-email"
+            />
+          </div>
+
+          {!isLoginMode && (
+            <div className="space-y-2">
+              <Label htmlFor="chain">Blockchain</Label>
+              <select
+                id="chain"
+                value={chain}
+                onChange={(e) => setChain(e.target.value as 'ETH' | 'BTC' | 'SOL')}
+                className="w-full p-2 border rounded"
+                disabled={isLoading}
+                data-testid="select-chain"
+              >
+                <option value="ETH">Ethereum (ETH)</option>
+                <option value="BTC">Bitcoin (BTC)</option>
+                <option value="SOL">Solana (SOL)</option>
+              </select>
+            </div>
           )}
 
-          {step === 'password' && (
+          <div className="space-y-2">
+            <Label htmlFor="password">
+              {isLoginMode ? 'Password' : 'Create Password (min 12 characters)'}
+            </Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+                data-testid="input-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-2"
+                data-testid="button-toggle-password"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {!isLoginMode && (
+              <p className="text-xs text-gray-500">
+                Must include: uppercase, lowercase, number, special character
+              </p>
+            )}
+          </div>
+
+          {!isLoginMode && (
             <>
-              <Alert className="border-yellow-500">
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleCreateWallet()}
+                  disabled={isLoading}
+                  data-testid="input-confirm-password"
+                />
+              </div>
+
+              <Alert className="border-yellow-500" data-testid="alert-password-warning">
                 <AlertTriangle className="h-4 w-4 text-yellow-500" />
                 <AlertDescription className="text-xs">
-                  <strong>IMPORTANT:</strong> This password encrypts your wallet. If you lose it, your funds are lost FOREVER. We cannot recover it.
+                  <strong>CRITICAL:</strong> If you lose your password AND recovery phrase, your funds are lost FOREVER. We cannot recover them.
                 </AlertDescription>
               </Alert>
+            </>
+          )}
 
-              {mode === 'create' ? (
+          <Button
+            onClick={isLoginMode ? handleLogin : handleCreateWallet}
+            disabled={isLoading}
+            className="w-full"
+            data-testid={isLoginMode ? 'button-login' : 'button-create-wallet'}
+          >
+            {isLoading ? (isLoginMode ? 'Logging in...' : 'Creating Wallet...') : (isLoginMode ? 'Login' : 'Create Wallet')}
+          </Button>
+        </>
+      )}
+
+      {step === 'backup' && (
+        <>
+          <Alert className="border-red-500" data-testid="alert-backup-critical">
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <AlertDescription className="text-xs">
+              <strong>CRITICAL:</strong> Write down these 12 words on paper. This is the ONLY way to recover your wallet if you lose your password.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <Label>Your Recovery Phrase</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSeed(!showSeed)}
+                data-testid="button-toggle-seed"
+              >
+                {showSeed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+            <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded border-2 border-red-500">
+              {showSeed ? (
+                <p className="font-mono text-sm break-words" data-testid="text-seed-phrase">{seedPhrase}</p>
+              ) : (
+                <p className="text-sm text-gray-500">Click the eye icon to reveal</p>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              onClick={copySeedPhrase}
+              disabled={!showSeed}
+              className="w-full"
+              data-testid="button-copy-seed"
+            >
+              {seedCopied ? (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Create Password (min 8 characters)</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2 top-2"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type={showPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleCreateWallet()}
-                    />
-                  </div>
-
-                  <Button onClick={handleCreateWallet} disabled={isLoading} className="w-full">
-                    {isLoading ? 'Creating Wallet...' : 'Create Wallet'}
-                  </Button>
+                  <Check className="mr-2 h-4 w-4" /> Copied!
                 </>
               ) : (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="importSeed">Seed Phrase (12 words)</Label>
-                    <textarea
-                      id="importSeed"
-                      className="w-full p-2 border rounded min-h-[80px]"
-                      placeholder="word1 word2 word3..."
-                      value={importSeed}
-                      onChange={(e) => setImportSeed(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Wallet Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleImportWallet()}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2 top-2"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <Button onClick={handleImportWallet} disabled={isLoading} className="w-full">
-                    {isLoading ? 'Importing...' : 'Import Wallet'}
-                  </Button>
+                  <Copy className="mr-2 h-4 w-4" /> Copy to Clipboard
                 </>
               )}
-            </>
-          )}
+            </Button>
+          </div>
 
-          {step === 'backup' && (
-            <>
-              <Alert className="border-red-500">
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-                <AlertDescription className="text-xs">
-                  <strong>CRITICAL:</strong> Write down these 12 words on paper. This is the ONLY way to recover your wallet if you lose your password or device.
-                </AlertDescription>
-              </Alert>
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border border-yellow-200 dark:border-yellow-800">
+            <p className="text-xs text-yellow-800 dark:text-yellow-200">
+              ⚠️ Never share your recovery phrase with anyone. Store it securely offline (write it on paper).
+            </p>
+          </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <Label>Your Seed Phrase</Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowSeed(!showSeed)}
-                  >
-                    {showSeed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded border-2 border-red-500">
-                  {showSeed ? (
-                    <p className="font-mono text-sm break-words">{seedPhrase}</p>
-                  ) : (
-                    <p className="text-sm text-gray-500">Click the eye icon to reveal</p>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={copySeedPhrase}
-                  disabled={!showSeed}
-                  className="w-full"
-                >
-                  {seedCopied ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" /> Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="mr-2 h-4 w-4" /> Copy to Clipboard
-                    </>
-                  )}
-                </Button>
-              </div>
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+            <p className="text-xs text-blue-800 dark:text-blue-200">
+              <strong>Your wallet address:</strong> <span className="font-mono">{walletAddress}</span>
+            </p>
+          </div>
 
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border border-yellow-200 dark:border-yellow-800">
-                <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                  ⚠️ Never share your seed phrase with anyone. We will never ask for it. Store it securely offline.
-                </p>
-              </div>
-
-              <Button onClick={handleBackupComplete} className="w-full">
-                I've Saved My Seed Phrase
-              </Button>
-            </>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+          <Button onClick={handleBackupComplete} className="w-full" data-testid="button-backup-complete">
+            I've Saved My Recovery Phrase Securely
+          </Button>
+        </>
+      )}
+    </div>
   );
 }

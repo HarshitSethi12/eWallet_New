@@ -8,6 +8,7 @@ import twilio from 'twilio';
 import NodeCache from 'node-cache';
 import sgMail from '@sendgrid/mail';
 import { Resend } from 'resend';
+import bcrypt from 'bcryptjs';
 
 declare module 'express-session' {
   interface SessionData {
@@ -1223,6 +1224,202 @@ export function setupAuth(app: express.Express) {
     } catch (error) {
       console.error('Delete wallet error:', error);
       res.status(500).json({ error: 'Failed to delete wallet' });
+    }
+  });
+
+  // ===== PASSWORD-BASED AUTHENTICATION (SELF-CUSTODIAL) =====
+  
+  /**
+   * Create a new self-custodial wallet with password authentication
+   * Client generates wallet locally and sends ONLY: email, passwordHash, salt, public address, chain
+   * CRITICAL: Private keys NEVER sent to server!
+   */
+  app.post('/api/auth/email/create-wallet', async (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    
+    try {
+      console.log('🔐 Self-custodial wallet creation request received');
+      
+      const { email, passwordHash, salt, walletAddress, chain } = req.body;
+      
+      // Validate required fields
+      if (!email || !passwordHash || !salt || !walletAddress || !chain) {
+        console.error('❌ Missing required fields');
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields'
+        });
+      }
+      
+      // Validate email format
+      if (!/\S+@\S+\.\S+/.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format'
+        });
+      }
+      
+      // Validate chain
+      if (!['ETH', 'BTC', 'SOL'].includes(chain)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid blockchain. Must be ETH, BTC, or SOL'
+        });
+      }
+      
+      // Check if email already exists
+      const canonicalEmail = email.toLowerCase().trim();
+      const existingWallet = await storage.getEmailWalletByEmail(canonicalEmail);
+      
+      if (existingWallet) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this email already exists'
+        });
+      }
+      
+      // Create wallet in database (only stores public data + password hash)
+      const result = await storage.createEmailWallet({
+        email: canonicalEmail,
+        passwordHash,
+        salt,
+        walletAddress,
+        chain
+      });
+      
+      // Create session for the user
+      req.session.user = {
+        id: `email_${result.wallet.id}`,
+        sub: `email_${result.wallet.id}`,
+        email: canonicalEmail,
+        walletAddress: result.wallet.address,
+        walletId: result.wallet.id,
+        provider: 'email',
+        chain: result.wallet.chain,
+        name: canonicalEmail.split('@')[0],
+        picture: null
+      };
+      
+      // Save session
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error('❌ Session save error:', err);
+            reject(err);
+          } else {
+            console.log('✅ Session saved for new wallet:', canonicalEmail);
+            resolve();
+          }
+        });
+      });
+      
+      console.log('✅ Self-custodial wallet created successfully');
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Wallet created successfully',
+        wallet: {
+          id: result.wallet.id,
+          email: result.wallet.email,
+          address: result.wallet.address,
+          chain: result.wallet.chain
+        }
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Wallet creation error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to create wallet'
+      });
+    }
+  });
+  
+  /**
+   * Login with email and password (self-custodial)
+   * Verifies password hash and returns salt so client can re-derive wallet
+   */
+  app.post('/api/auth/email/login', async (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    
+    try {
+      console.log('🔐 Password-based login request received');
+      
+      const { email, password } = req.body;
+      
+      // Validate required fields
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and password are required'
+        });
+      }
+      
+      // Get wallet by email
+      const canonicalEmail = email.toLowerCase().trim();
+      const wallet = await storage.getEmailWalletByEmail(canonicalEmail);
+      
+      if (!wallet) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password'
+        });
+      }
+      
+      // Verify password using bcrypt
+      const passwordMatch = await bcrypt.compare(password, wallet.passwordHash);
+      
+      if (!passwordMatch) {
+        console.log('❌ Password mismatch for:', canonicalEmail);
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password'
+        });
+      }
+      
+      // Create session
+      req.session.user = {
+        id: `email_${wallet.id}`,
+        sub: `email_${wallet.id}`,
+        email: wallet.email,
+        walletAddress: wallet.walletAddress,
+        walletId: wallet.id,
+        provider: 'email',
+        chain: wallet.chain,
+        name: wallet.email.split('@')[0],
+        picture: null
+      };
+      
+      // Save session
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error('❌ Session save error:', err);
+            reject(err);
+          } else {
+            console.log('✅ Session saved for login:', canonicalEmail);
+            resolve();
+          }
+        });
+      });
+      
+      console.log('✅ Login successful for:', canonicalEmail);
+      
+      // Return salt so client can re-derive wallet
+      return res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        salt: wallet.salt,
+        chain: wallet.chain,
+        walletAddress: wallet.walletAddress
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Login error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Login failed'
+      });
     }
   });
 }
