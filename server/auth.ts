@@ -1267,14 +1267,14 @@ export function setupAuth(app: express.Express) {
         });
       }
       
-      // Check if email already exists
+      // Check if wallet already exists for this email + chain combination
       const canonicalEmail = email.toLowerCase().trim();
-      const existingWallet = await storage.getEmailWalletByEmail(canonicalEmail);
+      const existingWallet = await storage.getEmailWalletByEmailAndChain(canonicalEmail, chain);
       
       if (existingWallet) {
         return res.status(400).json({
           success: false,
-          message: 'An account with this email already exists'
+          message: `You already have a ${chain} wallet. Try logging in or create a wallet for a different blockchain.`
         });
       }
       
@@ -1336,8 +1336,51 @@ export function setupAuth(app: express.Express) {
   });
   
   /**
-   * Login with email and password (self-custodial)
-   * Verifies password hash and returns salt so client can re-derive wallet
+   * Get all wallets for an email (multi-chain support)
+   * Returns list of all chain wallets associated with this email
+   */
+  app.post('/api/auth/email/get-wallets', async (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required'
+        });
+      }
+      
+      const canonicalEmail = email.toLowerCase().trim();
+      const wallets = await storage.getAllChainWalletsForEmail(canonicalEmail);
+      
+      // Return only non-sensitive data
+      const walletsData = wallets.map(w => ({
+        id: w.id,
+        chain: w.chain,
+        walletAddress: w.walletAddress,
+        createdAt: w.createdAt
+      }));
+      
+      return res.status(200).json({
+        success: true,
+        wallets: walletsData,
+        hasWallets: wallets.length > 0
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Get wallets error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to get wallets'
+      });
+    }
+  });
+
+  /**
+   * Login with email, password, and chain selection (self-custodial)
+   * Verifies password hash and returns salt so client can re-derive wallet for selected chain
    */
   app.post('/api/auth/email/login', async (req, res) => {
     res.setHeader('Content-Type', 'application/json');
@@ -1345,24 +1388,32 @@ export function setupAuth(app: express.Express) {
     try {
       console.log('🔐 Password-based login request received');
       
-      const { email, password } = req.body;
+      const { email, password, chain } = req.body;
       
       // Validate required fields
-      if (!email || !password) {
+      if (!email || !password || !chain) {
         return res.status(400).json({
           success: false,
-          message: 'Email and password are required'
+          message: 'Email, password, and chain are required'
         });
       }
       
-      // Get wallet by email
+      // Validate chain
+      if (!['ETH', 'BTC', 'SOL'].includes(chain)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid blockchain. Must be ETH, BTC, or SOL'
+        });
+      }
+      
+      // Get wallet by email and chain
       const canonicalEmail = email.toLowerCase().trim();
-      const wallet = await storage.getEmailWalletByEmail(canonicalEmail);
+      const wallet = await storage.getEmailWalletByEmailAndChain(canonicalEmail, chain);
       
       if (!wallet) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid email or password'
+          message: `No ${chain} wallet found for this email. Please create one first.`
         });
       }
       
@@ -1370,7 +1421,7 @@ export function setupAuth(app: express.Express) {
       const passwordMatch = await bcrypt.compare(password, wallet.passwordHash);
       
       if (!passwordMatch) {
-        console.log('❌ Password mismatch for:', canonicalEmail);
+        console.log('❌ Password mismatch for:', canonicalEmail, chain);
         return res.status(401).json({
           success: false,
           message: 'Invalid email or password'
@@ -1397,13 +1448,13 @@ export function setupAuth(app: express.Express) {
             console.error('❌ Session save error:', err);
             reject(err);
           } else {
-            console.log('✅ Session saved for login:', canonicalEmail);
+            console.log('✅ Session saved for login:', canonicalEmail, chain);
             resolve();
           }
         });
       });
       
-      console.log('✅ Login successful for:', canonicalEmail);
+      console.log('✅ Login successful for:', canonicalEmail, chain);
       
       // Return salt so client can re-derive wallet
       return res.status(200).json({

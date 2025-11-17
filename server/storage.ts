@@ -10,7 +10,7 @@ import {
   InsertMetaMaskUser,                         // TypeScript type for inserting MetaMask users
   InsertEmailWallet                           // TypeScript type for inserting email wallets
 } from '@shared/schema';
-import { eq, desc } from 'drizzle-orm';        // Database query operators
+import { eq, desc, and } from 'drizzle-orm';        // Database query operators
 import crypto from 'crypto';                   // Encryption utilities
 
 // ===== STORAGE CLASS =====
@@ -296,27 +296,32 @@ class Storage {
   }
 
   /**
-   * Gets a single wallet by email address
+   * Gets a single wallet by email and chain
    * Returns wallet with salt and password hash for authentication
-   * Used for login
+   * Used for login to specific chain wallet
    */
-  async getEmailWalletByEmail(email: string) {
+  async getEmailWalletByEmailAndChain(email: string, chain: 'ETH' | 'BTC' | 'SOL') {
     try {
       const canonicalEmail = email.toLowerCase().trim();
-      console.log('🔍 Finding wallet for email:', canonicalEmail);
+      console.log('🔍 Finding wallet for email:', canonicalEmail, 'chain:', chain);
 
       const wallets = await db.select()
         .from(emailWallets)
-        .where(eq(emailWallets.email, canonicalEmail))
+        .where(
+          and(
+            eq(emailWallets.email, canonicalEmail),
+            eq(emailWallets.chain, chain)
+          )
+        )
         .limit(1);
 
       if (wallets.length === 0) {
-        console.log('❌ No wallet found for email:', canonicalEmail);
+        console.log('❌ No wallet found for email:', canonicalEmail, 'chain:', chain);
         return null;
       }
 
       const wallet = wallets[0];
-      console.log('✅ Wallet found for email:', canonicalEmail);
+      console.log('✅ Wallet found for email:', canonicalEmail, 'chain:', chain);
 
       return {
         id: wallet.id,
@@ -329,7 +334,37 @@ class Storage {
         lastLogin: wallet.lastLogin,
       };
     } catch (error) {
-      console.error('❌ Error finding wallet by email:', error);
+      console.error('❌ Error finding wallet by email and chain:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets all chain wallets for a specific email address
+   * Returns array of wallets across all chains (ETH, BTC, SOL)
+   */
+  async getAllChainWalletsForEmail(email: string) {
+    try {
+      const canonicalEmail = email.toLowerCase().trim();
+      console.log('🔍 Finding all chain wallets for email:', canonicalEmail);
+
+      const wallets = await db.select()
+        .from(emailWallets)
+        .where(eq(emailWallets.email, canonicalEmail))
+        .orderBy(desc(emailWallets.createdAt));
+
+      console.log(`✅ Found ${wallets.length} chain wallet(s) for email:`, canonicalEmail);
+
+      return wallets.map(wallet => ({
+        id: wallet.id,
+        email: wallet.email,
+        chain: wallet.chain,
+        walletAddress: wallet.walletAddress,
+        createdAt: wallet.createdAt,
+        lastLogin: wallet.lastLogin,
+      }));
+    } catch (error) {
+      console.error('❌ Error finding chain wallets:', error);
       throw error;
     }
   }
@@ -522,9 +557,9 @@ class Storage {
       }
 
       return { success: false, error: 'Delete operation failed' };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ ADMIN: Error force deleting wallet:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error.message || 'Unknown error' };
     }
   }
 
@@ -536,14 +571,10 @@ class Storage {
       id: emailWallets.id,
       email: emailWallets.email,
       walletAddress: emailWallets.walletAddress,
+      chain: emailWallets.chain,
       createdAt: emailWallets.createdAt,
       lastLogin: emailWallets.lastLogin,
     }).from(emailWallets).orderBy(desc(emailWallets.createdAt));
-  }
-
-  // Get all sessions
-  async getAllSessions() {
-    return await db.select().from(userSessions).orderBy(desc(userSessions.startTime));
   }
 
   // Get all MetaMask users
