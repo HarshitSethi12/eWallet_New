@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { deriveWalletFromPassword, generateSalt, validatePassword } from '@/lib/self-custodial-wallet';
-import { Eye, EyeOff, Copy, Check, AlertTriangle } from 'lucide-react';
+import { Eye, EyeOff, Copy, Check, AlertTriangle, Wallet } from 'lucide-react';
 import bcrypt from 'bcryptjs';
 
 interface EmailAuthProps {
@@ -13,19 +13,84 @@ interface EmailAuthProps {
   isLoginMode: boolean;
 }
 
+interface ExistingWallet {
+  id: number;
+  chain: 'ETH' | 'BTC' | 'SOL';
+  walletAddress: string;
+  createdAt: string;
+}
+
 export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
-  const [step, setStep] = useState<'email-password' | 'backup'>('email-password');
+  const [step, setStep] = useState<'email' | 'email-password' | 'backup'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [chain, setChain] = useState<'ETH' | 'BTC' | 'SOL'>('ETH');
+  const [existingWallets, setExistingWallets] = useState<ExistingWallet[]>([]);
   const [seedPhrase, setSeedPhrase] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showSeed, setShowSeed] = useState(false);
   const [seedCopied, setSeedCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const { toast } = useToast();
+
+  const checkExistingWallets = async (emailToCheck: string) => {
+    if (!emailToCheck || !/\S+@\S+\.\S+/.test(emailToCheck)) {
+      return;
+    }
+
+    setCheckingEmail(true);
+    try {
+      const response = await fetch('/api/auth/email/get-wallets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToCheck.toLowerCase().trim() })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setExistingWallets(data.wallets || []);
+        
+        if (isLoginMode && data.wallets.length > 0) {
+          // Auto-select first wallet when logging in
+          setChain(data.wallets[0].chain);
+        } else if (!isLoginMode && data.wallets.length > 0) {
+          // Auto-select first available chain if creating new wallet
+          const usedChains = new Set(data.wallets.map((w: ExistingWallet) => w.chain));
+          const availableChain = (['ETH', 'BTC', 'SOL'] as const).find(c => !usedChains.has(c));
+          if (availableChain) {
+            setChain(availableChain);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking wallets:', error);
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
+  const handleEmailSubmit = () => {
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid email',
+        description: 'Please enter a valid email address'
+      });
+      return;
+    }
+    
+    checkExistingWallets(email);
+    setStep('email-password');
+  };
+
+  const getAvailableChains = (): ('ETH' | 'BTC' | 'SOL')[] => {
+    const allChains: ('ETH' | 'BTC' | 'SOL')[] = ['ETH', 'BTC', 'SOL'];
+    const usedChains = new Set(existingWallets.map(w => w.chain));
+    return allChains.filter(c => !usedChains.has(c));
+  };
 
   const handleCreateWallet = async () => {
     // Validate email
@@ -112,16 +177,6 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
   };
 
   const handleLogin = async () => {
-    // Validate email
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid email',
-        description: 'Please enter a valid email address'
-      });
-      return;
-    }
-
     if (!password) {
       toast({
         variant: 'destructive',
@@ -131,16 +186,26 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
       return;
     }
 
+    if (isLoginMode && existingWallets.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No wallet found',
+        description: 'No wallets found for this email. Please create one first.'
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Login with email and password
+      // Login with email, password, and selected chain
       const response = await fetch('/api/auth/email/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           email: email.toLowerCase().trim(),
-          password
+          password,
+          chain
         })
       });
 
@@ -166,7 +231,7 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
       
       toast({
         title: 'Login successful!',
-        description: 'Welcome back'
+        description: `Logged into your ${data.chain} wallet`
       });
       
       onSuccess();
@@ -202,35 +267,121 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
     onSuccess();
   };
 
+  const chainNames = {
+    ETH: 'Ethereum',
+    BTC: 'Bitcoin',
+    SOL: 'Solana'
+  };
+
   return (
     <div className="space-y-4 py-4" data-testid="email-auth-form">
-      {step === 'email-password' && (
+      {step === 'email' && (
         <>
-          {!isLoginMode && (
-            <Alert className="border-blue-500" data-testid="alert-self-custodial">
-              <AlertTriangle className="h-4 w-4 text-blue-500" />
-              <AlertDescription className="text-xs">
-                <strong>Self-Custodial Wallet:</strong> Your private keys are generated on your device and never sent to our servers. You are in full control of your funds.
-              </AlertDescription>
-            </Alert>
-          )}
+          <Alert className="border-blue-500" data-testid="alert-self-custodial">
+            <Wallet className="h-4 w-4 text-blue-500" />
+            <AlertDescription className="text-xs">
+              <strong>Self-Custodial Wallet:</strong> Your private keys are generated on your device and never sent to our servers.
+            </AlertDescription>
+          </Alert>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email Address</Label>
             <Input
               id="email"
               type="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
+              onKeyDown={(e) => e.key === 'Enter' && handleEmailSubmit()}
+              disabled={checkingEmail}
               data-testid="input-email"
             />
           </div>
 
+          <Button
+            onClick={handleEmailSubmit}
+            disabled={checkingEmail || !email}
+            className="w-full"
+            data-testid="button-continue"
+          >
+            {checkingEmail ? 'Checking...' : 'Continue'}
+          </Button>
+        </>
+      )}
+
+      {step === 'email-password' && (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setStep('email');
+                setExistingWallets([]);
+                setPassword('');
+                setConfirmPassword('');
+              }}
+              data-testid="button-back"
+            >
+              ← Change Email
+            </Button>
+            <p className="text-sm text-gray-600">{email}</p>
+          </div>
+
+          {existingWallets.length > 0 && (
+            <Alert className="border-green-500" data-testid="alert-existing-wallets">
+              <Wallet className="h-4 w-4 text-green-500" />
+              <AlertDescription className="text-xs">
+                <strong>Existing Wallets:</strong> You have {existingWallets.length} wallet{existingWallets.length > 1 ? 's' : ''} on this account
+                <ul className="mt-2 space-y-1">
+                  {existingWallets.map(w => (
+                    <li key={w.id} className="font-mono text-xs">
+                      • {chainNames[w.chain]} - {w.walletAddress.slice(0, 12)}...{w.walletAddress.slice(-8)}
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!isLoginMode && existingWallets.length > 0 && getAvailableChains().length === 0 && (
+            <Alert className="border-yellow-500" data-testid="alert-max-wallets">
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              <AlertDescription className="text-xs">
+                You already have wallets for all supported blockchains (ETH, BTC, SOL). Please log in instead.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {!isLoginMode && (
             <div className="space-y-2">
-              <Label htmlFor="chain">Blockchain</Label>
+              <Label htmlFor="chain">Select Blockchain</Label>
+              <select
+                id="chain"
+                value={chain}
+                onChange={(e) => setChain(e.target.value as 'ETH' | 'BTC' | 'SOL')}
+                className="w-full p-2 border rounded"
+                disabled={isLoading || getAvailableChains().length === 0}
+                data-testid="select-chain"
+              >
+                {getAvailableChains().map(c => (
+                  <option key={c} value={c}>{chainNames[c]} ({c})</option>
+                ))}
+                {getAvailableChains().length === 0 && (
+                  <option value="">No available chains</option>
+                )}
+              </select>
+              {existingWallets.length > 0 && getAvailableChains().length > 0 && (
+                <p className="text-xs text-gray-500">
+                  Creating a new {chainNames[chain]} wallet for this account
+                </p>
+              )}
+            </div>
+          )}
+
+          {isLoginMode && existingWallets.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="chain">Select Wallet</Label>
               <select
                 id="chain"
                 value={chain}
@@ -239,9 +390,11 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
                 disabled={isLoading}
                 data-testid="select-chain"
               >
-                <option value="ETH">Ethereum (ETH)</option>
-                <option value="BTC">Bitcoin (BTC)</option>
-                <option value="SOL">Solana (SOL)</option>
+                {existingWallets.map(w => (
+                  <option key={w.id} value={w.chain}>
+                    {chainNames[w.chain]} ({w.chain}) - {w.walletAddress.slice(0, 12)}...
+                  </option>
+                ))}
               </select>
             </div>
           )}
