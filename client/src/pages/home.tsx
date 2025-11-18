@@ -441,10 +441,8 @@ function WelcomePage() {
 
   // ===== WALLET CREATION SUCCESS HANDLER =====
   // Redirects to dashboard after successful wallet creation
-  const handleWalletCreationSuccess = (walletData: any) => {
-    console.log('✅ Wallet created successfully:', walletData);
-    console.log('📧 Email:', walletData.email);
-    console.log('🏦 Address:', walletData.address);
+  const handleWalletCreationSuccess = () => {
+    console.log('✅ Wallet created successfully');
     
     setShowEmailWalletCreation(false);
 

@@ -72,7 +72,7 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
     }
   };
 
-  const handleEmailSubmit = () => {
+  const handleEmailSubmit = async () => {
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
       toast({
         variant: 'destructive',
@@ -82,7 +82,49 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
       return;
     }
     
-    checkExistingWallets(email);
+    // Check for existing wallets first
+    setCheckingEmail(true);
+    try {
+      const response = await fetch('/api/auth/email/get-wallets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase().trim() })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setExistingWallets(data.wallets || []);
+        
+        // For create mode, check if all chains are used
+        if (!isLoginMode) {
+          const usedChains = new Set((data.wallets || []).map((w: ExistingWallet) => w.chain));
+          const availableChains = (['ETH', 'BTC', 'SOL'] as const).filter(c => !usedChains.has(c));
+          
+          if (availableChains.length === 0 && data.wallets.length > 0) {
+            toast({
+              variant: 'destructive',
+              title: 'All wallets created',
+              description: 'You already have wallets for all supported blockchains (ETH, BTC, SOL). Please log in instead.'
+            });
+            setCheckingEmail(false);
+            return;
+          }
+          
+          // Auto-select first available chain
+          if (availableChains.length > 0) {
+            setChain(availableChains[0]);
+          }
+        } else if (isLoginMode && data.wallets.length > 0) {
+          // Auto-select first wallet when logging in
+          setChain(data.wallets[0].chain);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking wallets:', error);
+    } finally {
+      setCheckingEmail(false);
+    }
+    
     setStep('email-password');
   };
 
@@ -353,7 +395,7 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
             </Alert>
           )}
 
-          {!isLoginMode && (
+          {!isLoginMode && getAvailableChains().length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="chain">Select Blockchain</Label>
               <select
@@ -361,17 +403,14 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
                 value={chain}
                 onChange={(e) => setChain(e.target.value as 'ETH' | 'BTC' | 'SOL')}
                 className="w-full p-2 border rounded"
-                disabled={isLoading || getAvailableChains().length === 0}
+                disabled={isLoading}
                 data-testid="select-chain"
               >
                 {getAvailableChains().map(c => (
                   <option key={c} value={c}>{chainNames[c]} ({c})</option>
                 ))}
-                {getAvailableChains().length === 0 && (
-                  <option value="">No available chains</option>
-                )}
               </select>
-              {existingWallets.length > 0 && getAvailableChains().length > 0 && (
+              {existingWallets.length > 0 && (
                 <p className="text-xs text-gray-500">
                   Creating a new {chainNames[chain]} wallet for this account
                 </p>
@@ -454,11 +493,17 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
 
           <Button
             onClick={isLoginMode ? handleLogin : handleCreateWallet}
-            disabled={isLoading}
+            disabled={isLoading || (!isLoginMode && getAvailableChains().length === 0)}
             className="w-full"
             data-testid={isLoginMode ? 'button-login' : 'button-create-wallet'}
           >
-            {isLoading ? (isLoginMode ? 'Logging in...' : 'Creating Wallet...') : (isLoginMode ? 'Login' : 'Create Wallet')}
+            {isLoading ? (
+              isLoginMode ? 'Logging in...' : 'Creating Wallet...'
+            ) : (
+              !isLoginMode && getAvailableChains().length === 0 ? 
+                'All Chains Already Have Wallets' : 
+                (isLoginMode ? 'Login' : 'Create Wallet')
+            )}
           </Button>
         </>
       )}
