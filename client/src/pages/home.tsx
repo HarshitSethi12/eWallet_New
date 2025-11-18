@@ -644,27 +644,31 @@ function WelcomePage() {
 
       {/* Email Wallet Creation Dialog */}
       <Dialog open={showEmailWalletCreation} onOpenChange={setShowEmailWalletCreation}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>Create Email Wallet</DialogTitle>
             <DialogDescription>
               Create a new self-custodial wallet using your email
             </DialogDescription>
           </DialogHeader>
-          <EmailAuth onSuccess={handleWalletCreationSuccess} isLoginMode={false} />
+          <div className="overflow-y-auto max-h-[calc(85vh-120px)] pr-2">
+            <EmailAuth onSuccess={handleWalletCreationSuccess} isLoginMode={false} />
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Email Login Dialog */}
       <Dialog open={showEmailLogin} onOpenChange={setShowEmailLogin}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>Login with Email</DialogTitle>
             <DialogDescription>
               Login to your existing wallet using email verification
             </DialogDescription>
           </DialogHeader>
-          <EmailAuth onSuccess={handleEmailLoginSuccess} isLoginMode={true} />
+          <div className="overflow-y-auto max-h-[calc(85vh-120px)] pr-2">
+            <EmailAuth onSuccess={handleEmailLoginSuccess} isLoginMode={true} />
+          </div>
         </DialogContent>
       </Dialog>
     </div>
