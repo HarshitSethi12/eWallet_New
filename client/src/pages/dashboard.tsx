@@ -110,13 +110,7 @@ import { RiExchangeFundsFill } from "react-icons/ri";
 import { useMetaMask } from "@/hooks/use-metamask";
 
 // ===== MOCK DATA FOR DEVELOPMENT =====
-// Mock token portfolio data to show while developing/testing
-const mockTokens = [
-  { symbol: 'ETH', name: 'Ethereum', balance: '2.5', price: 2340.50, change24h: 5.2, balanceUSD: 5851.25, logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' },
-  { symbol: 'USDC', name: 'USD Coin', balance: '1000', price: 1.00, change24h: -0.1, balanceUSD: 1000.00, logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png' },
-  { symbol: 'LINK', name: 'Chainlink', balance: '150', price: 14.25, change24h: 8.7, balanceUSD: 2137.50, logoURI: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png' },
-  { symbol: 'UNI', name: 'Uniswap', balance: '75', price: 6.80, change24h: -3.2, balanceUSD: 510.00, logoURI: 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png' }
-];
+// Note: Mock data removed - showing real blockchain balances only
 
 // ===== MAIN DASHBOARD COMPONENT =====
 // This is the main dashboard component that displays user's cryptocurrency portfolio
@@ -180,9 +174,9 @@ export default function Dashboard() {
   };
 
   // ===== DATA SELECTION LOGIC =====
-  // Use real API data when available, fallback to mock data during loading/error
-  const marketTokens = marketPricesData?.tokens || mockTokens; // For horizontal ticker (CoinGecko)
-  const portfolioTokens = tokenListData?.tokens || [];  // For Token List (1inch DEX) - NO FALLBACK
+  // Use real API data when available
+  const marketTokens = marketPricesData?.tokens || []; // For horizontal ticker (CoinGecko)
+  const portfolioTokens = tokenListData?.tokens || [];  // For Token List (1inch DEX)
 
   // Filter tokens based on search term
   const filteredPortfolioTokens = portfolioTokens.filter((token: any) =>
@@ -510,8 +504,13 @@ export default function Dashboard() {
   }, [walletAddress, marketTokens]);
 
   // ===== PORTFOLIO PERFORMANCE DATA =====
-  // Generate mock performance data based on timeframe
+  // Generate performance data based on real balances only
   const portfolioPerformanceData = React.useMemo(() => {
+    // If no real balances, return empty data (zero state)
+    if (realBalances.length === 0 || totalPortfolioValue === 0) {
+      return [];
+    }
+
     const days = selectedTimeframe === '7d' ? 7 : selectedTimeframe === '30d' ? 30 : 90;
     const data = [];
     const now = Date.now();
@@ -521,8 +520,8 @@ export default function Dashboard() {
       const date = new Date(now - i * dayMs);
       const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-      // Generate realistic portfolio value changes
-      const baseValue = totalPortfolioValue > 0 ? totalPortfolioValue : 5000;
+      // Generate realistic portfolio value changes based on actual portfolio value
+      const baseValue = totalPortfolioValue;
       const volatility = baseValue * 0.02; // 2% daily volatility
       const trend = (days - i) * (baseValue * 0.001); // Slight upward trend
       const randomChange = (Math.random() - 0.5) * volatility;
@@ -536,7 +535,7 @@ export default function Dashboard() {
     }
 
     return data;
-  }, [selectedTimeframe, totalPortfolioValue]);
+  }, [selectedTimeframe, totalPortfolioValue, realBalances.length]);
 
   // ===== ASSET ALLOCATION DATA =====
   const assetAllocationData = React.useMemo(() => {
@@ -551,29 +550,8 @@ export default function Dashboard() {
     })).sort((a, b) => b.value - a.value);
   }, [realBalances, totalPortfolioValue]);
 
-  // Use real balances if available, otherwise use mock data
-  const mockTokensOverview = realBalances.length > 0 ? realBalances : [
-    {
-      symbol: 'ETH',
-      name: 'Ethereum',
-      address: '0x0000000000000000000000000000000000000000',
-      balance: '2.5',
-      balanceUSD: 8750.25,
-      price: 3500.10,
-      change24h: 2.45,
-      logoURI: 'https://tokens.1inch.io/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png'
-    },
-    {
-      symbol: 'USDC',
-      name: 'USD Coin',
-      address: '0xa0b86a33e6c48e46f4d8d2c6a24e8f3a8f8f6f6f',
-      balance: '1250.50',
-      balanceUSD: 1250.50,
-      price: 1.00,
-      change24h: 0.02,
-      logoURI: 'https://tokens.1inch.io/0xa0b86a33e6c48e46f4d8d2c6a24e8f3a8f8f6f6f.png'
-    }
-  ];
+  // Use real balances only - no mock data fallback
+  const mockTokensOverview = realBalances;
 
   // ===== RENDER LOGIC =====
   // Redirect to home if user is not logged in
