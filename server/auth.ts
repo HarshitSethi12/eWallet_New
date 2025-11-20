@@ -226,18 +226,20 @@ export function setupAuth(app: express.Express) {
         url: 'https://www.googleapis.com/oauth2/v3/userinfo'
       });
 
+      const userData = userInfo.data as { email: string; name: string; [key: string]: any };
+      
       console.log('User info received:', {
-        email: userInfo.data.email,
-        name: userInfo.data.name
+        email: userData.email,
+        name: userData.name
       });
 
-      req.session.user = userInfo.data;
+      req.session.user = userData;
 
       // Track login session
       const sessionData = {
         userId: null, // We'll need to create/find user first
-        email: userInfo.data.email,
-        name: userInfo.data.name,
+        email: userData.email,
+        name: userData.name,
         ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
         userAgent: req.get('User-Agent') || 'unknown',
         sessionId: req.sessionID,
@@ -487,28 +489,28 @@ export function setupAuth(app: express.Express) {
         otpCache.del(email);
       }
 
-      console.log('🔍 Retrieving wallets for email:', email);
+      console.log('🔍 Retrieving wallet for email:', email);
 
-      // Retrieve all wallets for this email
-      let wallets;
+      // Retrieve wallet for this email
+      let wallet;
       try {
-        wallets = await storage.getEmailWallets(email);
+        wallet = await storage.getEmailWallets(email);
       } catch (storageError) {
-        console.error('❌ Error retrieving wallets:', storageError);
+        console.error('❌ Error retrieving wallet:', storageError);
         return res.status(500).json({
           success: false,
-          error: 'Failed to retrieve wallets. Please try again.',
+          error: 'Failed to retrieve wallet. Please try again.',
           details: storageError instanceof Error ? storageError.message : 'Unknown error'
         });
       }
 
-      console.log('📊 Found', wallets.length, 'wallets for:', email);
+      console.log('📊 Wallet found:', !!wallet);
 
-      if (wallets.length === 0) {
-        console.warn('⚠️ No wallets found for:', email);
+      if (!wallet) {
+        console.warn('⚠️ No wallet found for:', email);
         return res.status(404).json({
           success: false,
-          error: 'No wallets found for this email. Please create a new wallet first.',
+          error: 'No wallet found for this email. Please create a new wallet first.',
           shouldCreateWallet: true
         });
       }
@@ -543,7 +545,9 @@ export function setupAuth(app: express.Express) {
           email: email,
           name: email.split('@')[0],
           provider: 'email',
-          walletAddress: walletData.address,
+          btcAddress: walletData.btcAddress,
+          ethAddress: walletData.ethAddress,
+          solAddress: walletData.solAddress,
           walletId: walletId,
           picture: null
         };
@@ -577,7 +581,7 @@ export function setupAuth(app: express.Express) {
           userId: null,
           email: email,
           name: emailUser.name,
-          walletAddress: walletData.address,
+          walletAddress: walletData.ethAddress || undefined,
           ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
           userAgent: req.get('User-Agent') || 'unknown',
           sessionId: req.sessionID,
@@ -598,15 +602,17 @@ export function setupAuth(app: express.Express) {
           user: emailUser,
           wallet: {
             id: walletData.id,
-            address: walletData.address,
+            btcAddress: walletData.btcAddress,
+            ethAddress: walletData.ethAddress,
+            solAddress: walletData.solAddress,
             createdAt: walletData.createdAt,
           },
           loginComplete: true
         });
       }
 
-      // If no walletId, return wallet list for user to choose
-      console.log('📋 Returning wallet list for selection');
+      // If no walletId, return wallet info for user
+      console.log('📋 Returning wallet info');
 
       // Generate a temporary verification token for wallet selection
       const tempVerificationToken = crypto.randomBytes(32).toString('hex');
@@ -615,8 +621,8 @@ export function setupAuth(app: express.Express) {
 
       return res.status(200).json({
         success: true,
-        message: 'OTP verified - please select a wallet',
-        wallets: wallets,
+        message: 'OTP verified - wallet found',
+        wallet: wallet,
         verificationToken: tempVerificationToken,
         requiresWalletSelection: true
       });
@@ -753,7 +759,7 @@ export function setupAuth(app: express.Express) {
       // Self-custodial: Wallet will be created on client-side
       // Server only tracks email and wallet address
       // Note: Wallet address will be sent from client after generation
-      let user = { email, walletAddress: null, id: 0, createdAt: null, lastLogin: null };
+      let user = { email, walletAddress: undefined, id: 0, createdAt: null, lastLogin: null };
 
       // Ensure we check if a wallet exists for this email. If not, we guide the user to create one on the client.
       // If a wallet *does* exist, we might want to associate it with the session.
@@ -763,7 +769,7 @@ export function setupAuth(app: express.Express) {
       req.session.user = user;
       req.session.email = email;
       req.session.isEmailVerified = true;
-      req.session.walletId = null; // No wallet ID associated server-side initially
+      req.session.walletId = undefined; // No wallet ID associated server-side initially
 
       // Save session explicitly
       await new Promise<void>((resolve, reject) => {
@@ -783,7 +789,7 @@ export function setupAuth(app: express.Express) {
         userId: null,
         email: email,
         name: email.split('@')[0],
-        walletAddress: null, // Wallet address is not yet known server-side
+        walletAddress: undefined, // Wallet address is not yet known server-side
         ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
         userAgent: req.get('User-Agent') || 'unknown',
         sessionId: req.sessionID,
@@ -1090,7 +1096,9 @@ export function setupAuth(app: express.Express) {
           deletedWallet: {
             id: wallet.id,
             email: wallet.email,
-            address: wallet.walletAddress,
+            btcAddress: wallet.btcAddress,
+            ethAddress: wallet.ethAddress,
+            solAddress: wallet.solAddress,
           }
         });
       }
@@ -1110,12 +1118,14 @@ export function setupAuth(app: express.Express) {
       }
 
       const email = req.session.user.email;
-      const wallets = await storage.getEmailWallets(email);
+      const wallet = await storage.getEmailWallets(email);
 
-      // Filter out wallets that might not have an address yet (if created via self-custodial flow without client providing address)
-      const validWallets = wallets.filter(wallet => wallet.walletAddress);
+      if (!wallet) {
+        return res.json([]);
+      }
 
-      res.json(validWallets);
+      // Return wallet as array for backwards compatibility
+      res.json([wallet]);
     } catch (error) {
       console.error('Get wallets error:', error);
       res.status(500).json({ error: 'Failed to get wallets' });
@@ -1143,14 +1153,18 @@ export function setupAuth(app: express.Express) {
       }
 
       // Update session with new wallet
-      req.session.user.walletAddress = walletData.address;
+      req.session.user.btcAddress = walletData.btcAddress;
+      req.session.user.ethAddress = walletData.ethAddress;
+      req.session.user.solAddress = walletData.solAddress;
       req.session.user.walletId = walletId;
       req.session.walletId = walletId;
 
-      // Update the session's user object to reflect the new wallet address
+      // Update the session's user object to reflect the new wallet addresses
       req.session.user = {
         ...req.session.user,
-        walletAddress: walletData.address,
+        btcAddress: walletData.btcAddress,
+        ethAddress: walletData.ethAddress,
+        solAddress: walletData.solAddress,
         walletId: walletId
       };
 
@@ -1172,7 +1186,9 @@ export function setupAuth(app: express.Express) {
         message: 'Wallet switched successfully',
         wallet: {
           id: walletData.id,
-          address: walletData.address,
+          btcAddress: walletData.btcAddress,
+          ethAddress: walletData.ethAddress,
+          solAddress: walletData.solAddress,
           createdAt: walletData.createdAt,
         }
       });
@@ -1267,35 +1283,49 @@ export function setupAuth(app: express.Express) {
         });
       }
       
-      // Check if wallet already exists for this email + chain combination
+      // Check if wallet already exists for this email
       const canonicalEmail = email.toLowerCase().trim();
-      const existingWallet = await storage.getEmailWalletByEmailAndChain(canonicalEmail, chain);
+      const existingWallet = await storage.getEmailWalletByEmail(canonicalEmail);
       
       if (existingWallet) {
         return res.status(400).json({
           success: false,
-          message: `You already have a ${chain} wallet. Try logging in or create a wallet for a different blockchain.`
+          message: `You already have a wallet. Try logging in instead.`
         });
       }
       
-      // Create wallet in database (only stores public data + password hash)
-      const result = await storage.createEmailWallet({
+      // Create multi-chain wallet in database (only stores public data + password hash)
+      // Map chain-specific address to the correct field
+      const walletData: any = {
         email: canonicalEmail,
         passwordHash,
         salt,
-        walletAddress,
-        chain
-      });
+        btcAddress: '',
+        ethAddress: '',
+        solAddress: ''
+      };
+      
+      // Set the appropriate address based on chain
+      if (chain === 'BTC') {
+        walletData.btcAddress = walletAddress;
+      } else if (chain === 'ETH') {
+        walletData.ethAddress = walletAddress;
+      } else if (chain === 'SOL') {
+        walletData.solAddress = walletAddress;
+      }
+      
+      const result = await storage.createEmailWallet(walletData);
       
       // Create session for the user
       req.session.user = {
         id: `email_${result.wallet.id}`,
         sub: `email_${result.wallet.id}`,
         email: canonicalEmail,
-        walletAddress: result.wallet.address,
+        btcAddress: result.wallet.btcAddress,
+        ethAddress: result.wallet.ethAddress,
+        solAddress: result.wallet.solAddress,
         walletId: result.wallet.id,
         provider: 'email',
-        chain: result.wallet.chain,
         name: canonicalEmail.split('@')[0],
         picture: null
       };
@@ -1321,8 +1351,9 @@ export function setupAuth(app: express.Express) {
         wallet: {
           id: result.wallet.id,
           email: result.wallet.email,
-          address: result.wallet.address,
-          chain: result.wallet.chain
+          btcAddress: result.wallet.btcAddress,
+          ethAddress: result.wallet.ethAddress,
+          solAddress: result.wallet.solAddress
         }
       });
       
@@ -1353,20 +1384,47 @@ export function setupAuth(app: express.Express) {
       }
       
       const canonicalEmail = email.toLowerCase().trim();
-      const wallets = await storage.getAllChainWalletsForEmail(canonicalEmail);
+      const wallet = await storage.getEmailWalletByEmail(canonicalEmail);
       
-      // Return only non-sensitive data
-      const walletsData = wallets.map(w => ({
-        id: w.id,
-        chain: w.chain,
-        walletAddress: w.walletAddress,
-        createdAt: w.createdAt
-      }));
+      if (!wallet) {
+        return res.status(200).json({
+          success: true,
+          wallets: [],
+          hasWallets: false
+        });
+      }
+      
+      // Return only non-sensitive data for all chains
+      const walletsData = [];
+      if (wallet.btcAddress) {
+        walletsData.push({
+          id: wallet.id,
+          chain: 'BTC',
+          walletAddress: wallet.btcAddress,
+          createdAt: wallet.createdAt
+        });
+      }
+      if (wallet.ethAddress) {
+        walletsData.push({
+          id: wallet.id,
+          chain: 'ETH',
+          walletAddress: wallet.ethAddress,
+          createdAt: wallet.createdAt
+        });
+      }
+      if (wallet.solAddress) {
+        walletsData.push({
+          id: wallet.id,
+          chain: 'SOL',
+          walletAddress: wallet.solAddress,
+          createdAt: wallet.createdAt
+        });
+      }
       
       return res.status(200).json({
         success: true,
         wallets: walletsData,
-        hasWallets: wallets.length > 0
+        hasWallets: walletsData.length > 0
       });
       
     } catch (error: any) {
@@ -1406,14 +1464,29 @@ export function setupAuth(app: express.Express) {
         });
       }
       
-      // Get wallet by email and chain
+      // Get wallet by email
       const canonicalEmail = email.toLowerCase().trim();
-      const wallet = await storage.getEmailWalletByEmailAndChain(canonicalEmail, chain);
+      const wallet = await storage.getEmailWalletByEmail(canonicalEmail);
       
       if (!wallet) {
         return res.status(401).json({
           success: false,
-          message: `No ${chain} wallet found for this email. Please create one first.`
+          message: `No wallet found for this email. Please create one first.`
+        });
+      }
+      
+      // Check if the specific chain address exists
+      let chainAddress = '';
+      if (chain === 'BTC' && wallet.btcAddress) {
+        chainAddress = wallet.btcAddress;
+      } else if (chain === 'ETH' && wallet.ethAddress) {
+        chainAddress = wallet.ethAddress;
+      } else if (chain === 'SOL' && wallet.solAddress) {
+        chainAddress = wallet.solAddress;
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: `No ${chain} address found for this wallet. Please register a ${chain} wallet first.`
         });
       }
       
@@ -1433,10 +1506,11 @@ export function setupAuth(app: express.Express) {
         id: `email_${wallet.id}`,
         sub: `email_${wallet.id}`,
         email: wallet.email,
-        walletAddress: wallet.walletAddress,
+        btcAddress: wallet.btcAddress,
+        ethAddress: wallet.ethAddress,
+        solAddress: wallet.solAddress,
         walletId: wallet.id,
         provider: 'email',
-        chain: wallet.chain,
         name: wallet.email.split('@')[0],
         picture: null
       };
@@ -1456,13 +1530,16 @@ export function setupAuth(app: express.Express) {
       
       console.log('✅ Login successful for:', canonicalEmail, chain);
       
-      // Return salt so client can re-derive wallet
+      // Return salt and chain address so client can re-derive wallet
       return res.status(200).json({
         success: true,
         message: 'Login successful',
         salt: wallet.salt,
-        chain: wallet.chain,
-        walletAddress: wallet.walletAddress
+        chain: chain,
+        walletAddress: chainAddress,
+        btcAddress: wallet.btcAddress,
+        ethAddress: wallet.ethAddress,
+        solAddress: wallet.solAddress
       });
       
     } catch (error: any) {
@@ -1470,6 +1547,253 @@ export function setupAuth(app: express.Express) {
       return res.status(500).json({
         success: false,
         message: error.message || 'Login failed'
+      });
+    }
+  });
+
+  // ===== MULTI-CHAIN EMAIL WALLET ROUTES (NEW ARCHITECTURE) =====
+  
+  /**
+   * POST /auth/email-wallet/register
+   * Register a new multi-chain wallet (BTC, ETH, SOL)
+   * Client generates all wallets using deriveMultiChainWallet and sends all 3 addresses
+   * Server stores ONLY: email, passwordHash, salt, and all 3 public addresses
+   */
+  app.post('/auth/email-wallet/register', async (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    
+    try {
+      console.log('🔐 Multi-chain wallet registration request received');
+      
+      const { email, passwordHash, salt, btcAddress, ethAddress, solAddress } = req.body;
+      
+      // Validate required fields
+      if (!email || !passwordHash || !salt || !btcAddress || !ethAddress || !solAddress) {
+        console.error('❌ Missing required fields');
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: email, passwordHash, salt, btcAddress, ethAddress, solAddress'
+        });
+      }
+      
+      // Validate email format
+      if (!/\S+@\S+\.\S+/.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format'
+        });
+      }
+      
+      // Check if wallet already exists for this email
+      const canonicalEmail = email.toLowerCase().trim();
+      const existingWallet = await storage.getEmailWalletByEmail(canonicalEmail);
+      
+      if (existingWallet) {
+        return res.status(400).json({
+          success: false,
+          message: 'A wallet already exists for this email. Please login instead.'
+        });
+      }
+      
+      // Create multi-chain wallet in database
+      const result = await storage.createEmailWallet({
+        email: canonicalEmail,
+        passwordHash,
+        salt,
+        btcAddress,
+        ethAddress,
+        solAddress
+      });
+      
+      // Create session for the user
+      req.session.user = {
+        id: `email_${result.wallet.id}`,
+        sub: `email_${result.wallet.id}`,
+        email: canonicalEmail,
+        btcAddress: result.wallet.btcAddress,
+        ethAddress: result.wallet.ethAddress,
+        solAddress: result.wallet.solAddress,
+        walletId: result.wallet.id,
+        provider: 'email',
+        name: canonicalEmail.split('@')[0],
+        picture: null
+      };
+      
+      // Save session
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error('❌ Session save error:', err);
+            reject(err);
+          } else {
+            console.log('✅ Session saved for new multi-chain wallet:', canonicalEmail);
+            resolve();
+          }
+        });
+      });
+      
+      console.log('✅ Multi-chain wallet registered successfully');
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Multi-chain wallet registered successfully',
+        wallet: {
+          id: result.wallet.id,
+          email: result.wallet.email,
+          btcAddress: result.wallet.btcAddress,
+          ethAddress: result.wallet.ethAddress,
+          solAddress: result.wallet.solAddress,
+          createdAt: result.wallet.createdAt
+        }
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Multi-chain wallet registration error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to register wallet'
+      });
+    }
+  });
+  
+  /**
+   * POST /auth/email-wallet/login
+   * Login with email + password (no chain parameter needed)
+   * Returns salt and all 3 addresses so client can re-derive wallets
+   */
+  app.post('/auth/email-wallet/login', async (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    
+    try {
+      console.log('🔐 Multi-chain wallet login request received');
+      
+      const { email, password } = req.body;
+      
+      // Validate required fields
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and password are required'
+        });
+      }
+      
+      // Get wallet by email (returns all 3 chain addresses)
+      const canonicalEmail = email.toLowerCase().trim();
+      const wallet = await storage.getEmailWalletByEmail(canonicalEmail);
+      
+      if (!wallet) {
+        return res.status(401).json({
+          success: false,
+          message: 'No wallet found for this email. Please register first.'
+        });
+      }
+      
+      // Verify password using bcrypt
+      const passwordMatch = await bcrypt.compare(password, wallet.passwordHash);
+      
+      if (!passwordMatch) {
+        console.log('❌ Password mismatch for:', canonicalEmail);
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password'
+        });
+      }
+      
+      // Create session with all 3 addresses
+      req.session.user = {
+        id: `email_${wallet.id}`,
+        sub: `email_${wallet.id}`,
+        email: wallet.email,
+        btcAddress: wallet.btcAddress,
+        ethAddress: wallet.ethAddress,
+        solAddress: wallet.solAddress,
+        walletId: wallet.id,
+        provider: 'email',
+        name: wallet.email.split('@')[0],
+        picture: null
+      };
+      
+      // Save session
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error('❌ Session save error:', err);
+            reject(err);
+          } else {
+            console.log('✅ Session saved for multi-chain login:', canonicalEmail);
+            resolve();
+          }
+        });
+      });
+      
+      console.log('✅ Multi-chain login successful for:', canonicalEmail);
+      
+      // Return salt and all addresses so client can re-derive wallets
+      return res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        salt: wallet.salt,
+        btcAddress: wallet.btcAddress,
+        ethAddress: wallet.ethAddress,
+        solAddress: wallet.solAddress
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Multi-chain login error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Login failed'
+      });
+    }
+  });
+  
+  /**
+   * GET /auth/email-wallet/check
+   * Check if email has a wallet and return all 3 addresses
+   * Can be used before login/register to check wallet existence
+   */
+  app.get('/auth/email-wallet/check', async (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    
+    try {
+      const email = req.query.email as string;
+      
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email parameter is required'
+        });
+      }
+      
+      const canonicalEmail = email.toLowerCase().trim();
+      const wallet = await storage.getEmailWalletByEmail(canonicalEmail);
+      
+      if (!wallet) {
+        return res.status(200).json({
+          success: true,
+          hasWallet: false,
+          message: 'No wallet found for this email'
+        });
+      }
+      
+      // Return all 3 addresses (no chain field needed)
+      return res.status(200).json({
+        success: true,
+        hasWallet: true,
+        wallet: {
+          email: wallet.email,
+          btcAddress: wallet.btcAddress,
+          ethAddress: wallet.ethAddress,
+          solAddress: wallet.solAddress,
+          createdAt: wallet.createdAt
+        }
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Check wallet error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to check wallet'
       });
     }
   });

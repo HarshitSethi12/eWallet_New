@@ -28,6 +28,7 @@ import { DexSwap } from "@/components/dex-swap";
 import { FloatingChatWidget } from "@/components/floating-chat-widget";
 import { EnhancedTokenList } from "@/components/enhanced-token-list";
 import { WalletSwitcher } from "@/components/wallet-switcher";
+import { NetworkSwitcher, type NetworkType } from "@/components/network-switcher";
 
 // Icons from Lucide React
 import { 
@@ -119,12 +120,15 @@ export default function Dashboard() {
   // Get current user data from authentication context
   const { user, logout, isLoggingOut, checkSessionStatus } = useAuth();
   // Hook to disconnect MetaMask wallet
-  const { disconnectWallet, connectMetaMask, isMetaMaskConnected, account } = useMetaMask();
+  const { disconnectWallet, connectWallet, isAuthenticated, account } = useMetaMask();
   // Hook to manage navigation
   const [, setLocation] = useLocation();
 
   // ===== SESSION STATUS STATE =====
   const [sessionStatus, setSessionStatus] = React.useState<any>(null);
+
+  // ===== NETWORK SELECTION STATE =====
+  const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('ETH');
 
   // ===== TOKEN LIST SEARCH STATE =====
   const [tokenSearchTerm, setTokenSearchTerm] = useState('');
@@ -201,8 +205,10 @@ export default function Dashboard() {
   const [realBalances, setRealBalances] = useState<any[]>([]);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
 
-  // Use wallet address from authenticated user (MetaMask login) or MetaMask hook
-  const walletAddress = user?.walletAddress || account;
+  // Use wallet address based on selected network and user provider
+  const walletAddress = user?.provider === 'email' 
+    ? (selectedNetwork === 'BTC' ? user?.btcAddress : selectedNetwork === 'SOL' ? user?.solAddress : user?.ethAddress)
+    : (user?.walletAddress || account);
 
   // ===== PORTFOLIO CALCULATIONS (MOVED UP) =====
   // Calculate total portfolio value from real MetaMask balances
@@ -550,8 +556,43 @@ export default function Dashboard() {
     })).sort((a, b) => b.value - a.value);
   }, [realBalances, totalPortfolioValue]);
 
+  // ===== NETWORK-FILTERED BALANCES =====
+  // Filter balances based on selected network
+  const filteredBalances = React.useMemo(() => {
+    if (user?.provider !== 'email') {
+      // For MetaMask users, show all balances (currently ETH/ERC-20 only)
+      return realBalances;
+    }
+
+    // For email users with multi-chain wallets, filter by selected network
+    switch (selectedNetwork) {
+      case 'BTC':
+        // Show only BTC and WBTC tokens
+        return realBalances.filter(token => 
+          token.symbol === 'BTC' || token.symbol === 'WBTC'
+        );
+      case 'ETH':
+        // Show ETH and all ERC-20 tokens (exclude BTC/WBTC and SOL)
+        return realBalances.filter(token => 
+          token.symbol !== 'BTC' && token.symbol !== 'SOL'
+        );
+      case 'SOL':
+        // Show only SOL and SPL tokens
+        return realBalances.filter(token => 
+          token.symbol === 'SOL' || token.symbol?.includes('SOL')
+        );
+      default:
+        return realBalances;
+    }
+  }, [realBalances, selectedNetwork, user?.provider]);
+
+  // Use filtered balances for portfolio calculations
+  const filteredPortfolioValue = filteredBalances.length > 0 
+    ? filteredBalances.reduce((sum, token) => sum + (token.balanceUSD || 0), 0)
+    : totalPortfolioValue;
+
   // Use real balances only - no mock data fallback
-  const mockTokensOverview = realBalances;
+  const mockTokensOverview = filteredBalances;
 
   // ===== RENDER LOGIC =====
   // Redirect to home if user is not logged in
@@ -691,6 +732,30 @@ export default function Dashboard() {
           <WalletSwitcher onCreateNew={() => setLocation('/')} />
         )}
 
+        {/* Network Switcher - Multi-Chain Support */}
+        {user?.provider === 'email' && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <Activity className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                  Multi-Chain Wallet
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Switch between Bitcoin, Ethereum, and Solana networks
+                </p>
+              </div>
+            </div>
+            <NetworkSwitcher 
+              selectedNetwork={selectedNetwork} 
+              onNetworkChange={setSelectedNetwork}
+              address={walletAddress || undefined}
+            />
+          </div>
+        )}
+
         {/* Four Section Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-white">
           {/* Top Left: Wallet Overview */}
@@ -727,8 +792,12 @@ export default function Dashboard() {
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold">${totalPortfolioValue.toFixed(2)}</p>
-                  <p className="text-sm text-gray-500">Portfolio Value</p>
+                  <p className="text-2xl font-bold">${(user?.provider === 'email' ? filteredPortfolioValue : totalPortfolioValue).toFixed(2)}</p>
+                  <p className="text-sm text-gray-500">
+                    {user?.provider === 'email' && selectedNetwork !== 'ETH' 
+                      ? `${selectedNetwork} Portfolio` 
+                      : 'Portfolio Value'}
+                  </p>
                 </div>
               </div>
             </CardHeader>
@@ -760,7 +829,7 @@ export default function Dashboard() {
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mx-auto"></div>
                       <p className="text-xs text-gray-500 mt-2">Loading real balances...</p>
                     </div>
-                  ) : realBalances.length > 0 ? realBalances.map((token) => (
+                  ) : filteredBalances.length > 0 ? filteredBalances.map((token) => (
                     <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="flex items-center gap-3">
                         <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />
@@ -790,7 +859,9 @@ export default function Dashboard() {
                     <div className="text-center py-8">
                       <p className="text-sm text-gray-500">
                         {user?.provider === 'email' 
-                          ? 'Your wallet is empty. Add funds to get started!' 
+                          ? (selectedNetwork !== 'ETH' 
+                            ? `No ${selectedNetwork} tokens found in your wallet` 
+                            : 'Your wallet is empty. Add funds to get started!')
                           : user?.provider === 'metamask'
                           ? 'No tokens found in your wallet'
                           : 'Your wallet is empty. Add funds to get started!'}
@@ -926,7 +997,7 @@ export default function Dashboard() {
                         </div>
                       ))}
                     </div>
-                  ) : filteredPortfolioTokens.map((token) => (
+                  ) : filteredPortfolioTokens.map((token: any) => (
                     <div key={token.symbol} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors" data-testid={`token-item-${token.symbol}`}>
                       <div className="flex items-center gap-3">
                         <img src={token.logoURI} alt={token.name} className="w-8 h-8 rounded-full" />

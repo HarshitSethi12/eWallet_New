@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { deriveWalletFromPassword, generateSalt, validatePassword } from '@/lib/self-custodial-wallet';
+import { deriveMultiChainWallet, generateSalt, validatePassword } from '@/lib/self-custodial-wallet';
 import { Eye, EyeOff, Copy, Check, AlertTriangle, Wallet } from 'lucide-react';
 import bcrypt from 'bcryptjs';
 
@@ -13,22 +13,16 @@ interface EmailAuthProps {
   isLoginMode: boolean;
 }
 
-interface ExistingWallet {
-  id: number;
-  chain: 'ETH' | 'BTC' | 'SOL';
-  walletAddress: string;
-  createdAt: string;
-}
-
 export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
-  const [step, setStep] = useState<'email' | 'email-password' | 'backup'>('email');
+  const [step, setStep] = useState<'email' | 'password' | 'recovery-phrase' | 'confirmation'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [chain, setChain] = useState<'ETH' | 'BTC' | 'SOL'>('ETH');
-  const [existingWallets, setExistingWallets] = useState<ExistingWallet[]>([]);
+  const [walletExists, setWalletExists] = useState(false);
   const [seedPhrase, setSeedPhrase] = useState('');
-  const [walletAddress, setWalletAddress] = useState('');
+  const [btcAddress, setBtcAddress] = useState('');
+  const [ethAddress, setEthAddress] = useState('');
+  const [solAddress, setSolAddress] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showSeed, setShowSeed] = useState(false);
   const [seedCopied, setSeedCopied] = useState(false);
@@ -36,14 +30,14 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
   const [checkingEmail, setCheckingEmail] = useState(false);
   const { toast } = useToast();
 
-  const checkExistingWallets = async (emailToCheck: string) => {
+  const checkWalletExists = async (emailToCheck: string) => {
     if (!emailToCheck || !/\S+@\S+\.\S+/.test(emailToCheck)) {
       return;
     }
 
     setCheckingEmail(true);
     try {
-      const response = await fetch('/api/auth/email/get-wallets', {
+      const response = await fetch('/api/auth/email-wallet/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailToCheck.toLowerCase().trim() })
@@ -51,22 +45,10 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
 
       if (response.ok) {
         const data = await response.json();
-        setExistingWallets(data.wallets || []);
-        
-        if (isLoginMode && data.wallets.length > 0) {
-          // Auto-select first wallet when logging in
-          setChain(data.wallets[0].chain);
-        } else if (!isLoginMode && data.wallets.length > 0) {
-          // Auto-select first available chain if creating new wallet
-          const usedChains = new Set(data.wallets.map((w: ExistingWallet) => w.chain));
-          const availableChain = (['ETH', 'BTC', 'SOL'] as const).find(c => !usedChains.has(c));
-          if (availableChain) {
-            setChain(availableChain);
-          }
-        }
+        setWalletExists(data.exists || false);
       }
     } catch (error) {
-      console.error('Error checking wallets:', error);
+      console.error('Error checking wallet:', error);
     } finally {
       setCheckingEmail(false);
     }
@@ -82,56 +64,20 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
       return;
     }
     
-    // Check for existing wallets first
-    setCheckingEmail(true);
-    try {
-      const response = await fetch('/api/auth/email/get-wallets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.toLowerCase().trim() })
+    // Check if wallet already exists for this email
+    await checkWalletExists(email);
+    
+    // For create mode, check if wallet already exists
+    if (!isLoginMode && walletExists) {
+      toast({
+        variant: 'destructive',
+        title: 'Wallet already exists',
+        description: 'You already have a wallet for this email. Please log in instead.'
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setExistingWallets(data.wallets || []);
-        
-        // For create mode, check if all chains are used
-        if (!isLoginMode) {
-          const usedChains = new Set((data.wallets || []).map((w: ExistingWallet) => w.chain));
-          const availableChains = (['ETH', 'BTC', 'SOL'] as const).filter(c => !usedChains.has(c));
-          
-          if (availableChains.length === 0 && data.wallets.length > 0) {
-            toast({
-              variant: 'destructive',
-              title: 'All wallets created',
-              description: 'You already have wallets for all supported blockchains (ETH, BTC, SOL). Please log in instead.'
-            });
-            setCheckingEmail(false);
-            return;
-          }
-          
-          // Auto-select first available chain
-          if (availableChains.length > 0) {
-            setChain(availableChains[0]);
-          }
-        } else if (isLoginMode && data.wallets.length > 0) {
-          // Auto-select first wallet when logging in
-          setChain(data.wallets[0].chain);
-        }
-      }
-    } catch (error) {
-      console.error('Error checking wallets:', error);
-    } finally {
-      setCheckingEmail(false);
+      return;
     }
     
-    setStep('email-password');
-  };
-
-  const getAvailableChains = (): ('ETH' | 'BTC' | 'SOL')[] => {
-    const allChains: ('ETH' | 'BTC' | 'SOL')[] = ['ETH', 'BTC', 'SOL'];
-    const usedChains = new Set(existingWallets.map(w => w.chain));
-    return allChains.filter(c => !usedChains.has(c));
+    setStep('password');
   };
 
   const handleCreateWallet = async () => {
@@ -170,14 +116,15 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
       // Generate salt for this user
       const salt = generateSalt();
       
-      // Derive wallet from email + password + salt (client-side only!)
-      const wallet = await deriveWalletFromPassword(email, password, salt, chain);
+      // Derive multi-chain wallet from email + password + salt (client-side only!)
+      // This generates BTC, ETH, and SOL addresses all from one mnemonic
+      const multiWallet = await deriveMultiChainWallet(email, password, salt);
       
       // Hash password with bcrypt for server storage
       const passwordHash = await bcrypt.hash(password, 10);
       
-      // Send ONLY email, password hash, salt, public address, and chain to server
-      const response = await fetch('/api/auth/email/create-wallet', {
+      // Send ONLY email, password hash, salt, and all 3 public addresses to server
+      const response = await fetch('/auth/email-wallet/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -185,8 +132,9 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
           email: email.toLowerCase().trim(),
           passwordHash,
           salt,
-          walletAddress: wallet.address,
-          chain: wallet.chain
+          btcAddress: multiWallet.btc.address,
+          ethAddress: multiWallet.eth.address,
+          solAddress: multiWallet.sol.address
         })
       });
 
@@ -195,12 +143,14 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
         throw new Error(error.message || 'Failed to create wallet');
       }
 
-      // Save seed phrase to show user
-      setSeedPhrase(wallet.mnemonic);
-      setWalletAddress(wallet.address);
+      // Save wallet data to show user
+      setSeedPhrase(multiWallet.mnemonic);
+      setBtcAddress(multiWallet.btc.address);
+      setEthAddress(multiWallet.eth.address);
+      setSolAddress(multiWallet.sol.address);
       
-      // Move to backup step
-      setStep('backup');
+      // Move to recovery phrase step
+      setStep('recovery-phrase');
       
       toast({
         title: 'Wallet created!',
@@ -228,26 +178,25 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
       return;
     }
 
-    if (isLoginMode && existingWallets.length === 0) {
+    if (isLoginMode && !walletExists) {
       toast({
         variant: 'destructive',
         title: 'No wallet found',
-        description: 'No wallets found for this email. Please create one first.'
+        description: 'No wallet found for this email. Please create one first.'
       });
       return;
     }
 
     setIsLoading(true);
     try {
-      // Login with email, password, and selected chain
-      const response = await fetch('/api/auth/email/login', {
+      // Login with email and password (no chain parameter needed)
+      const response = await fetch('/auth/email-wallet/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           email: email.toLowerCase().trim(),
-          password,
-          chain
+          password
         })
       });
 
@@ -258,22 +207,22 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
 
       const data = await response.json();
       
-      // Re-derive wallet on client side to restore keys
-      const wallet = await deriveWalletFromPassword(
+      // Re-derive multi-chain wallet on client side to restore all keys
+      const multiWallet = await deriveMultiChainWallet(
         email,
         password,
-        data.salt,
-        data.chain
+        data.salt
       );
       
-      // Store wallet in sessionStorage (temporary, browser only)
-      sessionStorage.setItem('wallet_mnemonic', wallet.mnemonic);
-      sessionStorage.setItem('wallet_address', wallet.address);
-      sessionStorage.setItem('wallet_chain', wallet.chain);
+      // Store all wallet addresses in sessionStorage (temporary, browser only)
+      sessionStorage.setItem('wallet_mnemonic', multiWallet.mnemonic);
+      sessionStorage.setItem('btc_address', multiWallet.btc.address);
+      sessionStorage.setItem('eth_address', multiWallet.eth.address);
+      sessionStorage.setItem('sol_address', multiWallet.sol.address);
       
       toast({
         title: 'Login successful!',
-        description: `Logged into your ${data.chain} wallet`
+        description: 'Logged into your multi-chain wallet'
       });
       
       onSuccess();
@@ -296,23 +245,18 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
   };
 
   const handleBackupComplete = () => {
-    // Store wallet in sessionStorage
+    // Store all wallet addresses in sessionStorage
     sessionStorage.setItem('wallet_mnemonic', seedPhrase);
-    sessionStorage.setItem('wallet_address', walletAddress);
-    sessionStorage.setItem('wallet_chain', chain);
+    sessionStorage.setItem('btc_address', btcAddress);
+    sessionStorage.setItem('eth_address', ethAddress);
+    sessionStorage.setItem('sol_address', solAddress);
     
     toast({
       title: 'Setup complete!',
-      description: 'You can now access your wallet'
+      description: 'You can now access your multi-chain wallet'
     });
     
     onSuccess();
-  };
-
-  const chainNames = {
-    ETH: 'Ethereum',
-    BTC: 'Bitcoin',
-    SOL: 'Solana'
   };
 
   return (
@@ -351,7 +295,7 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
         </>
       )}
 
-      {step === 'email-password' && (
+      {step === 'password' && (
         <>
           <div className="flex items-center justify-between mb-4">
             <Button
@@ -359,7 +303,6 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
               size="sm"
               onClick={() => {
                 setStep('email');
-                setExistingWallets([]);
                 setPassword('');
                 setConfirmPassword('');
               }}
@@ -370,72 +313,22 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
             <p className="text-sm text-gray-600">{email}</p>
           </div>
 
-          {existingWallets.length > 0 && (
-            <Alert className="border-green-500" data-testid="alert-existing-wallets">
+          {!isLoginMode && (
+            <Alert className="border-blue-500" data-testid="alert-multi-chain">
+              <Wallet className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-xs">
+                <strong>Multi-Chain Wallet:</strong> One wallet for Bitcoin, Ethereum, and Solana - all from a single recovery phrase.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isLoginMode && walletExists && (
+            <Alert className="border-green-500" data-testid="alert-existing-wallet">
               <Wallet className="h-4 w-4 text-green-500" />
               <AlertDescription className="text-xs">
-                <strong>Existing Wallets:</strong> You have {existingWallets.length} wallet{existingWallets.length > 1 ? 's' : ''} on this account
-                <ul className="mt-2 space-y-1">
-                  {existingWallets.map(w => (
-                    <li key={w.id} className="font-mono text-xs">
-                      • {chainNames[w.chain]} - {w.walletAddress.slice(0, 12)}...{w.walletAddress.slice(-8)}
-                    </li>
-                  ))}
-                </ul>
+                <strong>Existing Wallet Found:</strong> Login to access your multi-chain wallet (BTC, ETH, SOL).
               </AlertDescription>
             </Alert>
-          )}
-
-          {!isLoginMode && existingWallets.length > 0 && getAvailableChains().length === 0 && (
-            <Alert className="border-yellow-500" data-testid="alert-max-wallets">
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-              <AlertDescription className="text-xs">
-                You already have wallets for all supported blockchains (ETH, BTC, SOL). Please log in instead.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {!isLoginMode && getAvailableChains().length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="chain">Select Blockchain</Label>
-              <select
-                id="chain"
-                value={chain}
-                onChange={(e) => setChain(e.target.value as 'ETH' | 'BTC' | 'SOL')}
-                className="w-full p-2 border rounded"
-                disabled={isLoading}
-                data-testid="select-chain"
-              >
-                {getAvailableChains().map(c => (
-                  <option key={c} value={c}>{chainNames[c]} ({c})</option>
-                ))}
-              </select>
-              {existingWallets.length > 0 && (
-                <p className="text-xs text-gray-500">
-                  Creating a new {chainNames[chain]} wallet for this account
-                </p>
-              )}
-            </div>
-          )}
-
-          {isLoginMode && existingWallets.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="chain">Select Wallet</Label>
-              <select
-                id="chain"
-                value={chain}
-                onChange={(e) => setChain(e.target.value as 'ETH' | 'BTC' | 'SOL')}
-                className="w-full p-2 border rounded"
-                disabled={isLoading}
-                data-testid="select-chain"
-              >
-                {existingWallets.map(w => (
-                  <option key={w.id} value={w.chain}>
-                    {chainNames[w.chain]} ({w.chain}) - {w.walletAddress.slice(0, 12)}...
-                  </option>
-                ))}
-              </select>
-            </div>
           )}
 
           <div className="space-y-2">
@@ -493,27 +386,25 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
 
           <Button
             onClick={isLoginMode ? handleLogin : handleCreateWallet}
-            disabled={isLoading || (!isLoginMode && getAvailableChains().length === 0)}
+            disabled={isLoading}
             className="w-full"
             data-testid={isLoginMode ? 'button-login' : 'button-create-wallet'}
           >
             {isLoading ? (
               isLoginMode ? 'Logging in...' : 'Creating Wallet...'
             ) : (
-              !isLoginMode && getAvailableChains().length === 0 ? 
-                'All Chains Already Have Wallets' : 
-                (isLoginMode ? 'Login' : 'Create Wallet')
+              isLoginMode ? 'Login' : 'Create Wallet'
             )}
           </Button>
         </>
       )}
 
-      {step === 'backup' && (
+      {step === 'recovery-phrase' && (
         <>
           <Alert className="border-red-500" data-testid="alert-backup-critical">
             <AlertTriangle className="h-4 w-4 text-red-500" />
             <AlertDescription className="text-xs">
-              <strong>CRITICAL:</strong> Write down these 12 words on paper. This is the ONLY way to recover your wallet if you lose your password.
+              <strong>CRITICAL:</strong> Write down these 12 words on paper. This ONE recovery phrase works for all your wallets (BTC, ETH, SOL).
             </AlertDescription>
           </Alert>
 
@@ -561,11 +452,23 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
             </p>
           </div>
 
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-            <p className="text-xs text-blue-800 dark:text-blue-200">
-              <strong>Your wallet address:</strong> <span className="font-mono">{walletAddress}</span>
-            </p>
-          </div>
+          <Alert className="border-blue-500" data-testid="alert-multi-chain-addresses">
+            <Wallet className="h-4 w-4 text-blue-500" />
+            <AlertDescription className="text-xs space-y-2">
+              <p><strong>Your Multi-Chain Wallet Addresses:</strong></p>
+              <div className="space-y-1 font-mono text-xs">
+                <p className="truncate" title={btcAddress}>
+                  <strong>BTC:</strong> {btcAddress.slice(0, 20)}...{btcAddress.slice(-10)}
+                </p>
+                <p className="truncate" title={ethAddress}>
+                  <strong>ETH:</strong> {ethAddress.slice(0, 20)}...{ethAddress.slice(-10)}
+                </p>
+                <p className="truncate" title={solAddress}>
+                  <strong>SOL:</strong> {solAddress.slice(0, 20)}...{solAddress.slice(-10)}
+                </p>
+              </div>
+            </AlertDescription>
+          </Alert>
 
           <Button onClick={handleBackupComplete} className="w-full" data-testid="button-backup-complete">
             I've Saved My Recovery Phrase Securely

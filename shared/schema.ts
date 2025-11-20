@@ -64,19 +64,18 @@ export const metamaskUsers = pgTable("metamask_users", {
 
 export const emailWallets = pgTable('email_wallets', {
   id: serial('id').primaryKey(),
-  email: text('email').notNull(), // Removed .unique() to allow multiple wallets per email
+  email: text('email').notNull().unique(), // One account per email
   passwordHash: text('password_hash').notNull(), // bcrypt hash for authentication
   salt: text('salt').notNull(), // Random salt for key derivation (unique per wallet)
-  walletAddress: text('wallet_address').notNull(),
-  chain: text('chain').notNull().default('ETH'), // Blockchain: ETH, BTC, SOL
+  // Multi-chain addresses derived from single seed phrase using BIP44
+  btcAddress: text('btc_address').notNull(), // Bitcoin address (m/44'/0'/0'/0/0)
+  ethAddress: text('eth_address').notNull(), // Ethereum address (m/44'/60'/0'/0/0)
+  solAddress: text('sol_address').notNull(), // Solana address (m/44'/501'/0'/0)
   // SELF-CUSTODIAL: Private keys never stored on server!
   // Keys are derived client-side from password + salt using scrypt + BIP39
   createdAt: timestamp('created_at').defaultNow(),
   lastLogin: timestamp('last_login'),
-}, (table) => ({
-  // Unique constraint: one wallet per email per chain
-  emailChainUnique: uniqueIndex('email_chain_unique_idx').on(table.email, table.chain),
-}));
+});
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true });
@@ -88,8 +87,9 @@ export const insertEmailWalletSchema = createInsertSchema(emailWallets).pick({
   email: true,
   passwordHash: true,
   salt: true,
-  walletAddress: true,
-  chain: true,
+  btcAddress: true,
+  ethAddress: true,
+  solAddress: true,
 });
 
 export const selectUserSchema = z.object({

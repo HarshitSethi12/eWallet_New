@@ -24,6 +24,9 @@ interface User {
   provider?: 'google' | 'metamask' | 'phone' | 'email';  // Authentication method used
   walletAddress?: string;         // MetaMask wallet address (if using MetaMask)
   phone?: string;                 // Phone number (if using phone auth)
+  btcAddress?: string;            // Bitcoin wallet address (for email auth users)
+  ethAddress?: string;            // Ethereum wallet address (for email auth users)
+  solAddress?: string;            // Solana wallet address (for email auth users)
 }
 
 // Interface defining the authentication context structure
@@ -104,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('❌ Session check failed:', error);
       return {
         isActive: false,
-        error: error.message || 'Session check failed'
+        error: (error as Error).message || 'Session check failed'
       };
     }
   };

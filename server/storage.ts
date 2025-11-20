@@ -258,34 +258,39 @@ class Storage {
     email: string;
     passwordHash: string;
     salt: string;
-    walletAddress: string;
-    chain: 'ETH' | 'BTC' | 'SOL';
+    btcAddress: string;
+    ethAddress: string;
+    solAddress: string;
   }) {
     try {
       // Canonicalize email (lowercase) for consistent login
       const canonicalEmail = walletData.email.toLowerCase().trim();
       
-      console.log('🔐 Creating new self-custodial wallet for:', canonicalEmail);
-      console.log('📍 Chain:', walletData.chain, 'Address:', walletData.walletAddress);
+      console.log('🔐 Creating new multi-chain self-custodial wallet for:', canonicalEmail);
+      console.log('📍 BTC:', walletData.btcAddress);
+      console.log('📍 ETH:', walletData.ethAddress);
+      console.log('📍 SOL:', walletData.solAddress);
 
       const result = await db.insert(emailWallets)
         .values({
           email: canonicalEmail,
           passwordHash: walletData.passwordHash,
           salt: walletData.salt,
-          walletAddress: walletData.walletAddress,
-          chain: walletData.chain,
+          btcAddress: walletData.btcAddress,
+          ethAddress: walletData.ethAddress,
+          solAddress: walletData.solAddress,
         })
         .returning();
 
-      console.log('✅ Self-custodial wallet created (no private keys stored!)');
+      console.log('✅ Multi-chain self-custodial wallet created (no private keys stored!)');
       return {
         isNew: true,
         wallet: {
           id: result[0].id,
           email: result[0].email,
-          address: result[0].walletAddress,
-          chain: result[0].chain,
+          btcAddress: result[0].btcAddress,
+          ethAddress: result[0].ethAddress,
+          solAddress: result[0].solAddress,
           createdAt: result[0].createdAt,
         }
       };
@@ -300,115 +305,93 @@ class Storage {
    * Returns wallet with salt and password hash for authentication
    * Used for login to specific chain wallet
    */
-  async getEmailWalletByEmailAndChain(email: string, chain: 'ETH' | 'BTC' | 'SOL') {
+  async getEmailWalletByEmail(email: string) {
     try {
       const canonicalEmail = email.toLowerCase().trim();
-      console.log('🔍 Finding wallet for email:', canonicalEmail, 'chain:', chain);
+      console.log('🔍 Finding multi-chain wallet for email:', canonicalEmail);
 
       const wallets = await db.select()
         .from(emailWallets)
-        .where(
-          and(
-            eq(emailWallets.email, canonicalEmail),
-            eq(emailWallets.chain, chain)
-          )
-        )
+        .where(eq(emailWallets.email, canonicalEmail))
         .limit(1);
 
       if (wallets.length === 0) {
-        console.log('❌ No wallet found for email:', canonicalEmail, 'chain:', chain);
+        console.log('❌ No wallet found for email:', canonicalEmail);
         return null;
       }
 
       const wallet = wallets[0];
-      console.log('✅ Wallet found for email:', canonicalEmail, 'chain:', chain);
+      console.log('✅ Multi-chain wallet found for email:', canonicalEmail);
 
       return {
         id: wallet.id,
         email: wallet.email,
         passwordHash: wallet.passwordHash,
         salt: wallet.salt,
-        walletAddress: wallet.walletAddress,
-        chain: wallet.chain,
+        btcAddress: wallet.btcAddress,
+        ethAddress: wallet.ethAddress,
+        solAddress: wallet.solAddress,
         createdAt: wallet.createdAt,
         lastLogin: wallet.lastLogin,
       };
     } catch (error) {
-      console.error('❌ Error finding wallet by email and chain:', error);
+      console.error('❌ Error finding wallet by email:', error);
       throw error;
     }
   }
 
+
   /**
-   * Gets all chain wallets for a specific email address
-   * Returns array of wallets across all chains (ETH, BTC, SOL)
+   * Gets the wallet for an email address (singular - one wallet per email)
+   * Returns wallet with btc/eth/sol addresses (without private keys for security)
    */
-  async getAllChainWalletsForEmail(email: string) {
+  async getEmailWallets(email: string) {
     try {
       const canonicalEmail = email.toLowerCase().trim();
-      console.log('🔍 Finding all chain wallets for email:', canonicalEmail);
+      console.log('🔍 Finding wallet for email:', canonicalEmail);
 
       const wallets = await db.select()
         .from(emailWallets)
         .where(eq(emailWallets.email, canonicalEmail))
-        .orderBy(desc(emailWallets.createdAt));
+        .limit(1);
 
-      console.log(`✅ Found ${wallets.length} chain wallet(s) for email:`, canonicalEmail);
+      if (wallets.length === 0) {
+        console.log('❌ No wallet found for email:', canonicalEmail);
+        return null;
+      }
 
-      return wallets.map(wallet => ({
+      const wallet = wallets[0];
+      console.log('✅ Wallet found for email:', canonicalEmail);
+
+      return {
         id: wallet.id,
         email: wallet.email,
-        chain: wallet.chain,
-        walletAddress: wallet.walletAddress,
+        btcAddress: wallet.btcAddress,
+        ethAddress: wallet.ethAddress,
+        solAddress: wallet.solAddress,
         createdAt: wallet.createdAt,
         lastLogin: wallet.lastLogin,
-      }));
+      };
     } catch (error) {
-      console.error('❌ Error finding chain wallets:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Gets all wallets for an email address
-   * Returns list of wallets (without private keys for security)
-   */
-  async getEmailWallets(email: string) {
-    try {
-      console.log('🔍 Finding all wallets for email:', email);
-
-      const wallets = await db.select()
-        .from(emailWallets)
-        .where(eq(emailWallets.email, email))
-        .orderBy(desc(emailWallets.createdAt));
-
-      console.log(`✅ Found ${wallets.length} wallet(s) for email:`, email);
-
-      return wallets.map(wallet => ({
-        id: wallet.id,
-        address: wallet.walletAddress,
-        createdAt: wallet.createdAt,
-        lastLogin: wallet.lastLogin,
-      }));
-    } catch (error) {
-      console.error('❌ Error retrieving email wallets:', error);
+      console.error('❌ Error retrieving email wallet:', error);
       throw error;
     }
   }
 
   /**
    * Gets a specific wallet by ID for an email
-   * Returns decrypted wallet information
+   * Returns wallet with all chain addresses
    */
   async getEmailWalletById(email: string, walletId: number) {
     try {
-      console.log('🔍 Finding wallet by ID:', walletId, 'for email:', email);
+      const canonicalEmail = email.toLowerCase().trim();
+      console.log('🔍 Finding wallet by ID:', walletId, 'for email:', canonicalEmail);
 
       const wallets = await db.select()
         .from(emailWallets)
         .where(eq(emailWallets.id, walletId));
 
-      if (wallets.length === 0 || wallets[0].email !== email) {
+      if (wallets.length === 0 || wallets[0].email !== canonicalEmail) {
         console.log('❌ Wallet not found or email mismatch');
         return null;
       }
@@ -423,9 +406,12 @@ class Storage {
       console.log('✅ Email wallet found');
       return {
         id: wallet.id,
-        address: wallet.walletAddress,
-        // Private key and seed phrase are not decrypted or returned from the server
+        email: wallet.email,
+        btcAddress: wallet.btcAddress,
+        ethAddress: wallet.ethAddress,
+        solAddress: wallet.solAddress,
         createdAt: wallet.createdAt,
+        lastLogin: wallet.lastLogin,
       };
     } catch (error) {
       console.error('❌ Error retrieving email wallet by ID:', error);
@@ -550,7 +536,9 @@ class Storage {
           wallet: {
             id: wallet.id,
             email: wallet.email,
-            address: wallet.walletAddress,
+            btcAddress: wallet.btcAddress,
+            ethAddress: wallet.ethAddress,
+            solAddress: wallet.solAddress,
             createdAt: wallet.createdAt,
           }
         };
@@ -566,12 +554,13 @@ class Storage {
   // ===== ADMIN GET METHODS =====
   // Get all email wallets
   async getAllEmailWallets() {
-    // Returning only wallet address and related info, not sensitive keys
+    // Returning wallet addresses and related info, not sensitive keys
     return await db.select({
       id: emailWallets.id,
       email: emailWallets.email,
-      walletAddress: emailWallets.walletAddress,
-      chain: emailWallets.chain,
+      btcAddress: emailWallets.btcAddress,
+      ethAddress: emailWallets.ethAddress,
+      solAddress: emailWallets.solAddress,
       createdAt: emailWallets.createdAt,
       lastLogin: emailWallets.lastLogin,
     }).from(emailWallets).orderBy(desc(emailWallets.createdAt));
