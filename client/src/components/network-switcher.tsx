@@ -74,7 +74,7 @@ export function NetworkSwitcher({ selectedNetwork, onNetworkChange, address }: N
             <div className="px-2 py-1.5 text-xs text-muted-foreground border-t mt-1">
               Current Address
             </div>
-            <div className="px-2 py-1 text-xs font-mono bg-muted rounded mx-2 mb-1 truncate">
+            <div className="px-2 py-1 text-xs font-mono bg-muted rounded mx-2 mb-1 break-all">
               {address}
             </div>
           </>
