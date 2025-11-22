@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import { eq, and, or } from "drizzle-orm";
 import { db } from "./db";
-import { users, wallets, transactions, selectUserSchema } from "@shared/schema";
+import { users, transactions, selectUserSchema } from "@shared/schema";
 import type { User } from "@shared/schema";
 import { BlockchainService } from "./blockchain";
 import { storage } from "./storage";
@@ -678,51 +678,21 @@ router.get("/wallets", authenticateUser, async (req, res) => {
       return res.json([wallet]);
     }
     
-    // For MetaMask/Google users with numeric IDs
-    const userId = Number(req.user!.id);
-    const userWallets = await db.select().from(wallets).where(eq(wallets.userId, userId));
-    res.json(userWallets);
+    // For MetaMask/Google users - old wallets table removed (self-custodial only)
+    // Return empty array as those users should use MetaMask directly
+    res.json([]);
   } catch (error: any) {
     res.status(500).json({ message: normalizeError(error) });
   }
 });
 
-// POST /wallets - Create a new wallet for the authenticated user
+// POST /wallets - DEPRECATED: Old non-self-custodial wallet creation
+// Email users now use self-custodial wallets created client-side
 router.post("/wallets", authenticateUser, async (req, res) => {
   try {
-    const { chain } = req.body;
-    let walletData;
-
-    if (chain === 'BTC') {
-      // Assuming BlockchainService has a createBitcoinWallet method
-      walletData = await BlockchainService.createBitcoinWallet();
-    } else if (chain === 'ETH') {
-      // Assuming BlockchainService has a createEthereumWallet method
-      walletData = await BlockchainService.createEthereumWallet();
-    } else {
-      return res.status(400).json({ message: "Unsupported wallet chain" });
-    }
-
-    // Encrypt the private key before storing
-    const encryptedPrivateKey = encrypt(walletData.privateKey);
-
-    const userId = Number(req.user!.id);
-    const [wallet] = await db.insert(wallets).values({
-      userId: userId,
-      address: walletData.address,
-      encryptedPrivateKey: encryptedPrivateKey, // Store encrypted private key
-      chain: chain,
-      lastBalance: "0"
-    }).returning();
-
-    // Return wallet details without the private key
-    res.json({
-      id: wallet.id,
-      userId: wallet.userId,
-      address: wallet.address,
-      chain: wallet.chain,
-      lastBalance: wallet.lastBalance,
-      updatedAt: wallet.updatedAt
+    // Old wallets table removed - only self-custodial email wallets supported
+    return res.status(400).json({ 
+      message: "Wallet creation deprecated. Please use email wallet signup for self-custodial wallets." 
     });
   } catch (error: any) {
     console.error('Error creating wallet:', error);
@@ -747,10 +717,9 @@ router.get("/transactions", authenticateUser, async (req, res) => {
         user.solAddress
       ].filter(Boolean); // Remove any undefined addresses
     } else {
-      // For MetaMask/Google users with numeric IDs
-      const userId = Number(req.user!.id);
-      const userWallets = await db.select().from(wallets).where(eq(wallets.userId, userId));
-      userAddresses = userWallets.map(wallet => wallet.address);
+      // For MetaMask/Google users - old wallets table removed (self-custodial only)
+      // Return empty addresses array
+      userAddresses = [];
     }
 
     // Get transactions involving any of the user's addresses
