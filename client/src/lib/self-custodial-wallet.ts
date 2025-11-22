@@ -21,6 +21,7 @@ import { ethers } from 'ethers';
 import * as bitcoin from 'bitcoinjs-lib';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import bs58 from 'bs58';
+import { derivePath } from 'ed25519-hd-key';
 
 export interface GeneratedWallet {
   mnemonic: string;           // 12-word recovery phrase (KEEP SECRET!)
@@ -260,36 +261,38 @@ function deriveBitcoinWallet(mnemonic: string, seed: Uint8Array): GeneratedWalle
 /**
  * Derives a Solana wallet from BIP39 mnemonic
  * Uses standard Solana derivation path: m/44'/501'/0'/0'
+ * Implements SLIP-0010 ed25519 derivation for compatibility with Phantom and other standard wallets
  * Generates real Base58-encoded addresses that can receive actual Solana (SOL)
  */
 function deriveSolanaWallet(mnemonic: string, seed: Uint8Array): GeneratedWallet {
-  // Standard Solana derivation path
-  const hdkey = HDKey.fromMasterSeed(seed);
-  const path = "m/44'/501'/0'/0'"; // BIP44 standard for Solana
-  const derived = hdkey.derive(path);
+  // Standard Solana derivation path (BIP44 for Solana)
+  const path = "m/44'/501'/0'/0'";
   
-  if (!derived.privateKey) {
-    throw new Error('Failed to derive Solana keys');
-  }
+  // Use ed25519-hd-key for proper SLIP-0010 ed25519 derivation
+  // This ensures compatibility with Phantom, Solflare, and other standard Solana wallets
+  const derived = derivePath(path, Buffer.from(seed).toString('hex'));
   
-  // Solana uses Ed25519 keypairs, we need to use the first 32 bytes of the private key
-  const secretKey = derived.privateKey.slice(0, 32);
+  // The derived key is a 64-byte Buffer containing:
+  // - First 32 bytes: secret key (seed for ed25519 keypair)
+  // - Last 32 bytes: chain code (not used by Solana)
+  const secretKey = derived.key;
   
-  // Create Solana keypair from the derived private key
+  // Create Solana keypair from the derived ed25519 seed
+  // This will generate the same address as Phantom/Solflare for the same mnemonic
   const keypair = Keypair.fromSeed(secretKey);
   
   // Get the public key and encode it as Base58 (standard Solana address format)
   const publicKey = keypair.publicKey;
   const address = publicKey.toBase58(); // Real Solana address
   
-  const privateKeyHex = '0x' + bytesToHex(derived.privateKey);
+  const privateKeyHex = '0x' + bytesToHex(secretKey);
   const publicKeyHex = '0x' + bytesToHex(publicKey.toBytes());
   
   return {
     mnemonic,
     privateKey: privateKeyHex,
     publicKey: publicKeyHex,
-    address, // Real Base58-encoded Solana address
+    address, // Real Base58-encoded Solana address (compatible with Phantom/Solflare)
     chain: 'SOL'
   };
 }
