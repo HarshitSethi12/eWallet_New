@@ -27,6 +27,7 @@ interface User {
   btcAddress?: string;            // Bitcoin wallet address (for email auth users)
   ethAddress?: string;            // Ethereum wallet address (for email auth users)
   solAddress?: string;            // Solana wallet address (for email auth users)
+  walletId?: number;              // Current wallet ID (for email auth users with multiple wallets)
 }
 
 // Interface defining the authentication context structure

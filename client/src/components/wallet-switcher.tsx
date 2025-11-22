@@ -68,9 +68,10 @@ export function WalletSwitcher({ onCreateNew }: WalletSwitcherProps) {
       return response.json();
     },
     onSuccess: (data) => {
+      const displayAddress = data.wallet.ethAddress || data.wallet.address;
       toast({
         title: 'Wallet Switched!',
-        description: `Now using wallet ${data.wallet.address.slice(0, 6)}...${data.wallet.address.slice(-4)}`,
+        description: displayAddress ? `Now using wallet ${displayAddress.slice(0, 6)}...${displayAddress.slice(-4)}` : 'Wallet switched successfully',
       });
 
       // Invalidate all queries to refresh data
@@ -184,12 +185,14 @@ export function WalletSwitcher({ onCreateNew }: WalletSwitcherProps) {
               <SelectValue placeholder="Select a wallet" />
             </SelectTrigger>
             <SelectContent>
-              {wallets.map((wallet: any) => (
+              {wallets.map((wallet: any) => {
+                const displayAddress = wallet.ethAddress || wallet.address;
+                return (
                 <SelectItem key={wallet.id} value={wallet.id.toString()}>
                   <div className="flex items-center justify-between w-full">
                     <div className="flex flex-col items-start gap-1">
                       <span className="font-mono text-sm">
-                        {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+                        {displayAddress ? `${displayAddress.slice(0, 6)}...${displayAddress.slice(-4)}` : `Wallet #${wallet.id}`}
                       </span>
                       <span className="text-xs text-gray-500">
                         Created: {new Date(wallet.createdAt).toLocaleDateString()}
@@ -210,7 +213,8 @@ export function WalletSwitcher({ onCreateNew }: WalletSwitcherProps) {
                     )}
                   </div>
                 </SelectItem>
-              ))}
+              );
+              })}
             </SelectContent>
           </Select>
 
