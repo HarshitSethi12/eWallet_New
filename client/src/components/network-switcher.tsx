@@ -50,7 +50,7 @@ export function NetworkSwitcher({ selectedNetwork, onNetworkChange, address }: N
           <ChevronDown className="h-4 w-4 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56">
+      <DropdownMenuContent align="start" className="w-56 z-[9999]">
         {networks.map((network) => (
           <DropdownMenuItem
             key={network.id}
