@@ -1748,15 +1748,15 @@ export function setupAuth(app: express.Express) {
   });
   
   /**
-   * GET /auth/email-wallet/check
+   * POST /auth/email-wallet/check
    * Check if email has a wallet and return all 3 addresses
    * Can be used before login/register to check wallet existence
    */
-  app.get('/auth/email-wallet/check', async (req, res) => {
+  app.post('/auth/email-wallet/check', async (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     
     try {
-      const email = req.query.email as string;
+      const { email } = req.body;
       
       if (!email) {
         return res.status(400).json({
@@ -1771,7 +1771,7 @@ export function setupAuth(app: express.Express) {
       if (!wallet) {
         return res.status(200).json({
           success: true,
-          hasWallet: false,
+          exists: false,
           message: 'No wallet found for this email'
         });
       }
@@ -1779,7 +1779,7 @@ export function setupAuth(app: express.Express) {
       // Return all 3 addresses (no chain field needed)
       return res.status(200).json({
         success: true,
-        hasWallet: true,
+        exists: true,
         wallet: {
           email: wallet.email,
           btcAddress: wallet.btcAddress,
