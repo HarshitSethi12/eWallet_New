@@ -259,16 +259,16 @@ function deriveBitcoinWallet(mnemonic: string, seed: Uint8Array): GeneratedWalle
 /**
  * Derives a Solana wallet from BIP39 mnemonic
  * Uses standard Solana derivation path: m/44'/501'/0'/0'
- * Implements SLIP-0010 ed25519 derivation for compatibility with Phantom and other standard wallets
+ * Note: For full Phantom/Solflare compatibility, ed25519 SLIP-0010 derivation is required
+ * This implementation uses a simplified approach that generates valid Solana addresses
  * Generates real Base58-encoded addresses that can receive actual Solana (SOL)
  */
 function deriveSolanaWallet(mnemonic: string, seed: Uint8Array): GeneratedWallet {
   // Standard Solana derivation path (BIP44 for Solana)
   const path = "m/44'/501'/0'/0'";
   
-  // Use @scure/bip32 with ed25519 curve for proper SLIP-0010 derivation
-  // This ensures compatibility with Phantom, Solflare, and other standard Solana wallets
-  const hdkey = HDKey.fromMasterSeed(seed, { ed25519Seed: true });
+  // Derive using standard BIP32
+  const hdkey = HDKey.fromMasterSeed(seed);
   const derived = hdkey.derive(path);
   
   if (!derived.privateKey) {
@@ -278,8 +278,7 @@ function deriveSolanaWallet(mnemonic: string, seed: Uint8Array): GeneratedWallet
   // Use the first 32 bytes of the private key as the seed for Solana keypair
   const secretKey = derived.privateKey.slice(0, 32);
   
-  // Create Solana keypair from the derived ed25519 seed
-  // This will generate the same address as Phantom/Solflare for the same mnemonic
+  // Create Solana keypair from the derived seed
   const keypair = Keypair.fromSeed(secretKey);
   
   // Get the public key and encode it as Base58 (standard Solana address format)
@@ -293,7 +292,7 @@ function deriveSolanaWallet(mnemonic: string, seed: Uint8Array): GeneratedWallet
     mnemonic,
     privateKey: privateKeyHex,
     publicKey: publicKeyHex,
-    address, // Real Base58-encoded Solana address (compatible with Phantom/Solflare)
+    address, // Real Base58-encoded Solana address
     chain: 'SOL'
   };
 }

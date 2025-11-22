@@ -1,3 +1,8 @@
+// Polyfill Buffer for cryptocurrency libraries (bitcoinjs-lib, @solana/web3.js)
+import { Buffer } from "buffer";
+(window as any).Buffer = Buffer;
+(globalThis as any).Buffer = Buffer;
+
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
