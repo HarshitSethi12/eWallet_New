@@ -664,9 +664,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Hover trigger area for header */}
+      {/* Hover trigger area for header - thin strip at very top */}
       <div 
-        className="fixed top-0 left-0 right-0 h-24 z-40"
+        className="fixed top-0 left-0 right-0 h-1 z-40"
         onMouseEnter={() => {
           const header = document.getElementById('auto-header');
           if (header) header.style.transform = 'translateY(0)';
@@ -683,7 +683,7 @@ export default function Dashboard() {
 
       {/* Additional hover area for header element itself */}
       <div 
-        className="fixed top-0 left-0 right-0 h-16 z-51"
+        className="fixed top-0 left-0 right-0 h-1 z-51"
         onMouseEnter={() => {
           const header = document.getElementById('auto-header');
           if (header) header.style.transform = 'translateY(0)';
