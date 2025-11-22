@@ -135,7 +135,7 @@ function Router() {
 
       {/* Admin sessions page route - for session management */}
       <Route path="/admin/sessions" component={AdminSessionsPage} />
-      <Route path="/admin-database" element={<AdminDatabasePage />} />
+      <Route path="/admin-database" component={AdminDatabasePage} />
 
       {/* Send and receive routes - currently redirect to Home */}
       <Route path="/send" component={Home} />

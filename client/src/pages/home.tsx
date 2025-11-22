@@ -51,7 +51,7 @@ function DashboardPage() {
 
   // ===== SESSION STATUS STATE =====
   // Local state to store session check results
-  const [sessionStatus, setSessionStatus] = React.useState(null);
+  const [sessionStatus, setSessionStatus] = React.useState<any>(null);
 
   // ===== SESSION CHECK HANDLER =====
   // Function to manually check if user session is still valid
@@ -255,7 +255,11 @@ function DashboardPage() {
             </div>
           ) : (
             wallets?.map((wallet: Wallet) => (
-              <AddressCard key={wallet.id} wallet={wallet} />
+              <AddressCard 
+                key={wallet.id} 
+                address={wallet.address} 
+                balance={parseFloat(wallet.lastBalance || '0')} 
+              />
             ))
           )}
         </div>
@@ -264,7 +268,10 @@ function DashboardPage() {
       {/* Recent Transactions */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Transactions</h2>
-        <TransactionList transactions={transactions || []} />
+        <TransactionList 
+          transactions={transactions || []} 
+          walletAddress={wallets?.[0]?.address || ''} 
+        />
       </div>
     </div>
   );
@@ -349,7 +356,7 @@ function WelcomePage() {
         console.warn('❌ No signature received');
         alert('Signature required to authenticate. Please try again.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ WalletConnect authentication error:', error);
       alert(`Connection failed: ${error.message || 'Please try again.'}`);
 
@@ -413,7 +420,7 @@ function WelcomePage() {
         console.warn('❌ No signature received');
         alert('Signature required to authenticate. Please try again.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ MetaMask authentication error:', error);
 
       // ===== ERROR HANDLING =====
