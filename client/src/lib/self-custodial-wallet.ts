@@ -21,7 +21,6 @@ import { ethers } from 'ethers';
 import * as bitcoin from 'bitcoinjs-lib';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import bs58 from 'bs58';
-import { derivePath } from 'ed25519-hd-key';
 
 export interface GeneratedWallet {
   mnemonic: string;           // 12-word recovery phrase (KEEP SECRET!)
@@ -239,9 +238,8 @@ function deriveBitcoinWallet(mnemonic: string, seed: Uint8Array): GeneratedWalle
   
   // Generate real Bech32 address using bitcoinjs-lib
   // This creates a valid bc1... address that can receive Bitcoin on mainnet
-  const publicKeyBuffer = Buffer.from(derived.publicKey);
   const { address } = bitcoin.payments.p2wpkh({
-    pubkey: publicKeyBuffer,
+    pubkey: derived.publicKey, // Uint8Array works directly with bitcoinjs-lib
     network: bitcoin.networks.bitcoin // Use mainnet
   });
   
@@ -268,14 +266,17 @@ function deriveSolanaWallet(mnemonic: string, seed: Uint8Array): GeneratedWallet
   // Standard Solana derivation path (BIP44 for Solana)
   const path = "m/44'/501'/0'/0'";
   
-  // Use ed25519-hd-key for proper SLIP-0010 ed25519 derivation
+  // Use @scure/bip32 with ed25519 curve for proper SLIP-0010 derivation
   // This ensures compatibility with Phantom, Solflare, and other standard Solana wallets
-  const derived = derivePath(path, Buffer.from(seed).toString('hex'));
+  const hdkey = HDKey.fromMasterSeed(seed, { ed25519Seed: true });
+  const derived = hdkey.derive(path);
   
-  // The derived key is a 64-byte Buffer containing:
-  // - First 32 bytes: secret key (seed for ed25519 keypair)
-  // - Last 32 bytes: chain code (not used by Solana)
-  const secretKey = derived.key;
+  if (!derived.privateKey) {
+    throw new Error('Failed to derive Solana keys');
+  }
+  
+  // Use the first 32 bytes of the private key as the seed for Solana keypair
+  const secretKey = derived.privateKey.slice(0, 32);
   
   // Create Solana keypair from the derived ed25519 seed
   // This will generate the same address as Phantom/Solflare for the same mnemonic
