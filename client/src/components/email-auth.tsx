@@ -37,7 +37,7 @@ export function EmailAuth({ onSuccess, isLoginMode }: EmailAuthProps) {
 
     setCheckingEmail(true);
     try {
-      const response = await fetch('/api/auth/email-wallet/check', {
+      const response = await fetch('/auth/email-wallet/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailToCheck.toLowerCase().trim() })
