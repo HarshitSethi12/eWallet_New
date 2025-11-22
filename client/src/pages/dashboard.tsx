@@ -614,6 +614,14 @@ export default function Dashboard() {
           background: 'linear-gradient(135deg, #4a7c59 0%, #6b8e5a 100%)',
         }}
         id="auto-header"
+        onMouseLeave={() => {
+          setTimeout(() => {
+            const header = document.getElementById('auto-header');
+            if (header) {
+              header.style.transform = 'translateY(-100%)';
+            }
+          }, 300);
+        }}
       >
         <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 flex items-center justify-between text-white">
           <div className="flex-1"></div>
@@ -1102,6 +1110,14 @@ export default function Dashboard() {
           background: 'linear-gradient(135deg, #4a7c59 0%, #6b8e5a 100%)',
         }}
         id="auto-footer"
+        onMouseLeave={() => {
+          setTimeout(() => {
+            const footer = document.getElementById('auto-footer');
+            if (footer) {
+              footer.style.transform = 'translateY(100%)';
+            }
+          }, 300);
+        }}
       >
         <div className="container max-w-5xl mx-auto px-3 py-3 sm:p-4 text-center text-white">
           <p className="text-sm">
@@ -1131,9 +1147,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Hover trigger area for footer */}
+      {/* Hover trigger area for footer - thin strip at very bottom */}
       <div 
-        className="fixed bottom-0 left-0 right-0 h-24 z-40"
+        className="fixed bottom-0 left-0 right-0 h-1 z-40"
         onMouseEnter={() => {
           const footer = document.getElementById('auto-footer');
           if (footer) footer.style.transform = 'translateY(0)';
@@ -1150,7 +1166,7 @@ export default function Dashboard() {
 
       {/* Additional hover area for footer element itself */}
       <div 
-        className="fixed bottom-0 left-0 right-0 h-16 z-51"
+        className="fixed bottom-0 left-0 right-0 h-1 z-51"
         onMouseEnter={() => {
           const footer = document.getElementById('auto-footer');
           if (footer) footer.style.transform = 'translateY(0)';
