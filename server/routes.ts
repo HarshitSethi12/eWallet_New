@@ -661,6 +661,23 @@ router.get("/api/debug/test-sushiswap", async (req, res) => {
 // GET /wallets - Get all wallets for the authenticated user
 router.get("/wallets", authenticateUser, async (req, res) => {
   try {
+    const user = req.user as any;
+    // Handle email users differently - they don't have numeric user IDs
+    if (user?.provider === 'email') {
+      // For email users, return wallet info from session
+      const wallet = {
+        id: user.walletId,
+        address: user.ethAddress, // Default to ETH for compatibility
+        btcAddress: user.btcAddress,
+        ethAddress: user.ethAddress,
+        solAddress: user.solAddress,
+        chain: 'MULTI', // Multi-chain wallet
+        lastBalance: "0"
+      };
+      return res.json([wallet]);
+    }
+    
+    // For MetaMask/Google users with numeric IDs
     const userId = Number(req.user!.id);
     const userWallets = await db.select().from(wallets).where(eq(wallets.userId, userId));
     res.json(userWallets);
@@ -717,10 +734,23 @@ router.post("/wallets", authenticateUser, async (req, res) => {
 // GET /transactions - Get all transactions for the authenticated user
 router.get("/transactions", authenticateUser, async (req, res) => {
   try {
-    // Get user's wallets first
-    const userId = Number(req.user!.id);
-    const userWallets = await db.select().from(wallets).where(eq(wallets.userId, userId));
-    const userAddresses = userWallets.map(wallet => wallet.address);
+    const user = req.user as any;
+    let userAddresses: string[] = [];
+    
+    // Handle email users differently - they don't have numeric user IDs
+    if (user?.provider === 'email') {
+      // For email users, get addresses from session
+      userAddresses = [
+        user.btcAddress,
+        user.ethAddress,
+        user.solAddress
+      ].filter(Boolean); // Remove any undefined addresses
+    } else {
+      // For MetaMask/Google users with numeric IDs
+      const userId = Number(req.user!.id);
+      const userWallets = await db.select().from(wallets).where(eq(wallets.userId, userId));
+      userAddresses = userWallets.map(wallet => wallet.address);
+    }
 
     // Get transactions involving any of the user's addresses
     let userTransactions: any[] = [];
