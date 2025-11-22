@@ -1059,7 +1059,7 @@ export default function Dashboard() {
         </div>
 
         {/* Bottom Section - Connect MetaMask Prompt - Only show if not logged in via BitWallet */}
-        {!isMetaMaskConnected && !user && (
+        {!isAuthenticated && !user && (
           <div className="col-span-full">
             <Card className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800">
               <CardContent className="p-6">
@@ -1078,7 +1078,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <Button
-                    onClick={connectMetaMask}
+                    onClick={connectWallet}
                     className="bg-orange-500 hover:bg-orange-600 text-white"
                   >
                     Connect MetaMask

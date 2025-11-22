@@ -14,6 +14,14 @@ build = ["sh", "-c", "npm run build"]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 36977
+externalPort = 3001
+
+[[ports]]
+localPort = 45651
+externalPort = 3000
+
 [workflows]
 runButton = "Clean Dev Server"
 
