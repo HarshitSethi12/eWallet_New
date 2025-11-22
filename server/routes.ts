@@ -667,12 +667,13 @@ router.get("/wallets", authenticateUser, async (req, res) => {
       // For email users, return wallet info from session
       const wallet = {
         id: user.walletId,
-        address: user.ethAddress, // Default to ETH for compatibility
+        address: user.ethAddress || user.btcAddress || user.solAddress, // Default to ETH for compatibility
         btcAddress: user.btcAddress,
         ethAddress: user.ethAddress,
         solAddress: user.solAddress,
         chain: 'MULTI', // Multi-chain wallet
-        lastBalance: "0"
+        lastBalance: "0",
+        createdAt: new Date().toISOString() // Add createdAt for wallet-switcher
       };
       return res.json([wallet]);
     }
