@@ -239,7 +239,7 @@ function deriveBitcoinWallet(mnemonic: string, seed: Uint8Array): GeneratedWalle
   // Generate real Bech32 address using bitcoinjs-lib
   // This creates a valid bc1... address that can receive Bitcoin on mainnet
   const { address } = bitcoin.payments.p2wpkh({
-    pubkey: derived.publicKey, // Uint8Array works directly with bitcoinjs-lib
+    pubkey: Buffer.from(derived.publicKey), // Convert Uint8Array to Buffer
     network: bitcoin.networks.bitcoin // Use mainnet
   });
   
