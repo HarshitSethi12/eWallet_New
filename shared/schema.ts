@@ -10,16 +10,6 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const wallets = pgTable("wallets", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id),
-  chain: text("chain").notNull(), // 'BTC' or 'ETH'
-  address: text("address").notNull(),
-  encryptedPrivateKey: text("encrypted_private_key").notNull(),
-  lastBalance: text("last_balance").default("0"),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   fromAddress: text("from_address").notNull(),
@@ -78,7 +68,6 @@ export const emailWallets = pgTable('email_wallets', {
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
-export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true });
 export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true });
 export const insertContactSchema = createInsertSchema(contacts).omit({ id: true });
 export const insertUserSessionSchema = createInsertSchema(userSessions).omit({ id: true });
@@ -102,8 +91,6 @@ export const selectUserSchema = z.object({
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type Wallet = typeof wallets.$inferSelect;
-export type InsertWallet = z.infer<typeof insertWalletSchema>;
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Contact = typeof contacts.$inferSelect;

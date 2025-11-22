@@ -18,6 +18,9 @@ import { entropyToMnemonic, mnemonicToSeedSync } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
 import { HDKey } from '@scure/bip32';
 import { ethers } from 'ethers';
+import * as bitcoin from 'bitcoinjs-lib';
+import { Keypair, PublicKey } from '@solana/web3.js';
+import bs58 from 'bs58';
 
 export interface GeneratedWallet {
   mnemonic: string;           // 12-word recovery phrase (KEEP SECRET!)
@@ -217,12 +220,13 @@ function deriveEthereumWallet(mnemonic: string, seed: Uint8Array): GeneratedWall
 
 /**
  * Derives a Bitcoin wallet from BIP39 mnemonic
- * Uses standard Bitcoin derivation path: m/44'/0'/0'/0/0
+ * Uses standard Bitcoin derivation path: m/84'/0'/0'/0/0 (Native SegWit)
+ * Generates real Bech32 addresses (bc1...) that can receive actual Bitcoin
  */
 function deriveBitcoinWallet(mnemonic: string, seed: Uint8Array): GeneratedWallet {
-  // Standard Bitcoin derivation path
+  // Use Native SegWit (Bech32) derivation path for modern Bitcoin addresses
   const hdkey = HDKey.fromMasterSeed(seed);
-  const path = "m/44'/0'/0'/0/0"; // BIP44 standard for Bitcoin
+  const path = "m/84'/0'/0'/0/0"; // BIP84 standard for Native SegWit
   const derived = hdkey.derive(path);
   
   if (!derived.privateKey || !derived.publicKey) {
@@ -232,15 +236,23 @@ function deriveBitcoinWallet(mnemonic: string, seed: Uint8Array): GeneratedWalle
   const privateKeyHex = '0x' + bytesToHex(derived.privateKey);
   const publicKeyHex = '0x' + bytesToHex(derived.publicKey);
   
-  // For now, return the public key as address
-  // In production, you'd convert this to proper Bitcoin address format
-  const address = `bc1q${publicKeyHex.slice(2, 42)}`;
+  // Generate real Bech32 address using bitcoinjs-lib
+  // This creates a valid bc1... address that can receive Bitcoin on mainnet
+  const publicKeyBuffer = Buffer.from(derived.publicKey);
+  const { address } = bitcoin.payments.p2wpkh({
+    pubkey: publicKeyBuffer,
+    network: bitcoin.networks.bitcoin // Use mainnet
+  });
+  
+  if (!address) {
+    throw new Error('Failed to generate Bitcoin address');
+  }
   
   return {
     mnemonic,
     privateKey: privateKeyHex,
     publicKey: publicKeyHex,
-    address,
+    address, // Real Bech32 address (bc1...)
     chain: 'BTC'
   };
 }
@@ -248,6 +260,7 @@ function deriveBitcoinWallet(mnemonic: string, seed: Uint8Array): GeneratedWalle
 /**
  * Derives a Solana wallet from BIP39 mnemonic
  * Uses standard Solana derivation path: m/44'/501'/0'/0'
+ * Generates real Base58-encoded addresses that can receive actual Solana (SOL)
  */
 function deriveSolanaWallet(mnemonic: string, seed: Uint8Array): GeneratedWallet {
   // Standard Solana derivation path
@@ -255,22 +268,28 @@ function deriveSolanaWallet(mnemonic: string, seed: Uint8Array): GeneratedWallet
   const path = "m/44'/501'/0'/0'"; // BIP44 standard for Solana
   const derived = hdkey.derive(path);
   
-  if (!derived.privateKey || !derived.publicKey) {
+  if (!derived.privateKey) {
     throw new Error('Failed to derive Solana keys');
   }
   
-  const privateKeyHex = '0x' + bytesToHex(derived.privateKey);
-  const publicKeyHex = '0x' + bytesToHex(derived.publicKey);
+  // Solana uses Ed25519 keypairs, we need to use the first 32 bytes of the private key
+  const secretKey = derived.privateKey.slice(0, 32);
   
-  // For now, return the public key as address
-  // In production, you'd convert this to proper Solana address format
-  const address = publicKeyHex.slice(2, 46);
+  // Create Solana keypair from the derived private key
+  const keypair = Keypair.fromSeed(secretKey);
+  
+  // Get the public key and encode it as Base58 (standard Solana address format)
+  const publicKey = keypair.publicKey;
+  const address = publicKey.toBase58(); // Real Solana address
+  
+  const privateKeyHex = '0x' + bytesToHex(derived.privateKey);
+  const publicKeyHex = '0x' + bytesToHex(publicKey.toBytes());
   
   return {
     mnemonic,
     privateKey: privateKeyHex,
     publicKey: publicKeyHex,
-    address,
+    address, // Real Base58-encoded Solana address
     chain: 'SOL'
   };
 }
@@ -304,6 +323,54 @@ export function validatePassword(password: string): string[] {
   }
   
   return errors;
+}
+
+/**
+ * Validates a Bitcoin address
+ * Supports Bech32 (bc1...), P2PKH (1...), and P2SH (3...) formats
+ */
+export function validateBitcoinAddress(address: string): boolean {
+  try {
+    // Try to decode as Bech32 (bc1...)
+    if (address.startsWith('bc1')) {
+      bitcoin.address.fromBech32(address);
+      return true;
+    }
+    
+    // Try to decode as Base58Check (1... or 3...)
+    bitcoin.address.fromBase58Check(address);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Validates an Ethereum address
+ * Checks if address is a valid 40-character hex string with 0x prefix
+ */
+export function validateEthereumAddress(address: string): boolean {
+  try {
+    // Use ethers.js built-in validation
+    return ethers.isAddress(address);
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Validates a Solana address
+ * Checks if address is a valid Base58-encoded 32-byte public key
+ */
+export function validateSolanaAddress(address: string): boolean {
+  try {
+    // Try to create a PublicKey from the address
+    // This will throw if the address is invalid
+    new PublicKey(address);
+    return true;
+  } catch (error) {
+    return false;
+  }
 }
 
 /**
