@@ -103,7 +103,7 @@ import { AddressCard } from "@/components/address-card";
 // Mock blockchain utilities for development
 import { generateMockAddress, generateMockPrivateKey } from "@/lib/mock-blockchain";
 // TypeScript types for data structures
-import type { Wallet as WalletType, Transaction } from "@shared/schema";
+import type { Transaction } from "@shared/schema";
 // React Icons for additional icons
 import { RiExchangeFundsFill } from "react-icons/ri";
 // Custom hooks for MetaMask wallet connection
@@ -507,6 +507,161 @@ export default function Dashboard() {
 
     fetchRealBalances();
   }, [walletAddress, marketTokens]);
+
+  // Fetch real blockchain balances for self-custodial email wallet users
+  useEffect(() => {
+    const fetchBlockchainBalances = async () => {
+      if (user?.provider !== 'email' || !user?.btcAddress || !user?.ethAddress || !user?.solAddress) {
+        return;
+      }
+
+      setIsLoadingBalances(true);
+      try {
+        const balances: any[] = [];
+
+        // Fetch balances for all three chains in parallel
+        const [btcData, ethData, solData] = await Promise.all([
+          fetch(`/api/blockchain/balance/BTC/${user.btcAddress}`).then(res => res.json()),
+          fetch(`/api/blockchain/balance/ETH/${user.ethAddress}`).then(res => res.json()),
+          fetch(`/api/blockchain/balance/SOL/${user.solAddress}`).then(res => res.json())
+        ]);
+
+        console.log('🔍 Blockchain balances fetched:', { btcData, ethData, solData });
+
+        // Add Bitcoin balance
+        if (btcData && !btcData.error) {
+          const btcPrice = marketTokens.find((t: any) => t.symbol === 'BTC')?.price || 0;
+          const change24h = marketTokens.find((t: any) => t.symbol === 'BTC')?.change24h || 0;
+          
+          balances.push({
+            symbol: 'BTC',
+            name: 'Bitcoin',
+            address: user.btcAddress,
+            balance: btcData.balance || '0',
+            balanceUSD: btcData.balanceUsd || 0,
+            price: btcPrice,
+            change24h: change24h,
+            logoURI: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png'
+          });
+        }
+
+        // Add Ethereum balance
+        if (ethData && !ethData.error) {
+          const ethPrice = marketTokens.find((t: any) => t.symbol === 'ETH')?.price || 0;
+          const change24h = marketTokens.find((t: any) => t.symbol === 'ETH')?.change24h || 0;
+          
+          balances.push({
+            symbol: 'ETH',
+            name: 'Ethereum',
+            address: user.ethAddress,
+            balance: ethData.balance || '0',
+            balanceUSD: ethData.balanceUsd || 0,
+            price: ethPrice,
+            change24h: change24h,
+            logoURI: 'https://tokens.1inch.io/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png'
+          });
+        }
+
+        // Add Solana balance
+        if (solData && !solData.error) {
+          const solPrice = marketTokens.find((t: any) => t.symbol === 'SOL')?.price || 0;
+          const change24h = marketTokens.find((t: any) => t.symbol === 'SOL')?.change24h || 0;
+          
+          balances.push({
+            symbol: 'SOL',
+            name: 'Solana',
+            address: user.solAddress,
+            balance: solData.balance || '0',
+            balanceUSD: solData.balanceUsd || 0,
+            price: solPrice,
+            change24h: change24h,
+            logoURI: 'https://cryptologos.cc/logos/solana-sol-logo.png'
+          });
+        }
+
+        // Sort by USD value (highest first)
+        balances.sort((a, b) => b.balanceUSD - a.balanceUSD);
+
+        setRealBalances(balances);
+        console.log('✅ Blockchain balances loaded:', balances.length, 'chains');
+      } catch (error) {
+        console.error('❌ Error fetching blockchain balances:', error);
+      } finally {
+        setIsLoadingBalances(false);
+      }
+    };
+
+    fetchBlockchainBalances();
+  }, [user, marketTokens]);
+
+  // Fetch real blockchain transactions for self-custodial email wallet users
+  useEffect(() => {
+    const fetchBlockchainTransactions = async () => {
+      if (user?.provider !== 'email' || !walletAddress) {
+        return;
+      }
+
+      setIsLoadingTransactions(true);
+      try {
+        let transactions: any[] = [];
+
+        // Determine which chain to fetch transactions for based on selected network
+        const chain = selectedNetwork || 'ETH';
+        
+        console.log(`🔍 Fetching ${chain} transactions for:`, walletAddress);
+
+        const response = await fetch(`/api/blockchain/transactions/${chain}/${walletAddress}`);
+        const data = await response.json();
+
+        if (data.transactions && Array.isArray(data.transactions)) {
+          // Transform blockchain transactions to our format
+          transactions = data.transactions.slice(0, 10).map((tx: any) => {
+            const isReceived = tx.to && tx.to.toLowerCase() === walletAddress.toLowerCase();
+            
+            // Calculate time ago
+            const timestamp = tx.timestamp;
+            const now = Date.now();
+            const diffMs = now - timestamp;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            let timeAgo;
+            if (diffMins < 60) {
+              timeAgo = `${diffMins} ${diffMins === 1 ? 'min' : 'mins'} ago`;
+            } else if (diffHours < 24) {
+              timeAgo = `${diffHours} ${diffHours === 1 ? 'hr' : 'hrs'} ago`;
+            } else {
+              timeAgo = `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+            }
+
+            return {
+              id: tx.hash,
+              type: isReceived ? 'receive' : 'send',
+              token: chain,
+              amount: tx.value,
+              value: tx.value,
+              from: tx.from || 'Unknown',
+              to: tx.to || 'Unknown',
+              timestamp: timeAgo,
+              status: tx.status || 'confirmed',
+              hash: tx.hash,
+              confirmations: tx.confirmations
+            };
+          });
+
+          setRealTransactions(transactions);
+          console.log(`✅ Successfully processed ${transactions.length} ${chain} transactions`);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching blockchain transactions:', error);
+      } finally {
+        setIsLoadingTransactions(false);
+      }
+    };
+
+    fetchBlockchainTransactions();
+  }, [user, walletAddress, selectedNetwork]);
 
   // ===== PORTFOLIO PERFORMANCE DATA =====
   // Generate performance data based on real balances only

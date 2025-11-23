@@ -834,6 +834,115 @@ router.get("/wallet/transactions/:address", async (req, res) => {
   }
 });
 
+// ===== BLOCKCHAIN DATA ENDPOINTS =====
+
+import {
+  getBitcoinBalance,
+  getEthereumBalance,
+  getSolanaBalance,
+  getBitcoinTransactions,
+  getEthereumTransactions,
+  getSolanaTransactions
+} from './blockchain-service';
+
+// GET /blockchain/balance/:chain/:address - Get real blockchain balance
+router.get("/blockchain/balance/:chain/:address", async (req, res) => {
+  try {
+    const { chain, address } = req.params;
+    
+    console.log(`🔍 Balance request for ${chain} address:`, address);
+    
+    let balanceResult;
+    
+    switch (chain.toUpperCase()) {
+      case 'BTC':
+      case 'BITCOIN':
+        balanceResult = await getBitcoinBalance(address);
+        break;
+        
+      case 'ETH':
+      case 'ETHEREUM':
+        const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+        if (!etherscanApiKey) {
+          return res.status(503).json({ 
+            error: "Etherscan API key not configured",
+            balance: '0',
+            balanceUsd: 0
+          });
+        }
+        balanceResult = await getEthereumBalance(address, etherscanApiKey);
+        break;
+        
+      case 'SOL':
+      case 'SOLANA':
+        balanceResult = await getSolanaBalance(address);
+        break;
+        
+      default:
+        return res.status(400).json({ error: `Unsupported chain: ${chain}` });
+    }
+    
+    console.log(`✅ ${chain} balance fetched:`, balanceResult);
+    res.json(balanceResult);
+    
+  } catch (error: any) {
+    console.error('❌ Error fetching blockchain balance:', error);
+    res.status(500).json({ 
+      error: normalizeError(error),
+      balance: '0',
+      balanceUsd: 0
+    });
+  }
+});
+
+// GET /blockchain/transactions/:chain/:address - Get real blockchain transactions
+router.get("/blockchain/transactions/:chain/:address", async (req, res) => {
+  try {
+    const { chain, address } = req.params;
+    
+    console.log(`🔍 Transaction history request for ${chain} address:`, address);
+    
+    let transactions;
+    
+    switch (chain.toUpperCase()) {
+      case 'BTC':
+      case 'BITCOIN':
+        transactions = await getBitcoinTransactions(address);
+        break;
+        
+      case 'ETH':
+      case 'ETHEREUM':
+        const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+        if (!etherscanApiKey) {
+          return res.status(503).json({ 
+            error: "Etherscan API key not configured",
+            transactions: []
+          });
+        }
+        transactions = await getEthereumTransactions(address, etherscanApiKey);
+        break;
+        
+      case 'SOL':
+      case 'SOLANA':
+        transactions = await getSolanaTransactions(address);
+        break;
+        
+      default:
+        return res.status(400).json({ error: `Unsupported chain: ${chain}` });
+    }
+    
+    console.log(`✅ Found ${transactions.length} ${chain} transactions`);
+    res.json({ transactions });
+    
+  } catch (error: any) {
+    console.error('❌ Error fetching blockchain transactions:', error);
+    res.status(500).json({ 
+      error: normalizeError(error),
+      transactions: []
+    });
+  }
+});
+
 // ===== AUTHENTICATION ENDPOINTS =====
 
 // POST /register - Register a new user (OAuth-based)
